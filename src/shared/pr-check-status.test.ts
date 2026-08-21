@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { derivePRCheckStatus, derivePRCheckStatusFromRollup } from './pr-check-status'
-import type { PRCheckDetail } from './types'
+import type { PRCheckDetail } from './github/check-types'
 
 const check = (
   status: PRCheckDetail['status'],
@@ -32,5 +32,9 @@ describe('provider-neutral check status', () => {
     expect(derivePRCheckStatusFromRollup([{}])).toBe('neutral')
     expect(derivePRCheckStatusFromRollup([{ state: 'PENDING' }])).toBe('pending')
     expect(derivePRCheckStatusFromRollup([{ state: 'ERROR' }])).toBe('failure')
+  })
+
+  it.each(['ERROR', 'STARTUP_FAILURE'])('treats raw %s conclusions as failures', (conclusion) => {
+    expect(derivePRCheckStatusFromRollup([{ status: 'COMPLETED', conclusion }])).toBe('failure')
   })
 })

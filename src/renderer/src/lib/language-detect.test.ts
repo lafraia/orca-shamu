@@ -59,6 +59,17 @@ describe('detectLanguage', () => {
     expect(detectLanguage('scripts/legacy.cjs')).toBe('javascript')
   })
 
+  it('maps .r files to the r language id regardless of case', () => {
+    expect(detectLanguage('analysis/model.r')).toBe('r')
+    expect(detectLanguage('analysis/MODEL.R')).toBe('r')
+  })
+
+  it('maps .jsp/.jspf files to the built-in html language id (case-insensitive)', () => {
+    expect(detectLanguage('src/main/webapp/index.jsp')).toBe('html')
+    expect(detectLanguage('src/main/webapp/WEB-INF/include/header.jspf')).toBe('html')
+    expect(detectLanguage('C:\\app\\WebContent\\WEB-INF\\jsp\\LIST.JSP')).toBe('html')
+  })
+
   it('keeps .json/.jsonc on the built-in json language and unknown on plaintext', () => {
     expect(detectLanguage('config/settings.json')).toBe('json')
     expect(detectLanguage('config/tsconfig.jsonc')).toBe('json')
