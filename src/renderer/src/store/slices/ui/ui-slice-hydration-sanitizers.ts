@@ -171,6 +171,9 @@ export function sanitizeHydratedActiveView(value: PersistedUIState['activeView']
   if (!isTopLevelView(value)) {
     return 'terminal'
   }
+  if (value === 'project-chat' && (typeof window === 'undefined' || !window.api?.projectChannels)) {
+    return 'terminal'
+  }
   return value
 }
 

@@ -1,3 +1,4 @@
+import { isProjectChannelsDistribution } from '../../shared/project-channels-distribution'
 import { app } from 'electron'
 import { isMacInstallRequested } from '../updater-mac-install'
 import type { UpdateCheckOptions } from '../../shared/update-status-types'
@@ -13,7 +14,7 @@ export abstract class UpdaterMenuChecks extends UpdaterScheduling {
     ) {
       return
     }
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isProjectChannelsDistribution(app.getVersion())) {
       this.sendStatus({ state: 'not-available', userInitiated: true })
       return
     }

@@ -90,6 +90,7 @@ import { e2eApi } from './api/e2e-bridge'
 import { mobileApi } from './api/mobile-bridge'
 import { agentStatusApi } from './api/agent-status-bridge'
 import { speechApi } from './api/speech-bridge'
+import { projectChannelsApi } from './api/project-channels-bridge'
 
 installBrowserFindListener()
 
@@ -103,6 +104,7 @@ const telemetryGetConsentStateApi: PreloadApi['telemetryGetConsentState'] = () =
   ipcRenderer.invoke('telemetry:getConsentState')
 
 const api = {
+  projectChannels: projectChannelsApi,
   app: appApi,
   orcaProfiles: orcaProfilesApi,
   platform: platformApi,

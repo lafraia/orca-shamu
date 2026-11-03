@@ -2,6 +2,7 @@ import { memo, Suspense, useCallback, useRef } from 'react'
 import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
+import { ProjectChannelsHost } from '../components/project-channels/ProjectChannelDialog'
 import { usePluginViewCaptureStore } from '@/store/plugin-view-capture'
 import { pendingCreationOpensNativeChat } from '@/lib/pending-worktree-creation'
 import Sidebar from '../components/Sidebar'
@@ -34,6 +35,7 @@ const ArtifactsPage = lazy(() => import('../components/artifacts/ArtifactsPage')
 const WorkspaceSpacePage = lazy(() => import('../components/workspace-space/WorkspaceSpacePage'))
 const MobilePage = lazy(() => import('../components/mobile/MobilePage'))
 const Terminal = lazy(() => import('../components/Terminal'))
+const ProjectChannelPage = lazy(() => import('../components/project-channels/ProjectChannelPage'))
 
 type WorktreeSidebarScrollRefs = {
   scrollOffsetRef: React.MutableRefObject<number>
@@ -89,6 +91,7 @@ function ActivePage({ layout }: { layout: AppChromeLayout }): React.JSX.Element 
   const { activeView, hasActiveWorktree, activePendingCreationId, creationLayoutActive } = layout
   return (
     <>
+      {activeView === 'project-chat' ? <ProjectChannelPage /> : null}
       {activeView === 'settings' ? <Settings /> : null}
       {activeView === 'skills' ? <SkillsPage /> : null}
       {activeView === 'artifacts' ? <ArtifactsPage /> : null}
@@ -141,6 +144,7 @@ export function AppWorkspaceShell(props: {
         'The app is still running. Retry the shell or use the menu to report the crash details.'
       )}
     >
+      <ProjectChannelsHost />
       <div className="flex flex-row flex-1 min-h-0 overflow-hidden">
         {/* Keep the non-workspace titlebar from spanning the right sidebar. */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0">

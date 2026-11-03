@@ -1,3 +1,4 @@
+import type { ProjectChannelsApi } from '../shared/project-channels'
 import type {
   ClaudeAccountsApi,
   CodexAccountsApi,
@@ -76,6 +77,7 @@ import type { FolderWorkspacesApi, SparsePresetsApi, WorktreeApi } from './api/w
 type Merged<T> = { [K in keyof T]: T[K] }
 
 export type PreloadApi = {
+  projectChannels?: ProjectChannelsApi
   app: AppApi
   orcaProfiles: OrcaProfileApi
   platform: PlatformApi
