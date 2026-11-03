@@ -35,16 +35,19 @@ describe('updater', () => {
     resetUpdaterMocks()
   })
 
-  it('does not replace a project-channel distribution with an official update', async () => {
-    appMock.getVersion.mockReturnValue('1.4.247-projects.1')
-    const { setupAutoUpdater, checkForUpdatesFromMenu } = await loadUpdaterModule()
-    setupAutoUpdater(updaterMainWindow(vi.fn()), { getLastUpdateCheckAt: () => Date.now() })
-    checkForUpdatesFromMenu()
-    checkForUpdatesFromMenu({ channel: 'stable', targetTag: 'v1.4.248' })
-    await Promise.resolve()
-    expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled()
-    expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled()
-  })
+  it.each(['1.4.247-projects.1', '1.4.247-shamu.1'])(
+    'does not replace %s with an official update',
+    async (version) => {
+      appMock.getVersion.mockReturnValue(version)
+      const { setupAutoUpdater, checkForUpdatesFromMenu } = await loadUpdaterModule()
+      setupAutoUpdater(updaterMainWindow(vi.fn()), { getLastUpdateCheckAt: () => Date.now() })
+      checkForUpdatesFromMenu()
+      checkForUpdatesFromMenu({ channel: 'stable', targetTag: 'v1.4.248' })
+      await Promise.resolve()
+      expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled()
+      expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled()
+    }
+  )
 
   it.each([
     [

@@ -101,6 +101,7 @@ process.stdin.on('data', (chunk) => {
       `${launchLog}.requests.jsonl`,
       `${JSON.stringify({
         pid: process.pid,
+        uuid: frame?.uuid ?? null,
         type: frame?.type ?? null,
         subtype: frame?.request?.subtype ?? null
       })}\n`

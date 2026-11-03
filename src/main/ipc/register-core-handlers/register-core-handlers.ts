@@ -1,3 +1,4 @@
+import { registerProviderAccountHandlers } from './register-provider-account-handlers'
 import { app } from 'electron'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../shared/layout-owner-switch'
 import { registerAppHandlers } from '../app'
@@ -25,7 +26,6 @@ import { registerCrashReportingHandlers } from '../crash-reporting'
 import { registerExportHandlers } from '../export'
 import { registerStatsHandlers } from '../stats'
 import { registerMemoryHandlers } from '../memory'
-import { registerRateLimitHandlers } from '../rate-limits'
 import { registerRuntimeHandlers } from '../runtime'
 import {
   invalidateRuntimeEnvironmentTransport,
@@ -69,16 +69,8 @@ import { registerEmulatorScrcpyKeyboardHandler } from '../emulator-scrcpy-keyboa
 import { registerSpeechHandlers } from '../speech'
 import { registerTerminalRenderDesyncEvidenceHandler } from '../terminal-render-desync-evidence'
 import { registerOrcaProfileHandlers } from '../orca-profiles'
-import { registerCodexAccountHandlers } from '../codex-accounts'
 import { registerAgentHookHandlers } from '../agent-hooks'
-import { registerCodexConfigSyncHandlers } from '../codex-config-sync'
 import { getPtyIdForPaneKey } from '../pty/pane/key-state'
-import { registerClaudeAccountHandlers } from '../claude-accounts'
-import { registerOpenCodeGoCredentialsHandlers } from '../opencode-go-credentials'
-import { registerMiniMaxCredentialsHandlers } from '../minimax-credentials'
-import { registerZcodePlanCredentialsHandlers } from '../zcode-plan-credentials'
-import { registerGrokAccountHandlers } from '../grok-accounts'
-import { registerCursorAccountHandlers } from '../cursor-accounts'
 import { registerUpdaterHandlers } from '../../window/attach-main-window-services'
 import {
   registerClipboardHandlers,
@@ -151,9 +143,9 @@ export function registerCoreHandlers(
   codexUsage: CodexUsageStore,
   openCodeUsage: OpenCodeUsageStore,
   museUsage: MuseUsageStore,
-  codexAccounts: CodexAccountService,
-  claudeAccounts: ClaudeAccountService,
-  rateLimits: RateLimitService,
+  codexAccounts: CodexAccountService | null,
+  claudeAccounts: ClaudeAccountService | null,
+  rateLimits: RateLimitService | null,
   mainWindowWebContentsId: number | null = null,
   automations?: AutomationService,
   commitMessageAgentEnv?: CommitMessageAgentEnvironmentResolvers,
@@ -189,16 +181,8 @@ export function registerCoreHandlers(
   registerCliHandlers()
   registerPreflightHandlers(store)
   registerUsageProviderHandlers({ claudeUsage, codexUsage, openCodeUsage, museUsage })
-  registerCodexAccountHandlers(codexAccounts, () => store.getSettings())
   registerAgentHookHandlers(runtime, { getPtyIdForPaneKey })
-  registerCodexConfigSyncHandlers(codexAccounts.runtimeHomeService)
-  registerClaudeAccountHandlers(claudeAccounts)
-  registerOpenCodeGoCredentialsHandlers(rateLimits)
-  registerMiniMaxCredentialsHandlers(rateLimits)
-  registerZcodePlanCredentialsHandlers(rateLimits)
-  registerGrokAccountHandlers()
-  registerCursorAccountHandlers()
-  registerRateLimitHandlers(rateLimits, codexAccounts)
+  registerProviderAccountHandlers(store, codexAccounts, claudeAccounts, rateLimits)
   registerGitHubHandlers(store, stats)
   registerGitLabHandlers(store)
   registerHostedReviewHandlers(store, stats)

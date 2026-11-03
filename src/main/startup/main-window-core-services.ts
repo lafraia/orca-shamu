@@ -23,6 +23,8 @@ import {
 import { isRecoveryReloadInFlight } from './main-window-lifecycle-flags'
 import { RELAY_HOST_CLOSE_REASON } from '../../shared/relay-host-close-reason'
 import { holdLaunchReconnectOptOuts } from '../ipc/ssh/ssh-host-user-disconnect'
+import { isShamuClientMode } from './shamu-client-mode'
+import type { ClaudeAccountSelectionTarget } from '../claude-accounts/runtime-selection'
 
 export function attachMainWindowCoreServices(
   window: BrowserWindow,
@@ -53,15 +55,18 @@ export function attachMainWindowCoreServices(
     !codexUsage ||
     !openCodeUsage ||
     !museUsage ||
-    !codexAccounts ||
-    !claudeAccounts ||
-    !rateLimits ||
     !automations ||
     !keybindings ||
-    !codexRuntimeHome ||
-    !claudeRuntimeAuth
+    (!isShamuClientMode() &&
+      (!codexAccounts || !claudeAccounts || !rateLimits || !codexRuntimeHome || !claudeRuntimeAuth))
   ) {
     throw new Error('Main window services must be initialized before attaching')
+  }
+  const prepareClaudeAuth = (target?: ClaudeAccountSelectionTarget) => {
+    if (!claudeRuntimeAuth) {
+      throw new Error('Use the primary Orca to run local agents.')
+    }
+    return claudeRuntimeAuth.prepareForClaudeLaunch(target)
   }
   // Server status probes start inside registerCoreHandlers; held hosts must be marked first.
   holdLaunchReconnectOptOuts(store.getSshTargets())
@@ -80,7 +85,7 @@ export function attachMainWindowCoreServices(
     automations,
     {
       prepareForCodexLaunch: prepareCodexRuntimeHomeForLaunch,
-      prepareForClaudeLaunch: (target) => claudeRuntimeAuth.prepareForClaudeLaunch(target),
+      prepareForClaudeLaunch: prepareClaudeAuth,
       resolveBaseEnvironment: () => resolveHostAgentBaseEnvironment(store.getSettings())
     },
     state.agentAwakeService ?? undefined,
@@ -88,7 +93,7 @@ export function attachMainWindowCoreServices(
     keybindings,
     {
       getAdditionalAiVaultCodexHomePaths: () =>
-        codexRuntimeHome.getHostCodexHomePathsForSessionDiscovery(),
+        codexRuntimeHome?.getHostCodexHomePathsForSessionDiscovery() ?? [],
       prepareAiVaultSessionResume: (args) =>
         prepareCodexAiVaultSessionResume(args, {
           runtimeHome: codexRuntimeHome,
@@ -137,7 +142,7 @@ export function attachMainWindowCoreServices(
     store,
     runtime,
     prepareCodexRuntimeHomeForLaunch,
-    (target) => claudeRuntimeAuth.prepareForClaudeLaunch(target),
+    prepareClaudeAuth,
     {
       prepareCodexSessionResume: prepareCodexSessionResumeForLaunch,
       awaitLocalPtyStartup: () => state.localPtyStartupReady,
@@ -160,7 +165,7 @@ export function attachMainWindowCoreServices(
   )
   // Attach durable diagnostic pulls now, defer process launch past first paint.
   initTccPromptNotice(window, { deferWatchUntilReadyToShow: true })
-  rateLimits.attach(window)
+  rateLimits?.attach(window)
   // Quota probes spawn CLIs/use network; defer to show/focus refresh so they do not compete with first paint.
-  rateLimits.start({ fetchImmediately: false })
+  rateLimits?.start({ fetchImmediately: false })
 }

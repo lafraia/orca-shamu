@@ -37,6 +37,7 @@ import { runGatedWslMoveDesktopRewritePass } from '../persistence/moving-wsl-pro
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
 import { repairDuplicatePtyPanesOnStart } from '../runtime/moved-pane-owner-rekey'
 import { WslUsageReporter } from '../telemetry/wsl-usage-reporter'
+import { isShamuClientMode } from './shamu-client-mode'
 
 // Headless serve has no first window; timer fallback must still sweep trash.
 const WORKTREE_TRASH_SWEEP_FALLBACK_MS = 15_000
@@ -94,7 +95,9 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
   }, WORKTREE_TRASH_SWEEP_FALLBACK_MS)
   // Defer noncritical plugin-file refresh past first paint.
   runAfterFirstWindowShown(() => {
-    refreshInstalledOpenCodeStatusPlugins(store.getSettings())
+    if (!isShamuClientMode()) {
+      refreshInstalledOpenCodeStatusPlugins(store.getSettings())
+    }
   }, WORKTREE_TRASH_SWEEP_FALLBACK_MS)
   runAfterFirstWindowShown(() => {
     new WslUsageReporter(store, app.getPath('userData')).start()
@@ -110,17 +113,19 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
   }, WORKTREE_TRASH_SWEEP_FALLBACK_MS)
   nativeTheme.themeSource = store.getSettings().theme ?? 'system'
   // Wait for shell PATH before probing Codex; start reconciliation early so first launch can share it.
-  startCodexHooks({
-    pathReady: app.isPackaged ? hydrateAgentCliShellPath() : Promise.resolve(),
-    isEnabled: () => isAgentStatusHooksEnabledForAgent(store.getSettings(), 'codex'),
-    resolveLaunchHome: () => {
-      if (!state.codexRuntimeHome) {
-        throw new Error('Codex runtime home service is not initialized')
+  if (!isShamuClientMode()) {
+    startCodexHooks({
+      pathReady: app.isPackaged ? hydrateAgentCliShellPath() : Promise.resolve(),
+      isEnabled: () => isAgentStatusHooksEnabledForAgent(store.getSettings(), 'codex'),
+      resolveLaunchHome: () => {
+        if (!state.codexRuntimeHome) {
+          throw new Error('Codex runtime home service is not initialized')
+        }
+        return state.codexRuntimeHome.resolveHostCodexHomePathForLaunchReadOnly()
       }
-      return state.codexRuntimeHome.resolveHostCodexHomePathForLaunchReadOnly()
-    }
-  })
-  if (shouldInstallManagedHooks(!app.isPackaged)) {
+    })
+  }
+  if (!isShamuClientMode() && shouldInstallManagedHooks(!app.isPackaged)) {
     reconcileStartupManagedAgentHooks({
       getSettings: () => store.getSettings(),
       isQuitting: () => state.isQuitting,

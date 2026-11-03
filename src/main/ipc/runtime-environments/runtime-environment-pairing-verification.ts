@@ -41,7 +41,7 @@ type VerifiedPairingCode = {
 }
 
 /** Proves a pairing link reaches a compatible host that accepts it, without saving anything. */
-async function verifyPairingCode(
+export async function verifyRuntimeEnvironmentPairingCode(
   pairingCode: string,
   allowLoopback: boolean | undefined
 ): Promise<VerifiedPairingCode | RemotePairingFailure> {
@@ -91,7 +91,7 @@ export async function verifyAndAddRuntimeEnvironmentFromPairingCode(
   userDataPath: string,
   args: VerifyAndAddRuntimeEnvironmentArgs
 ): Promise<VerifyAndAddRuntimeEnvironmentResult> {
-  const verified = await verifyPairingCode(args.pairingCode, args.allowLoopback)
+  const verified = await verifyRuntimeEnvironmentPairingCode(args.pairingCode, args.allowLoopback)
   if (!verified.ok) {
     return verified
   }
@@ -126,7 +126,7 @@ export async function verifyAndRepairRuntimeEnvironmentFromPairingCode(
     return pairingSaveFailure(null, 'repairCloudWorkspace')
   }
   // SSH tunnel pairings legitimately use loopback links.
-  const verified = await verifyPairingCode(
+  const verified = await verifyRuntimeEnvironmentPairingCode(
     args.pairingCode,
     existing.connectionDependency === 'ssh-tunnel'
   )

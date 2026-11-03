@@ -49,6 +49,7 @@ import { recordDurableCrashBreadcrumb } from '../crash-reporting/durable-crash-b
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
 import { getRuntimeEnvironmentRegistryRoot } from '../ipc/runtime-environments/runtime-environment-registry-root'
 import { openOffscreenBrowserPageLink } from '../runtime/browser/offscreen-browser-page-link'
+import { isShamuClientMode } from './shamu-client-mode'
 
 export function getDesktopWindowStatus(): RuntimeDesktopWindowStatus {
   const activation = state.desktopActivationGate
@@ -189,6 +190,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
 }
 
 export function configureRuntimeServices(runtime: OrcaRuntimeService): void {
+  if (isShamuClientMode()) {
+    return
+  }
   const store = state.store
   const claudeAccounts = state.claudeAccounts
   const codexAccounts = state.codexAccounts

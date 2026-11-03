@@ -32,7 +32,7 @@ import {
   installRemoteServerUpdate,
   isQuittingForUpdate
 } from '../updater'
-import { getDevInstanceIdentity, shouldApplyPreReadyAppName } from './dev-instance-identity'
+import { getAppInstanceIdentity, shouldApplyPreReadyAppName } from './dev-instance-identity'
 import { enableRendererHeapHeadroom } from './renderer-heap-headroom'
 import { configureLinuxDevShmUsage } from './linux-dev-shm-policy'
 import { isStartupDiagnosticsEnabled, logStartupDiagnostic } from './startup-diagnostics'
@@ -155,7 +155,7 @@ function initializeMainProcessPreflight(options: MainProcessPreflightOptions): b
   if (state.isServeMode) {
     reserveServeStdoutForReadiness()
   }
-  state.devInstanceIdentity = getDevInstanceIdentity(isDev)
+  state.devInstanceIdentity = getAppInstanceIdentity(isDev, app.getVersion())
   state.devAgentHookEndpointNamespace = state.devInstanceIdentity.isDev
     ? state.devInstanceIdentity.appUserModelId
     : undefined

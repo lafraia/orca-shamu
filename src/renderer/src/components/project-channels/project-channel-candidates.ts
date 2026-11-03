@@ -7,6 +7,7 @@ import {
   executionHostIdForStructuredTarget
 } from '@/runtime/structured-agent-session-owner'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { shamuAllowsSessionTarget } from '../shamu/shamu-client-state'
 
 export function projectChannelCandidates(
   state: AppState,
@@ -18,7 +19,7 @@ export function projectChannelCandidates(
         return []
       }
       const target = structuredAgentSessionTargetForTab(state, tab)
-      if (!target) {
+      if (!target || !shamuAllowsSessionTarget(target)) {
         return []
       }
       return [
@@ -44,6 +45,9 @@ export function availableProjectChannelMember(
   state: AppState,
   member: ProjectChannelMember
 ): boolean {
+  if (!shamuAllowsSessionTarget(member.target)) {
+    return false
+  }
   const tab = state.unifiedTabsByWorktree[member.worktreeId]?.find((row) => row.id === member.tabId)
   if (
     !tab ||

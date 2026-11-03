@@ -1,6 +1,16 @@
-# Project channels preview
+# Orca Shamu
 
-Based on the upstream `v1.4.247` release. This desktop preview adds a project conversation over existing native Chat sessions. It does not move their execution directories, clone their processes, change their permission policies or replace their original transcripts.
+Based on the upstream `v1.4.247` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep both applications open. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
+
+## Connect once
+
+1. Keep the installed Orca open. In **Settings → Remote Orca Servers**, create a **New Link** for **This computer**.
+2. Open **Orca Shamu.app**, paste that access link into **Primary Orca access link** and connect.
+3. Shamu loads the primary Orca's repositories, worktrees, folder workspaces and native Chat tabs. A connection bar provides reconnect and link renewal when contact is lost.
+
+The link must target loopback. The native access-link flow authorizes the client without exposing a LAN service. Credentials stay in Orca's existing runtime environment registry; `shamu-primary.json` contains only the environment ID and pinned public host key. Renewed links must belong to that same primary host. Never paste an access link into logs, issues or source files.
+
+Shamu uses its own bundle ID, Keychain service and application profile. No production profile is copied or opened by a second writer. The client skips local provider account initialization, auth synchronization, quota polling and managed agent hook installation. Its project organization and drafts are local to that interface, while session execution and controls remain on the primary Orca. Closing Shamu leaves the primary sessions intact. If the primary Orca becomes unavailable, reconnect it; Shamu does not substitute local sessions for project participants.
 
 ## Use
 
@@ -23,7 +33,7 @@ Draft edits are kept in memory and saved outside the keystroke path. A renderer-
 
 The desktop owns the project list. Existing native sessions on supported paired runtimes retain their stamped host; this preview does not add channel sharing or a channel interface to mobile/web clients. Those clients fall back to their workspace view. Attachments and project-driven creation of fresh agents remain available through the original Chat tabs rather than the shared composer.
 
-## Build and switching applications
+## Build
 
 Use the pnpm version pinned in `package.json` (this release uses 12.14.0). Install root and `mobile/` dependencies with frozen lockfiles, then run:
 
@@ -31,9 +41,9 @@ Use the pnpm version pinned in `package.json` (this release uses 12.14.0). Insta
 node config/scripts/build-project-channels-mac.mjs
 ```
 
-The app is generated under `dist/project-channels/mac-arm64/Orca.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. The preview keeps the upstream bundle identifier, keychain service name and profile so existing workspace sessions remain available. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature. Quit the installed Orca before opening the preview; both applications intentionally share the single-instance lock. Reopening the installed app returns to the upstream UI. The additional channel file remains intact.
+The app is generated under `dist/project-channels/mac-arm64/Orca Shamu.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. Its bundle ID is `com.lafraia.orca-shamu` and its default profile is `~/Library/Application Support/Orca Shamu`. The internal executable remains `Orca` for compatibility with the bundled CLI launcher. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature.
 
-The preview version carries a `projects.1` suffix and refuses automatic or manual jumps to official releases. Future upstream upgrades are integrated into the fork source, tested and rebuilt. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes; existing runtime connections are unchanged.
+The version carries a `shamu.1` suffix and refuses automatic or manual jumps to official releases. Future upstream upgrades are integrated into the fork source, tested and rebuilt. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
 
 ## Updating the fork
 
@@ -44,5 +54,7 @@ Keep the last working app until the new package passes an isolated startup check
 ## Validation
 
 Targeted tests cover recipients, session isolation, scoped native replies, older history, durable storage, revision conflicts, failed/uncertain delivery and draft recovery. Hidden Electron/CDP journeys use isolated profiles and a synthetic Claude protocol process, covering promotion from both worktrees and folder workspaces, two participants, named routing, draft recovery and reload without duplicate replies. They do not call a paid model or use production conversations.
+
+The two-instance journeys connect through the Shamu UI using a real loopback access link. They assert that the original session ID is retained, a message appears in both apps, Stop reaches the primary provider process, reload does not duplicate a reply, the client has no local native ownership and the primary remains the native owner after the client closes. Connection tests cover unreadable bindings, expired links, host-key mismatch, private binding permissions and recovery after a failed hydration.
 
 Delivery checks also cover a host rejecting a submission after transport acknowledgement, an unknown dispatch result, a late acknowledgement arriving after the journal's refusal and an orphaned send expiring while the reader stays unchanged after reload. The journal remains authoritative; none of these transitions automatically resends the message.

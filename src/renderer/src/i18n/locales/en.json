@@ -23610,5 +23610,24 @@
     "saving": "Saving…",
     "save": "Save project",
     "promote": "Use as main project chat…"
+  },
+  "shamu": {
+    "loading": "Connecting to the primary Orca…",
+    "description": "Use the sessions and controls of your primary Orca, with both apps open.",
+    "stepSettings": "In the primary Orca, open Settings → Remote Orca Servers.",
+    "stepLink": "Create an access link and choose This computer.",
+    "stepPaste": "Paste that link here to connect to the existing sessions.",
+    "accessLink": "Primary Orca access link",
+    "connectError": "Could not connect. Keep the primary Orca open and generate a new link for This computer.",
+    "cancel": "Cancel",
+    "connecting": "Connecting…",
+    "connect": "Connect to primary Orca",
+    "primary": "Primary Orca",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "reconnect": "Reconnect",
+    "updateLink": "Update access link",
+    "loadError": "Could not load the Shamu connection. Your saved sessions have not been changed.",
+    "retry": "Try again"
   }
 }

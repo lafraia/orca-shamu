@@ -449,6 +449,7 @@ vi.mock('../native-chat', () => ({
 }))
 
 vi.mock('../project-channels', () => ({ registerProjectChannelsHandlers: vi.fn() }))
+vi.mock('../shamu-client', () => ({ registerShamuClientHandlers: vi.fn() }))
 
 import { agentSessionRefusalError } from '../../../shared/agent-session/failures/agent-session-wire-refusals'
 import { recordStructuredAgentSessionHostInstallRefusal } from '../../runtime/agent-session/structured-agent-session-host-refusal'

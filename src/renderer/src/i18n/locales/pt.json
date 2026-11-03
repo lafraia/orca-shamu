@@ -23542,5 +23542,24 @@
     "saving": "Salvando…",
     "save": "Salvar projeto",
     "promote": "Usar como chat principal do projeto…"
+  },
+  "shamu": {
+    "loading": "Conectando ao Orca principal…",
+    "description": "Use as sessões e os controles do Orca principal, com os dois aplicativos abertos.",
+    "stepSettings": "No Orca principal, abra Configurações → Servidores Orca remotos.",
+    "stepLink": "Crie um link de acesso e escolha Este computador.",
+    "stepPaste": "Cole esse link aqui para se conectar às sessões existentes.",
+    "accessLink": "Link de acesso do Orca principal",
+    "connectError": "Não foi possível conectar. Mantenha o Orca principal aberto e gere um novo link para Este computador.",
+    "cancel": "Cancelar",
+    "connecting": "Conectando…",
+    "connect": "Conectar ao Orca principal",
+    "primary": "Orca principal",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "reconnect": "Reconectar",
+    "updateLink": "Atualizar link de acesso",
+    "loadError": "Não foi possível carregar a conexão do Shamu. As sessões salvas foram preservadas.",
+    "retry": "Tentar novamente"
   }
 }
