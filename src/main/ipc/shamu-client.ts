@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import { z } from 'zod'
 import { isShamuClientMode } from '../startup/shamu-client-mode'
 import { createEmptyRateLimitState } from '../../shared/rate-limit-state-factory'
@@ -6,6 +6,9 @@ import type { Store } from '../persistence/loading-store/store'
 import { ShamuPrimaryConnection } from '../shamu-primary-connection'
 import { getRuntimeEnvironmentRegistryRoot } from './runtime-environments/runtime-environment-registry-root'
 import { isTrustedUIRenderer } from './ui'
+import { getPlatformUserDataPath } from '../../cli/runtime/metadata'
+import { readShamuPrimaryPreferences } from '../shamu-primary-preferences'
+import { callRuntimeEnvironment } from './runtime-environments/runtime-environment-transport-routing'
 
 export function registerShamuClientHandlers(store: Store): ShamuPrimaryConnection | null {
   const enabled = isShamuClientMode()
@@ -33,6 +36,36 @@ export function registerShamuClientHandlers(store: Store): ShamuPrimaryConnectio
   }
   ipcMain.removeHandler('shamuClient:read')
   ipcMain.removeHandler('shamuClient:connect')
+  ipcMain.removeHandler('shamuClient:readPrimaryPreferences')
+  ipcMain.handle('shamuClient:readPrimaryPreferences', async (event) => {
+    trusted(event)
+    const primary = await connection?.read()
+    if (!primary?.environmentId) {
+      throw new Error('Connect Shamu to the primary Orca first.')
+    }
+    const status = await callRuntimeEnvironment(
+      getRuntimeEnvironmentRegistryRoot(),
+      primary.environmentId,
+      'status.get',
+      {},
+      30_000
+    )
+    if (
+      !status.ok ||
+      typeof status.result !== 'object' ||
+      !status.result ||
+      !('runtimeId' in status.result) ||
+      typeof status.result.runtimeId !== 'string'
+    ) {
+      throw new Error('The primary Orca is unavailable.')
+    }
+    const home = app.getPath('home')
+    return readShamuPrimaryPreferences(
+      getPlatformUserDataPath(process.platform, home),
+      status.result.runtimeId,
+      home
+    )
+  })
   ipcMain.handle('shamuClient:read', async (event) => {
     trusted(event)
     return { enabled, ...((await connection?.read()) ?? { environmentId: null }) }

@@ -156,7 +156,7 @@ export function loadInitialWebSessionTabs({
                   expectedTrackingGeneration,
                   // Workspaces the mirror never writes contribute no evidence to the environment-wide verdict.
                   publishedSnapshotCount: result.snapshots.filter((snapshot) =>
-                    isHostMirroredWorktree(snapshot.worktree)
+                    isHostMirroredWorktree(snapshot.worktree, environmentId)
                   ).length
                 }
               }

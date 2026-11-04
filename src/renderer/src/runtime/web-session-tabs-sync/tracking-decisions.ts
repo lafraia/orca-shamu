@@ -1,4 +1,4 @@
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { isHostMirroredWorktree } from './visibility-types'
 import type { RuntimeMobileSessionTabsResult } from '../../../../shared/runtime-types'
 import {
   latestSessionTabsSnapshotByWorktree,
@@ -42,10 +42,6 @@ const WEB_SESSION_TABS_FRAME_UNMIRRORED = {
   settlesHostMirror: false
 } as const satisfies WebSessionTabsSnapshotDecision
 
-function isHostMirroredWorktree(worktreeId: string): boolean {
-  return worktreeId !== FLOATING_TERMINAL_WORKTREE_ID
-}
-
 export function shouldApplyWebSessionTabsSnapshot(
   snapshot: RuntimeMobileSessionTabsResult,
   environmentId: string,
@@ -70,7 +66,7 @@ export function decideWebSessionTabsSnapshot(
     queueAcceptedWebSessionTerminalSnapshot(snapshot, environmentId)
     return WEB_SESSION_TABS_FRAME_APPLIED
   }
-  if (!isHostMirroredWorktree(snapshot.worktree)) {
+  if (!isHostMirroredWorktree(snapshot.worktree, environmentId)) {
     // Why: a remote empty same-id snapshot would delete the user's local floating tabs.
     return WEB_SESSION_TABS_FRAME_UNMIRRORED
   }

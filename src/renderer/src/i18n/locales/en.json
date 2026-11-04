@@ -23629,5 +23629,8 @@
     "updateLink": "Update access link",
     "loadError": "Could not load the Shamu connection. Your saved sessions have not been changed.",
     "retry": "Try again"
-  }
+  },
+  "shamu.importPreferences": "Import interface settings",
+  "shamu.preferencesImported": "Settings imported",
+  "shamu.preferencesError": "Could not import interface settings."
 }

@@ -1,6 +1,6 @@
 const base = require('./electron-builder.config.cjs')
 const pkg = require('../package.json')
-const version = `${pkg.version}${pkg.version.includes('-') ? '.' : '-'}shamu.1`
+const version = `${pkg.version}${pkg.version.includes('-') ? '.' : '-'}shamu.2`
 
 module.exports = {
   ...base,

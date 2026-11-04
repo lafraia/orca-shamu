@@ -23561,5 +23561,8 @@
     "updateLink": "Atualizar link de acesso",
     "loadError": "Não foi possível carregar a conexão do Shamu. As sessões salvas foram preservadas.",
     "retry": "Tentar novamente"
-  }
+  },
+  "shamu.importPreferences": "Importar configurações da interface",
+  "shamu.preferencesImported": "Configurações importadas",
+  "shamu.preferencesError": "Não foi possível importar as configurações da interface."
 }

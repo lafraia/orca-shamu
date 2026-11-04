@@ -190,6 +190,22 @@ function ShamuConnectionStatus({ onEdit }: { onEdit: () => void }): React.JSX.El
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const [importError, setImportError] = useState(false)
+  const [imported, setImported] = useState(false)
+  const importPreferences = async (): Promise<void> => {
+    setBusy(true)
+    setImportError(false)
+    setImported(false)
+    try {
+      const preferences = await window.api.shamuClient!.readPrimaryPreferences()
+      await useAppStore.getState().updateSettingsOrThrow(preferences)
+      setImported(true)
+    } catch {
+      setImportError(true)
+    } finally {
+      setBusy(false)
+    }
+  }
   const reconnect = async (): Promise<void> => {
     setBusy(true)
     setError(false)
@@ -213,6 +229,23 @@ function ShamuConnectionStatus({ onEdit }: { onEdit: () => void }): React.JSX.El
           ? translate('shamu.connected', 'Connected')
           : translate('shamu.disconnected', 'Disconnected')}
       </span>
+      {live ? (
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={busy}
+          className="ml-auto"
+          onClick={() => void importPreferences()}
+        >
+          {translate('shamu.importPreferences', 'Import interface settings')}
+        </Button>
+      ) : null}
+      {imported ? <span>{translate('shamu.preferencesImported', 'Settings imported')}</span> : null}
+      {importError ? (
+        <span role="alert">
+          {translate('shamu.preferencesError', 'Could not import interface settings.')}
+        </span>
+      ) : null}
       {!live || error || hydrationError ? (
         <>
           <Button

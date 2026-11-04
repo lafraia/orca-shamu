@@ -1,12 +1,13 @@
 # Orca Shamu
 
-Based on the upstream `v1.4.247` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep both applications open. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
+Based on the upstream `v1.4.247` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep the primary process running; its window can stay hidden or minimized. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
 
 ## Connect once
 
 1. Keep the installed Orca open. In **Settings → Remote Orca Servers**, create a **New Link** for **This computer**.
 2. Open **Orca Shamu.app**, paste that access link into **Primary Orca access link** and connect.
-3. Shamu loads the primary Orca's repositories, worktrees, folder workspaces and native Chat tabs. A connection bar provides reconnect and link renewal when contact is lost.
+3. Shamu loads the primary Orca's repositories, worktrees, folder workspaces and native Chat tabs, including side chats in the floating workspace. A connection bar provides reconnect and link renewal when contact is lost.
+4. Choose **Import interface settings** in that bar to import the primary's fonts, sizes, theme, chat appearance and side panel preferences. The primary settings are read only; Shamu saves the selected appearance fields through its own settings service. Accounts, permissions, trusted directories and environment selection are excluded. Run it again after changing the primary's appearance.
 
 The link must target loopback. The native access-link flow authorizes the client without exposing a LAN service. Credentials stay in Orca's existing runtime environment registry; `shamu-primary.json` contains only the environment ID and pinned public host key. Renewed links must belong to that same primary host. Never paste an access link into logs, issues or source files.
 
@@ -14,7 +15,7 @@ Shamu uses its own bundle ID, Keychain service and application profile. No produ
 
 ## Use
 
-1. Open **Workspaces**, then right-click a native Chat tab and choose **Use as main project chat…**. Folder workspaces and Git worktrees use the same flow.
+1. Open **Workspaces**, then right-click a native Chat tab and choose **Use as main project chat…**. Folder workspaces, Git worktrees and floating side chats use the same flow.
 2. Choose a project name, agent display name and unique `@handle`.
 3. Open **Agents** in the project to add other existing native Chat tabs, rename their project identities or choose the main participant.
 4. Unmentioned messages go to the main participant. `@handle` addresses that participant; `@all` explicitly addresses everyone. Only user sends dispatch turns. Agent output never starts a response loop.
@@ -43,7 +44,7 @@ node config/scripts/build-project-channels-mac.mjs
 
 The app is generated under `dist/project-channels/mac-arm64/Orca Shamu.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. Its bundle ID is `com.lafraia.orca-shamu` and its default profile is `~/Library/Application Support/Orca Shamu`. The internal executable remains `Orca` for compatibility with the bundled CLI launcher. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature.
 
-The version carries a `shamu.1` suffix and refuses automatic or manual jumps to official releases. Future upstream upgrades are integrated into the fork source, tested and rebuilt. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
+The version carries a `shamu.2` suffix and refuses automatic or manual jumps to official releases. Future upstream upgrades are integrated into the fork source, tested and rebuilt. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
 
 ## Updating the fork
 
@@ -55,6 +56,6 @@ Keep the last working app until the new package passes an isolated startup check
 
 Targeted tests cover recipients, session isolation, scoped native replies, older history, durable storage, revision conflicts, failed/uncertain delivery and draft recovery. Hidden Electron/CDP journeys use isolated profiles and a synthetic Claude protocol process, covering promotion from both worktrees and folder workspaces, two participants, named routing, draft recovery and reload without duplicate replies. They do not call a paid model or use production conversations.
 
-The two-instance journeys connect through the Shamu UI using a real loopback access link. They assert that the original session ID is retained, a message appears in both apps, Stop reaches the primary provider process, reload does not duplicate a reply, the client has no local native ownership and the primary remains the native owner after the client closes. Connection tests cover unreadable bindings, expired links, host-key mismatch, private binding permissions and recovery after a failed hydration.
+The two-instance journeys connect through the Shamu UI using a real loopback access link, including a floating side chat. They assert that the original session ID is retained, a message appears in both apps, Stop reaches the primary provider process, reload does not duplicate a reply, the client has no local native ownership and the primary remains the native owner after the client closes. Connection tests cover unreadable bindings, expired links, host-key mismatch, private binding permissions and recovery after a failed hydration. Regression tests cover floating ownership and a binding arriving after an active inventory stream. Appearance tests cover the allowlist, runtime identity checks and unreadable profile state.
 
 Delivery checks also cover a host rejecting a submission after transport acknowledgement, an unknown dispatch result, a late acknowledgement arriving after the journal's refusal and an orphaned send expiring while the reader stays unchanged after reload. The journal remains authoritative; none of these transitions automatically resends the message.

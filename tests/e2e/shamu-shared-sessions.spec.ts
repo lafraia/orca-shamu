@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { test } from './helpers/project-channel-stub'
 import { expect } from './helpers/orca-app'
 import { waitForActiveWorktree, waitForSessionReady } from './helpers/store'
@@ -6,11 +6,12 @@ import { buildFakeAgentCommandOverride } from './helpers/fake-agent-command-over
 import { createChatOnHost, SUPPORTED } from './helpers/structured-claude-stub'
 import { launchPairedElectronClient } from './helpers/paired-electron-client'
 import { claudePromptUuidForSubmission } from '../../src/main/claude/structured/claude-structured-session-id'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../src/shared/constants'
 import { agentJournalSubmissionKey } from '../../src/shared/agent-session/journal/agent-session-journal-item-key'
 
 test.describe('Shamu shares the primary Orca sessions', () => {
   test.skip(!SUPPORTED, 'the isolated Claude protocol fixture requires POSIX')
-  for (const owner of ['worktree', 'folder'] as const) {
+  for (const owner of ['worktree', 'folder', 'floating'] as const) {
     test(`shares the same ${owner} session and Stop control with both apps open`, async ({
       orcaPage: primary,
       claudeStub,
@@ -45,6 +46,9 @@ test.describe('Shamu shares the primary Orca sessions', () => {
           state.setActiveWorktree(id)
           return id
         }, seededRepoPath)
+      }
+      if (owner === 'floating') {
+        workspaceId = FLOATING_TERMINAL_WORKTREE_ID
       }
       const sessionId = await createChatOnHost(primary, workspaceId)
       await expect
@@ -113,6 +117,9 @@ test.describe('Shamu shares the primary Orca sessions', () => {
           .poll(() =>
             client.page.evaluate((id) => {
               const state = window.__store!.getState()
+              if (id === 'global-floating-terminal') {
+                return Boolean(state.unifiedTabsByWorktree[id]?.length)
+              }
               return id.startsWith('folder:')
                 ? state.folderWorkspaces.some((row) => `folder:${row.id}` === id)
                 : state.allWorktrees().some((row) => row.id === id)
@@ -146,12 +153,26 @@ test.describe('Shamu shares the primary Orca sessions', () => {
           },
           { workspaceId, sessionId }
         )
+        if (owner === 'floating') {
+          await client.page.evaluate(() => {
+            if (!window.__store!.getState().floatingWorkspacePanelOpen) {
+              window.dispatchEvent(new Event('orca-toggle-floating-terminal'))
+            }
+          })
+        }
         await client.page
           .locator(`[data-testid="sortable-tab"][data-tab-id="${tabId}"]`)
           .click({ button: 'right' })
         await client.page.getByRole('menuitem', { name: 'Use as main project chat…' }).click()
         await client.page.getByLabel('Project name', { exact: true }).fill('Shared project')
         await client.page.getByRole('button', { name: 'Save project', exact: true }).click()
+        if (owner === 'floating') {
+          await client.page.evaluate(() => {
+            if (window.__store!.getState().floatingWorkspacePanelOpen) {
+              window.dispatchEvent(new Event('orca-toggle-floating-terminal'))
+            }
+          })
+        }
         await expect(client.page.locator('[data-project-agent]')).toContainText('Ready')
         const message = client.page.getByRole('textbox', { name: 'Message project', exact: true })
         await message.fill('Hello from Shamu')
@@ -164,6 +185,13 @@ test.describe('Shamu shares the primary Orca sessions', () => {
             window.__store!.getState().activateTab(primaryTab, { worktreeId: workspaceId }),
           { workspaceId, primaryTab }
         )
+        if (owner === 'floating') {
+          await primary.evaluate(() => {
+            if (!window.__store!.getState().floatingWorkspacePanelOpen) {
+              window.dispatchEvent(new Event('orca-toggle-floating-terminal'))
+            }
+          })
+        }
         await expect(primary.locator('body')).toContainText('Hello from Shamu')
         await expect(primary.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
         const project = await client.page.evaluate(() => window.api.projectChannels!.read())
@@ -235,10 +263,12 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         )
         expect(primaryOwner).toMatchObject({ ok: true, result: { owner: 'native' } })
       } finally {
-        await testInfo.attach('provider-requests', {
-          path: `${claudeStub.launchLog}.requests.jsonl`,
-          contentType: 'application/jsonl'
-        })
+        if (existsSync(`${claudeStub.launchLog}.requests.jsonl`)) {
+          await testInfo.attach('provider-requests', {
+            path: `${claudeStub.launchLog}.requests.jsonl`,
+            contentType: 'application/jsonl'
+          })
+        }
         const sourceHistory = await primary.evaluate(
           (sessionId) =>
             window.api.runtime.call({

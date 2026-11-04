@@ -1,3 +1,5 @@
+import type { GlobalSettings } from './global-settings-types'
+
 export const SHAMU_APP_NAME = 'Orca Shamu'
 export const SHAMU_APP_ID = 'com.lafraia.orca-shamu'
 
@@ -13,4 +15,5 @@ export type ShamuClientState = {
 export type ShamuClientApi = {
   read: () => Promise<ShamuClientState>
   connect: (pairingCode: string) => Promise<ShamuClientState>
+  readPrimaryPreferences: () => Promise<Partial<GlobalSettings>>
 }

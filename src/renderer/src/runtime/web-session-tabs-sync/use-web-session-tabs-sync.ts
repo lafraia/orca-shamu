@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { lastVerifiedRuntimeStatus } from '../../../../shared/runtime-host-status'
 import { useAppStore } from '../../store'
+import { useShamuClient } from '../../components/shamu/shamu-client-state'
 import { useRuntimeSessionMirrorEnvironmentKeys } from '../use-runtime-session-mirror-environment-key'
 import { sessionTabsFreshnessKey } from './tracking'
 import { clearWebSessionTabsTrackingForEnvironment } from './tracking-lifecycle'
@@ -39,6 +40,9 @@ export function useWebSessionTabsSync(): void {
 
   const activeWorktreeId = useAppStore((state) => state.activeWorktreeId)
   const workspaceSessionReady = useAppStore((state) => state.workspaceSessionReady)
+  const floatingMirrorEnvironmentId = useShamuClient((state) =>
+    state.enabled ? state.environmentId : null
+  )
   const { environmentKey: runtimeSessionMirrorEnvironmentKey, resubscribeSignal } =
     useRuntimeSessionMirrorEnvironmentKeys()
   const activeWorktreeRuntimeEnvironmentId = useAppStore((state) =>
@@ -112,7 +116,7 @@ export function useWebSessionTabsSync(): void {
       globalSubscriptionsRef.current = null
       subscriptions?.()
     }
-  }, [runtimeSessionMirrorEnvironmentKey, workspaceSessionReady])
+  }, [runtimeSessionMirrorEnvironmentKey, workspaceSessionReady, floatingMirrorEnvironmentId])
 
   // Regained contact revives only dead streams; stable mirror keys retain state, and probe flaps without outages must not resubscribe.
   useEffect(() => {

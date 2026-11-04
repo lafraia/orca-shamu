@@ -9,6 +9,15 @@ export const useShamuClient = create<
   }
 >(() => ({ enabled: false, environmentId: null, loaded: false, error: false }))
 
+export function shamuMirrorsFloatingWorkspace(environmentId?: string): boolean {
+  const state = useShamuClient.getState()
+  return Boolean(
+    state.enabled &&
+    state.environmentId &&
+    (environmentId === undefined || environmentId === state.environmentId)
+  )
+}
+
 export function shamuAllowsSessionTarget(target: ProjectChannelMember['target']): boolean {
   const state = useShamuClient.getState()
   return (
