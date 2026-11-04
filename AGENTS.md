@@ -9,6 +9,10 @@
 
 If selection fans out excessively, use scoped checks and report limits. Use the PR base (default `origin/main`; `ORCA_CODE_QUALITY_BASE=<ref>` for stacks). `--base=HEAD` and dirty-only checks provide incremental evidence only.
 
+## Orca Shamu Preview
+
+Use `pnpm dev:shamu` for renderer changes; see `PROJECT_CHANNELS.md`. Keep the installed Shamu version at `1.4.247-shamu.2` with release updates disabled. React/CSS changes use the local live server; changes to main, preload or native code still require rebuilding Shamu. Keep the primary Orca process running because it owns the shared sessions. Do not copy profiles or pairing credentials into another application.
+
 # Don't Poll the CI
 
 Use `gh run watch <run-id> --compact --exit-status` or `gh pr checks --watch` to prevent token waste

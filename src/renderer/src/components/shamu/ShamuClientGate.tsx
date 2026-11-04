@@ -224,6 +224,7 @@ function ShamuConnectionStatus({ onEdit }: { onEdit: () => void }): React.JSX.El
     >
       <Link2 className="size-3.5" />
       <span>{translate('shamu.primary', 'Primary Orca')}</span>
+      {import.meta.env.DEV ? <span>Live reload</span> : null}
       <span>
         {live && !error && !hydrationError
           ? translate('shamu.connected', 'Connected')

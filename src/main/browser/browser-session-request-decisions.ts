@@ -1,4 +1,9 @@
 import {
+  finishShamuLiveRequest,
+  hasShamuLiveWindows,
+  shamuLiveResponseDecision
+} from '../window/shamu-live-request-guard'
+import {
   reportBrowserSessionWebRequest,
   type ObservedWebRequestDetails
 } from './browser-session-web-request-observer'
@@ -128,6 +133,7 @@ export function installBrowserSessionRequestLifecycle(session: Electron.Session)
     event: 'onCompleted' | 'onErrorOccurred',
     details: ObservedWebRequestDetails
   ): void => {
+    finishShamuLiveRequest(session, details.id)
     reportBrowserSessionWebRequest(session, event, details)
     try {
       decider?.requestFinished?.(session, event, details)
@@ -160,6 +166,11 @@ export function installBrowserSessionHeadersReceived(session: Electron.Session):
   session.webRequest.onHeadersReceived(
     { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
     (details, callback) => {
+      const liveDecision = shamuLiveResponseDecision(session, details)
+      if (liveDecision?.cancel) {
+        callback(liveDecision)
+        return
+      }
       reportBrowserSessionWebRequest(session, 'onHeadersReceived', details)
       let response: Electron.HeadersReceivedResponse | null = null
       try {
@@ -174,6 +185,9 @@ export function installBrowserSessionHeadersReceived(session: Electron.Session):
 
 /** Every response otherwise waits on main, so drop the handler once nothing needs it. */
 export function removeBrowserSessionHeadersReceived(session: Electron.Session): void {
+  if (hasShamuLiveWindows(session)) {
+    return
+  }
   if (headersReceivedSessions.delete(session)) {
     session.webRequest.onHeadersReceived(null)
   }

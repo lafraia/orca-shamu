@@ -1,5 +1,6 @@
+import { loadDesktopRenderer } from './desktop-renderer-url'
 import { mainI18n, translateMain } from '../i18n/main-i18n'
-import { app, BrowserWindow, nativeTheme, type WebContents } from 'electron'
+import { BrowserWindow, nativeTheme, type WebContents } from 'electron'
 import { join } from 'node:path'
 import { isBackgroundLaunch, showWindowWithoutStealingFocus } from './foreground-activation-policy'
 import { installPrivilegedWindowNavigationPolicy } from './privileged-window-navigation'
@@ -103,11 +104,7 @@ export function createOrFocusWorkspaceSpaceWindow(store: Store): BrowserWindow {
     }
   })
 
-  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}/space.html`)
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/space.html'))
-  }
+  void loadDesktopRenderer(window, 'space.html', join(__dirname, '../renderer/space.html'))
   return window
 }
 

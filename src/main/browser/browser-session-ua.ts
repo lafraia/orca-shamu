@@ -1,3 +1,4 @@
+import { shamuLiveRequestHeaders } from '../window/shamu-live-request-guard'
 import type { Session } from 'electron'
 import type { BrowserTabIdentity, UserAgentMetadata } from './browser-tab-identity'
 export { cleanElectronUserAgent } from './browser-process-user-agent'
@@ -62,10 +63,19 @@ function applyUserAgentMetadataHeaders(
 }
 
 // Rewrite only hints Chromium emitted; desktop hints remain browser-owned.
+const installedUserAgentPolicies = new WeakSet<Session>()
+
+export function ensureBrowserSessionUserAgentPolicy(session: Session): void {
+  if (!installedUserAgentPolicies.has(session)) {
+    installBrowserSessionUserAgentPolicy(session)
+  }
+}
+
 export function installBrowserSessionUserAgentPolicy(
   sess: Session,
   resolveRequestUserAgent?: BrowserSessionRequestUserAgentResolver
 ): () => void {
+  installedUserAgentPolicies.add(sess)
   const googleAuthUa = googleAuthUserAgent()
   const processUa = getBrowserProcessUserAgentIdentity().userAgent
   const applyUserAgentPolicy = (details: Electron.OnBeforeSendHeadersListenerDetails): void => {
@@ -111,7 +121,11 @@ export function installBrowserSessionUserAgentPolicy(
       applyUserAgentPolicy(details)
       // Why after the policy: Chrome sets its own user agent before extensions modify headers.
       callback({
-        requestHeaders: decideBrowserSessionRequestHeaders(sess, details, details.requestHeaders)
+        requestHeaders: shamuLiveRequestHeaders(
+          sess,
+          details,
+          decideBrowserSessionRequestHeaders(sess, details, details.requestHeaders)
+        )
       })
     }
   )
@@ -121,6 +135,7 @@ export function installBrowserSessionUserAgentPolicy(
       return
     }
     disposed = true
+    installedUserAgentPolicies.delete(sess)
     sess.webRequest.onBeforeSendHeaders(null)
   }
 }
