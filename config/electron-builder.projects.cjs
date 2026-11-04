@@ -1,14 +1,21 @@
 const base = require('./electron-builder.config.cjs')
-const pkg = require('../package.json')
-const version = `${pkg.version}${pkg.version.includes('-') ? '.' : '-'}shamu.2`
+const release = require('./shamu-release.cjs')
+const { version } = release
 
 module.exports = {
   ...base,
   appId: 'com.lafraia.orca-shamu',
   productName: 'Orca Shamu',
   protocols: [],
+  artifactName: 'Orca-Shamu-${version}-${arch}.${ext}',
   directories: { ...base.directories, output: 'dist/project-channels' },
-  extraMetadata: { ...base.extraMetadata, name: 'orca-shamu', productName: 'Orca Shamu', version },
+  extraMetadata: {
+    ...base.extraMetadata,
+    name: 'orca-shamu',
+    productName: 'Orca Shamu',
+    version,
+    orcaShamu: release
+  },
   mac: {
     ...base.mac,
     // Preserve the executable path used by the upstream CLI launcher.

@@ -252,6 +252,29 @@ describe('NativeChatMentionMenu', () => {
 
   const NO_ROWS = { files: [], loading: false, failed: false }
 
+  it('groups bot attention separately from files with one shared selection index', () => {
+    const chooseBot = vi.fn()
+    const chooseFile = vi.fn()
+    render(
+      <NativeChatMentionMenu
+        mention={{ ...NO_ROWS, bots: [{ id: 'ceo', name: 'CEO' }], files: ['src/app.ts'] }}
+        activeIndex={1}
+        listboxId="mentions"
+        onChoose={chooseFile}
+        onChooseBot={chooseBot}
+      />
+    )
+    const options = screen.getAllByRole('option')
+    expect(options).toHaveLength(2)
+    expect(options[0].textContent).toContain('Replies in its own chat')
+    expect(options[1].getAttribute('aria-selected')).toBe('true')
+    fireEvent.pointerDown(options[0])
+    expect(chooseBot).toHaveBeenCalledWith({ id: 'ceo', name: 'CEO' })
+    expect(chooseFile).not.toHaveBeenCalled()
+    fireEvent.pointerDown(options[1])
+    expect(chooseFile).toHaveBeenCalledWith('src/app.ts')
+  })
+
   it('lists files by name with their folder and inserts the one pressed', () => {
     const onChoose = vi.fn()
     render(

@@ -1,3 +1,4 @@
+import { NativeChatBotReference, insertBotReference } from './native-chat-bot-reference'
 import { insertAgentReferences, NativeChatAgentReference } from './native-chat-agent-reference'
 import { nativeChatDraftPositions } from './native-chat-composer-draft-memory'
 import { createNativeChatPastedTextHistory } from './native-chat-pasted-text-history'
@@ -99,6 +100,7 @@ function NativePromptEditor({
           trailingNode: false
         }),
         NativeChatAgentReference,
+        NativeChatBotReference,
         NativeChatSkill,
         NativeChatFileReference,
         NativeChatImageReference,
@@ -344,6 +346,7 @@ function NativePromptEditor({
                 to: promptTextPosition(doc, to ?? 0)
               })
             },
+            insertBotReference: (from, to, bot) => insertBotReference(editor, from, to, bot),
             insertSkill: (from, to, token, path) => {
               const { doc } = editor.state
               const range = { from: promptTextPosition(doc, from), to: promptTextPosition(doc, to) }

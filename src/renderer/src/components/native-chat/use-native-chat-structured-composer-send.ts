@@ -1,3 +1,4 @@
+import { prepareNativeChatBotNotification } from './native-chat-notify-bots'
 import { serializeNativeChatAgentReferences } from './native-chat-agent-reference-send'
 import { mayHoldAgentReferences } from '../../../../shared/orchestration-agent-reference'
 import { getAgentLabel } from '@/lib/agent-catalog'
@@ -120,6 +121,9 @@ export function useNativeChatStructuredComposerSend({
           hostCommand ? 'goal' : 'message'
         )
       }
+      const notifyBots = !hostCommand
+        ? prepareNativeChatBotNotification(structuredTransport, submittedText, submitted.document)
+        : null
       const submission = captureNativeChatComposerSubmission(draftScopeKey)
       let consumed = false
       let completeAddition = false
@@ -191,6 +195,9 @@ export function useNativeChatStructuredComposerSend({
             revealsTranscript && (!hostCommand || isCurrent())
           )
           consume()
+          if (notifyBots) {
+            void notifyBots()
+          }
           return true
         })
         .catch((error) => {

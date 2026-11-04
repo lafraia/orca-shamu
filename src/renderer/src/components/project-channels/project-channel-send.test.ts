@@ -43,6 +43,7 @@ describe('shared channel send admission', () => {
       error: null
     })
     api = {
+      notifyBots: vi.fn(),
       read: vi.fn(),
       ensureConversation: vi.fn(),
       write: vi.fn(async (snapshot) => ({ ...snapshot, revision: snapshot.revision + 1 }))

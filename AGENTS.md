@@ -11,7 +11,7 @@ If selection fans out excessively, use scoped checks and report limits. Use the 
 
 ## Orca Shamu Preview
 
-Use `pnpm dev:shamu` for renderer changes; see `PROJECT_CHANNELS.md`. Keep the installed Shamu version at `1.4.247-shamu.2` with release updates disabled. React/CSS changes use the local live server; changes to main, preload or native code still require rebuilding Shamu. Keep the primary Orca process running because it owns the shared sessions. Do not copy profiles or pairing credentials into another application.
+Use `pnpm dev:shamu` for renderer changes; see `PROJECT_CHANNELS.md`. Track the upstream tag and Shamu revision in `config/shamu-release.json`. Keep official release updates disabled. React/CSS changes use the local live server; changes to main, preload or native code still require rebuilding Shamu. Keep the primary Orca process running because it owns the shared sessions. Do not copy profiles or pairing credentials into another application.
 
 # Don't Poll the CI
 

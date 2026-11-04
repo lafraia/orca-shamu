@@ -1,3 +1,4 @@
+import type { BotMentionReceipt, BotMentionRequest } from './bot-mentions'
 import { z } from 'zod'
 import type { AgentType } from './agent-status-types'
 import { isStructuredAgentId } from './agent-session/lifecycle/agent-session-provider-handle-encoding'
@@ -120,6 +121,7 @@ export function projectChannelSessionKey(
 }
 
 export type ProjectChannelsApi = {
+  notifyBots: (request: BotMentionRequest) => Promise<BotMentionReceipt[]>
   read: () => Promise<ProjectChannelsSnapshot>
   write: (snapshot: ProjectChannelsSnapshot) => Promise<ProjectChannelsSnapshot>
   ensureConversation: (channelId: string) => Promise<ProjectChannelsSnapshot>

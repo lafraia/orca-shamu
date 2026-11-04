@@ -10,7 +10,8 @@ import { useNotificationCardComposerClearance } from '@/lib/notification-card-co
 import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/native-chat-composer-autocomplete'
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
 import { NativeChatMentionMenu, NativeChatPickerMenu } from './NativeChatAutocompleteMenus'
-import type { NativeChatMentionFiles } from './use-native-chat-mention-files'
+import type { NativeChatMentionOptions } from './use-native-chat-bot-mentions'
+import type { BotMention } from '../../../../shared/bot-mentions'
 import { NativeChatComposerActions } from './NativeChatComposerActions'
 import { NativeChatComposerNotices } from './NativeChatComposerNotices'
 import type { NativeChatComposerNotice } from './native-chat-composer-notice'
@@ -45,7 +46,7 @@ export type NativeChatComposerFieldProps = {
   canSend: boolean
   unavailableHint?: string | undefined
   autocomplete: ComposerAutocomplete
-  mentionFiles: NativeChatMentionFiles
+  mentionFiles: NativeChatMentionOptions
   activeSuggestion: number
   notices: readonly NativeChatComposerNotice[]
   imageAttachments: readonly NativeChatComposerImageAttachment[]
@@ -79,6 +80,7 @@ export type NativeChatComposerFieldProps = {
   onChoosePickerItem: (item: NativeChatPickerItem) => void
   onRetrySkills: () => void
   onChooseMentionFile: (path: string) => void
+  onChooseMentionBot?: (bot: BotMention) => void
   onRemoveImageAttachment: (id: string) => void
   onAttach: () => void
   onDictationToggle: () => void
@@ -165,6 +167,7 @@ export function NativeChatComposerField({
   onChoosePickerItem,
   onRetrySkills,
   onChooseMentionFile,
+  onChooseMentionBot,
   onRemoveImageAttachment,
   onAttach,
   onDictationToggle,
@@ -185,7 +188,7 @@ export function NativeChatComposerField({
     autocomplete.mode === 'slash'
       ? autocomplete.items.length
       : autocomplete.mode === 'mention'
-        ? mentionFiles.files.length
+        ? mentionFiles.files.length + (mentionFiles.bots?.length ?? 0)
         : 0
   // Value the IME started from, and whether a programmatic clear was dropped on top of it.
   const compositionBaseRef = useRef('')
@@ -298,6 +301,7 @@ export function NativeChatComposerField({
               activeIndex={activeSuggestion}
               listboxId={pickerListboxId}
               onChoose={onChooseMentionFile}
+              onChooseBot={onChooseMentionBot}
             />
           ) : null}
           <NativeChatComposerNotices

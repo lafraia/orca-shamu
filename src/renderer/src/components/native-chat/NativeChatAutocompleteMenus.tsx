@@ -1,6 +1,6 @@
-import { createPortal } from 'react-dom'
-import { memo, useEffect, useRef, useLayoutEffect, useState } from 'react'
-import { Package, RotateCcw } from 'lucide-react'
+import { NativeChatPickerListbox as PickerListbox } from './NativeChatPickerListbox'
+import { memo, useEffect, useRef } from 'react'
+import { Bot, Package, RotateCcw } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import { cn } from '@/lib/utils'
@@ -9,7 +9,8 @@ import { FilenameFirstPath } from '@/components/file-path-cursor-tooltip'
 import { FileTypeIcon } from '@/components/FileTypeIcon'
 import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/native-chat-composer-autocomplete'
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
-import type { NativeChatMentionFiles } from './use-native-chat-mention-files'
+import type { NativeChatMentionOptions } from './use-native-chat-bot-mentions'
+import type { BotMention } from '../../../../shared/bot-mentions'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { localizeSlashCommandDescription } from './native-chat-slash-command-descriptions'
 
@@ -227,69 +228,6 @@ function PickerOption({
   )
 }
 
-function PickerListbox({
-  id,
-  children
-}: {
-  id: string
-  children: React.ReactNode
-}): React.JSX.Element {
-  const marker = useRef<HTMLSpanElement>(null)
-  const [bounds, setBounds] = useState<DOMRect | null>(null)
-  useLayoutEffect(() => {
-    const anchor = marker.current?.parentElement
-    if (!anchor) {
-      return
-    }
-    const measure = (): void => {
-      const next = anchor.getBoundingClientRect()
-      setBounds((current) =>
-        current?.left === next.left && current.width === next.width && current.top === next.top
-          ? current
-          : next
-      )
-    }
-    const ancestors: HTMLElement[] = []
-    for (let parent: HTMLElement | null = anchor; parent; parent = parent.parentElement) {
-      ancestors.push(parent)
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(anchor)
-    ancestors.forEach((parent) => parent.addEventListener('scroll', measure))
-    window.addEventListener('resize', measure)
-    return () => {
-      observer.disconnect()
-      ancestors.forEach((parent) => parent.removeEventListener('scroll', measure))
-      window.removeEventListener('resize', measure)
-    }
-  }, [])
-  return (
-    <>
-      <span ref={marker} />
-      {bounds &&
-        createPortal(
-          <div
-            id={id}
-            role="listbox"
-            data-focus-behavior="composer-suggestions"
-            style={{
-              position: 'fixed',
-              left: bounds.left,
-              width: bounds.width,
-              bottom: window.innerHeight - bounds.top + 4
-            }}
-            // Inside a popover (the launch setup), take the menu layer Select and DropdownMenu use above popovers.
-            className={`scrollbar-sleek max-h-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-floating ${marker.current?.closest('[data-slot="popover-content"]') ? 'z-[70]' : 'z-50'}`}
-          >
-            {children}
-          </div>,
-          marker.current?.closest('.native-chat-appearance') ?? document.body
-        )}
-    </>
-  )
-}
-
 function PickerOptionButton({
   id,
   selected,
@@ -363,23 +301,26 @@ export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
   mention,
   activeIndex,
   listboxId,
-  onChoose
+  onChoose,
+  onChooseBot
 }: {
-  mention: NativeChatMentionFiles
+  mention: NativeChatMentionOptions
   activeIndex: number
   listboxId: string
   onChoose: (path: string) => void
+  onChooseBot?: (bot: BotMention) => void
 }): React.JSX.Element {
   useUiLanguageRevision()
   const activeItemRef = useRef<HTMLButtonElement | null>(null)
-  const selectedIndex = Math.min(activeIndex, mention.files.length - 1)
+  const bots = mention.bots ?? []
+  const selectedIndex = Math.min(activeIndex, bots.length + mention.files.length - 1)
 
   useEffect(() => {
     activeItemRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [selectedIndex, mention.files])
+  }, [selectedIndex, mention.files, mention.bots])
 
   const statusText =
-    mention.files.length > 0
+    bots.length + mention.files.length > 0
       ? null
       : mention.loading
         ? translate('components.native-chat.composer.loadingFiles', 'Loading files...')
@@ -389,21 +330,47 @@ export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
 
   return (
     <PickerListbox id={listboxId}>
-      {mention.files.map((path, index) => (
+      {bots.length > 0 ? (
+        <PickerStatus>{translate('shamu.mentions.bots', 'Bots')}</PickerStatus>
+      ) : null}
+      {bots.map((bot, index) => (
         <PickerOptionButton
-          key={path}
+          key={bot.id}
           id={`${listboxId}-option-${index}`}
           selected={index === selectedIndex}
           activeItemRef={activeItemRef}
-          onChoose={() => onChoose(path)}
+          onChoose={() => onChooseBot?.(bot)}
         >
-          <FileTypeIcon
-            filePath={path}
-            className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-          />
-          <FilenameFirstPath path={path} />
+          <Bot className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate">{bot.name}</span>
+            <span className="block text-xs text-muted-foreground">
+              {translate('shamu.mentions.ownChat', 'Replies in its own chat')}
+            </span>
+          </span>
         </PickerOptionButton>
       ))}
+      {bots.length > 0 && mention.files.length > 0 ? (
+        <PickerStatus>{translate('shamu.mentions.files', 'Files')}</PickerStatus>
+      ) : null}
+      {mention.files.map((path, fileIndex) => {
+        const index = bots.length + fileIndex
+        return (
+          <PickerOptionButton
+            key={path}
+            id={`${listboxId}-option-${index}`}
+            selected={index === selectedIndex}
+            activeItemRef={activeItemRef}
+            onChoose={() => onChoose(path)}
+          >
+            <FileTypeIcon
+              filePath={path}
+              className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+            />
+            <FilenameFirstPath path={path} />
+          </PickerOptionButton>
+        )
+      })}
       {statusText ? (
         <PickerStatus>
           {mention.loading ? <LoadingSpinner className="size-3.5" /> : null}

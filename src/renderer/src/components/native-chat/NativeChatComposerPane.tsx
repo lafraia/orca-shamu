@@ -1,10 +1,10 @@
+import { useNativeChatMentions } from './use-native-chat-bot-mentions'
 import { useNativeChatComposerEditSession } from './use-native-chat-composer-edit-session'
 import { useNativeChatComposerNotice } from './use-native-chat-composer-notice'
 import { useNativeChatMobileHoldNotice } from './use-native-chat-mobile-hold-notice'
 import { forwardRef, useCallback, useState, useRef } from 'react'
 import { useNativeChatComposerInterrupt } from './use-native-chat-composer-interrupt'
 import { useNativeChatContextUsageSummary } from './use-native-chat-context-usage-summary'
-import { useNativeChatMentionFiles } from './use-native-chat-mention-files'
 import { useNativeChatDraft } from './use-native-chat-draft'
 import { useNativeChatDraftEvents } from './use-native-chat-draft-events'
 import { useNativeChatComposerRecall } from './use-native-chat-composer-recall'
@@ -127,13 +127,15 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       clearSkillOrigin,
       completeItem,
       completeMention,
+      completeBotMention,
       dismiss,
       handleDraftOrCaretChange
     } = picker
-    const mentionFiles = useNativeChatMentionFiles({
+    const mentionFiles = useNativeChatMentions({
       query: autocomplete.mode === 'mention' ? autocomplete.query : null,
       terminalTabId,
-      structuredWorktreeId: structuredTransport?.worktreeId
+      structuredWorktreeId: structuredTransport?.worktreeId,
+      botSessionId: !editSession && !launchPrompt ? structuredTransport?.sessionId : undefined
     })
 
     const resolveTarget = useCallback(
@@ -333,6 +335,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       autocomplete,
       mentionFiles,
       completeMention,
+      completeBotMention,
       activeSuggestion,
       draft,
       recall: editSession ? undefined : recall.recall,
@@ -396,6 +399,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
           goalMode={goalMode}
           onRetrySkills={picker.retrySkills}
           onChooseMentionFile={completeMention}
+          onChooseMentionBot={completeBotMention}
           onRemoveImageAttachment={attachments.removeImageAttachment}
           onAttach={pickAttachments}
           onDictationToggle={dictation.toggleDictation}

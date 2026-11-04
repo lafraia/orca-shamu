@@ -1,3 +1,5 @@
+import { completeNativeChatBotMention } from './native-chat-bot-mentions'
+import type { BotMention } from '../../../../shared/bot-mentions'
 import {
   writeNativeChatComposerText,
   type NativeChatComposerInput
@@ -50,6 +52,7 @@ export type NativeChatPickerState = {
   isPickedSkill: (draft: string) => boolean
   completeItem: (item: NativeChatPickerItem) => void
   completeMention: (path: string) => void
+  completeBotMention: (bot: BotMention) => void
   dismiss: (triggerKey: string) => void
   handleDraftOrCaretChange: (value: string, caret: number) => void
 }
@@ -224,6 +227,17 @@ export function useNativeChatPickerState(args: {
     [autocomplete, commitCompletion, liveDraft]
   )
 
+  const completeBotMention = useCallback(
+    (bot: BotMention) => {
+      const canPick = !disabledRef.current && autocomplete.mode === 'mention' && !isComposing()
+      if (canPick && completeNativeChatBotMention(textareaRef.current, bot)) {
+        setActiveSuggestion(0)
+        setDismissed(null)
+      }
+    },
+    [autocomplete, isComposing, setActiveSuggestion, textareaRef]
+  )
+
   const handleDraftOrCaretChange = useCallback(
     (value: string, nextCaret: number) => {
       const firstToken = value.split(/\s/, 1)[0] ?? ''
@@ -299,6 +313,7 @@ export function useNativeChatPickerState(args: {
     isPickedSkill,
     completeItem,
     completeMention,
+    completeBotMention,
     dismiss,
     handleDraftOrCaretChange
   }

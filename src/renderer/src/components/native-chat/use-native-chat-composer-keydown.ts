@@ -8,7 +8,8 @@ import {
 import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/native-chat-composer-autocomplete'
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
 import { isMacPlatform } from './native-chat-shortcut'
-import type { NativeChatMentionFiles } from './use-native-chat-mention-files'
+import type { NativeChatMentionOptions } from './use-native-chat-bot-mentions'
+import type { BotMention } from '../../../../shared/bot-mentions'
 import type { NativeChatComposerSendIntent } from './native-chat-composer-types'
 import {
   isNativeChatRecallActive,
@@ -19,8 +20,9 @@ import {
 
 export type UseNativeChatComposerKeyDownArgs = {
   autocomplete: ComposerAutocomplete
-  mentionFiles: NativeChatMentionFiles
+  mentionFiles: NativeChatMentionOptions
   completeMention: (path: string) => void
+  completeBotMention?: (bot: BotMention) => void
   activeSuggestion: number
   draft: string
   /** Image chips count as composer content, like typed text. */
@@ -43,6 +45,7 @@ export function useNativeChatComposerKeyDown({
   autocomplete,
   mentionFiles,
   completeMention,
+  completeBotMention,
   activeSuggestion,
   draft,
   hasAttachments = false,
@@ -77,7 +80,10 @@ export function useNativeChatComposerKeyDown({
       }
 
       if (autocomplete.mode !== 'none') {
-        const items = autocomplete.mode === 'slash' ? autocomplete.items : mentionFiles.files
+        const items =
+          autocomplete.mode === 'slash'
+            ? autocomplete.items
+            : [...(mentionFiles.bots ?? []), ...mentionFiles.files]
         if (event.key === 'ArrowDown' && items.length > 0) {
           event.preventDefault()
           setActiveSuggestion((index) => (index + 1) % items.length)
@@ -93,8 +99,13 @@ export function useNativeChatComposerKeyDown({
         if (picks && items.length > 0) {
           event.preventDefault()
           if (autocomplete.mode === 'mention') {
-            const { files } = mentionFiles
-            completeMention(files[Math.min(activeSuggestion, files.length - 1)])
+            const index = Math.min(activeSuggestion, items.length - 1)
+            const bot = mentionFiles.bots?.[index]
+            if (bot) {
+              completeBotMention?.(bot)
+            } else {
+              completeMention(mentionFiles.files[index - (mentionFiles.bots?.length ?? 0)])
+            }
             return
           }
           const item = autocomplete.items[activeSuggestion] ?? autocomplete.items[0]
@@ -176,6 +187,7 @@ export function useNativeChatComposerKeyDown({
       activeSuggestion,
       autocomplete,
       completeMention,
+      completeBotMention,
       completePickerItem,
       dismissPicker,
       dispatchPickerCommand,

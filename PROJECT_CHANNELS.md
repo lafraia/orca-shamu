@@ -1,6 +1,6 @@
 # Orca Shamu
 
-Based on the upstream `v1.4.247` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep the primary process running; its window can stay hidden or minimized. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
+Based on the upstream `v1.4.248` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep the primary process running; its window can stay hidden or minimized. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
 
 ## Connect once
 
@@ -54,7 +54,7 @@ Both Electron apps still have independent main, renderer and GPU processes. Thei
 
 Close Shamu, keep the primary Orca running, then run `pnpm dev:shamu` from this checkout. The launcher starts Vite on literal loopback and opens the same installed Shamu executable, profile and saved primary connection. Its connection bar shows **Live reload**. Saving React or CSS files updates that interface without packaging another release. Some module changes can reload the document; saved drafts and native sessions remain in their existing owners.
 
-Quit Shamu to stop this development server. Opening the installed app normally uses its bundled interface again. Changes to main, preload or the native executable still require rebuilding and restarting Shamu. This mode keeps version `1.4.247-shamu.2` and the existing update block. It adds a local Vite process while active.
+Quit Shamu to stop this development server. Opening the installed app normally uses its bundled interface again. Changes to main, preload or the native executable still require rebuilding and restarting Shamu. This mode keeps version `1.4.248-shamu.1` and the existing update block. It adds a local Vite process while active.
 
 The live server proves a private per-launch token before its document is loaded. The token stays in process memory/environment, never in the URL or `out/shamu-live.json`; that file records only the launcher PID, local URL and checkout. The usual window IDs, navigation containment, preload, sandbox and context isolation remain in force. The launcher accepts `--app /path/to/Shamu/executable` for another installed bundle location.
 
@@ -68,7 +68,7 @@ node config/scripts/build-project-channels-mac.mjs
 
 The app is generated under `dist/project-channels/mac-arm64/Orca Shamu.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. Its bundle ID is `com.lafraia.orca-shamu` and its default profile is `~/Library/Application Support/Orca Shamu`. The internal executable remains `Orca` for compatibility with the bundled CLI launcher. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature.
 
-The version remains `1.4.247-shamu.2` and refuses automatic or manual jumps to official releases. Keep this version and updater policy unchanged while applying local interface changes. Independent Shamu versioning and release updates are deferred to a separate future project. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
+The packaged version is `<upstream>-shamu.<revision>`, currently `1.4.248-shamu.1`. `config/shamu-release.json` records the exact upstream tag and commit, plus the independent Shamu revision. Keep `package.json.version` equal to upstream. After merging an upstream tag, run `pnpm shamu:version sync` to reset the revision to 1. For another Shamu release on the same base, run `pnpm shamu:version bump`. Inspect it with `pnpm shamu:version`. Shamu release tags use `shamu/v<upstream>-shamu.<revision>`. The builder validates this metadata and embeds it in the app. Official automatic and manual updates remain blocked; publishing an independent signed update feed is separate from creating local versioned builds. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
 
 ## Updating the fork
 
@@ -83,3 +83,11 @@ Targeted tests cover recipients, session isolation, scoped native replies, older
 The two-instance journeys connect through the Shamu UI using a real loopback access link, including a floating side chat. They assert that the original session ID is retained, a message appears in both apps, Stop reaches the primary provider process, reload does not duplicate a reply, the client has no local native ownership and the primary remains the native owner after the client closes. Connection tests cover unreadable bindings, expired links, host-key mismatch, private binding permissions and recovery after a failed hydration. Regression tests cover floating ownership and a binding arriving after an active inventory stream. Appearance tests cover the allowlist, runtime identity checks and unreadable profile state.
 
 Delivery checks also cover a host rejecting a submission after transport acknowledgement, an unknown dispatch result, a late acknowledgement arriving after the journal's refusal and an orphaned send expiring while the reader stays unchanged after reload. The journal remains authoritative; none of these transitions automatically resends the message.
+
+## Bot mentions
+
+In any structured native chat in Shamu, type `@` and select a bot from the Bots group. File suggestions remain in the Files group. Selected bot pills retain their stable identity when drafts are saved and restored. A literal pasted mention or an assistant reply does not dispatch anything.
+
+After the source message is accepted, Shamu delivers the explicit mention to each selected bot's own permanent chat, including the source label, session and workspace reference. Replies stay in the bot chat. Busy bots use the native queued-send policy. Delivery identifiers and outcomes are stored privately in the profile's `bot-mentions` directory before sending. Reloading or retrying a notification never automatically resends an ambiguous delivery. The notification offers access to the bot chat, or a retry if the notification request could not complete.
+
+See `UPSTREAM_PATCHES.md` for temporary upstream fixes and their removal criteria.

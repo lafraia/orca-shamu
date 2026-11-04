@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 
+import type { BotMention } from '../../../../shared/bot-mentions'
 import { cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
 import { useState, type KeyboardEventHandler } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -43,12 +44,19 @@ function setup(
   draft = '/',
   {
     files = [],
+    bots = [],
     activeSuggestion = 0,
     loading = false
-  }: { files?: readonly string[]; activeSuggestion?: number; loading?: boolean } = {}
+  }: {
+    files?: readonly string[]
+    bots?: readonly BotMention[]
+    activeSuggestion?: number
+    loading?: boolean
+  } = {}
 ) {
   const callbacks = {
     completeMention: vi.fn(),
+    completeBotMention: vi.fn(),
     completePickerItem: vi.fn(),
     dispatchPickerCommand: vi.fn(),
     dismissPicker: vi.fn(),
@@ -61,7 +69,7 @@ function setup(
   const hook = renderHook(() =>
     useNativeChatComposerKeyDown({
       autocomplete,
-      mentionFiles: { files, loading, failed: false },
+      mentionFiles: { files, bots, loading, failed: false },
       activeSuggestion,
       draft,
       isComposing: () => composing,
@@ -86,6 +94,19 @@ describe('useNativeChatComposerKeyDown', () => {
 
   const setupMention = (options?: Parameters<typeof setup>[3]) =>
     setup(mention, false, 'open @app', options)
+
+  it('picks a bot with Enter and a file after the bot rows with Tab', () => {
+    const bot = { id: 'ceo', name: 'CEO' }
+    const first = setupMention({ bots: [bot], files: ['README.md'] })
+    press(first.handler, 'Enter')
+    expect(first.callbacks.completeBotMention).toHaveBeenCalledWith(bot)
+    expect(first.callbacks.send).not.toHaveBeenCalled()
+    const second = setupMention({ bots: [bot], files: ['README.md'], activeSuggestion: 1 })
+    press(second.handler, 'Tab')
+    expect(second.callbacks.completeMention).toHaveBeenCalledWith('README.md')
+    expect(second.callbacks.completeBotMention).not.toHaveBeenCalled()
+    cleanup()
+  })
 
   function press(handler: KeyboardEventHandler<HTMLElement>, key: string, shiftKey = false): void {
     render(<div data-testid="composer" onKeyDown={handler} />)
@@ -229,6 +250,7 @@ describe('useNativeChatComposerKeyDown', () => {
         draft,
         mentionFiles: { files: [], loading: false, failed: false },
         completeMention: vi.fn(),
+        completeBotMention: vi.fn(),
         recall: {
           source: { messages: prompts.map((text, index) => userMessage(String(index), text)) },
           position: recallPosition,
