@@ -1,4 +1,4 @@
-import { Hash, Layers, Plus, Settings2 } from 'lucide-react'
+import { UsersRound, Layers, Plus, Settings2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
@@ -33,8 +33,8 @@ export function ProjectNavigationSwitch(): React.JSX.Element | null {
           useAppStore.setState({ activeView: 'project-chat' })
         }}
       >
-        <Hash />
-        {translate('projectChannels.projects', 'Projects')}
+        <UsersRound />
+        {translate('projectChannels.projects', 'Teams')}
       </Button>
       <Button
         variant={mode === 'workspaces' ? 'secondary' : 'ghost'}
@@ -67,13 +67,13 @@ export function ProjectChannelSidebar(): React.JSX.Element {
   )
   return (
     <nav
-      aria-label={translate('projectChannels.projects', 'Projects')}
+      aria-label={translate('projectChannels.projects', 'Teams')}
       className="flex min-h-0 flex-1 flex-col px-2 pb-2 pt-3"
     >
       <div className="mb-2 flex items-center gap-2">
         <Input
-          aria-label={translate('projectChannels.search', 'Find project')}
-          placeholder={translate('projectChannels.search', 'Find project')}
+          aria-label={translate('projectChannels.search', 'Find team')}
+          placeholder={translate('projectChannels.search', 'Find team')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           density="compact"
@@ -82,7 +82,7 @@ export function ProjectChannelSidebar(): React.JSX.Element {
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label={translate('projectChannels.new', 'New project')}
+          aria-label={translate('projectChannels.new', 'New team')}
           onClick={() => openProjectChannelEditor({})}
         >
           <Plus />
@@ -92,14 +92,14 @@ export function ProjectChannelSidebar(): React.JSX.Element {
         <div role="alert" className="space-y-2 p-2 text-xs text-destructive">
           {error}
           <Button variant="outline" size="xs" onClick={() => void reloadProjectChannels()}>
-            {translate('projectChannels.reload', 'Reload projects')}
+            {translate('projectChannels.reload', 'Reload teams')}
           </Button>
         </div>
       ) : null}
       {!loaded && !error ? (
         <div
           aria-busy="true"
-          aria-label={translate('projectChannels.loading', 'Loading projects')}
+          aria-label={translate('projectChannels.loading', 'Loading teams')}
           className="space-y-2 px-2 py-3"
         >
           {[0, 1, 2].map((key) => (
@@ -124,7 +124,7 @@ export function ProjectChannelSidebar(): React.JSX.Element {
                 'bg-worktree-sidebar-accent'
             )}
           >
-            <Hash className="size-3.5 shrink-0 text-muted-foreground" />
+            <UsersRound className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate font-medium">{channel.name}</span>
             <span className="text-xs tabular-nums text-muted-foreground">
               {channel.members.length}
@@ -134,11 +134,11 @@ export function ProjectChannelSidebar(): React.JSX.Element {
         {loaded && channels.length === 0 ? (
           <div className="px-2 py-4 text-xs text-muted-foreground">
             {search ? (
-              translate('projectChannels.noResults', 'No projects found')
+              translate('projectChannels.noResults', 'No teams found')
             ) : (
               <Button variant="outline" size="sm" onClick={() => openProjectChannelEditor({})}>
                 <Plus />
-                {translate('projectChannels.new', 'New project')}
+                {translate('projectChannels.new', 'New team')}
               </Button>
             )}
           </div>

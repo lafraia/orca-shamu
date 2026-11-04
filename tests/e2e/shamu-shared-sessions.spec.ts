@@ -163,9 +163,9 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         await client.page
           .locator(`[data-testid="sortable-tab"][data-tab-id="${tabId}"]`)
           .click({ button: 'right' })
-        await client.page.getByRole('menuitem', { name: 'Use as main project chat…' }).click()
-        await client.page.getByLabel('Project name', { exact: true }).fill('Shared project')
-        await client.page.getByRole('button', { name: 'Save project', exact: true }).click()
+        await client.page.getByRole('menuitem', { name: 'Use as main team chat…' }).click()
+        await client.page.getByLabel('Team name', { exact: true }).fill('Shared project')
+        await client.page.getByRole('button', { name: 'Save team', exact: true }).click()
         if (owner === 'floating') {
           await client.page.evaluate(() => {
             if (window.__store!.getState().floatingWorkspacePanelOpen) {
@@ -174,7 +174,7 @@ test.describe('Shamu shares the primary Orca sessions', () => {
           })
         }
         await expect(client.page.locator('[data-project-agent]')).toContainText('Ready')
-        const message = client.page.getByRole('textbox', { name: 'Message project', exact: true })
+        const message = client.page.getByRole('textbox', { name: 'Message team', exact: true })
         await message.fill('Hello from Shamu')
         await message.press('Enter')
         await expect(
@@ -245,7 +245,7 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         )
         expect(localOwner.ok).toBe(false)
         await client.page.reload()
-        await client.page.getByRole('button', { name: 'Projects', exact: true }).click()
+        await client.page.getByRole('button', { name: 'Teams', exact: true }).click()
         await client.page.getByRole('button', { name: 'Shared project', exact: false }).click()
         await expect(
           client.page.getByRole('log').getByText('Stub reply.', { exact: true })

@@ -120,7 +120,7 @@ function ProjectChannelDialog({
       setError(
         translate(
           'projectChannels.invalid',
-          'Choose a project name, a main agent and unique @handles (letters, numbers, underscores or hyphens).'
+          'Choose a team name, a main agent and unique @handles (letters, numbers, underscores or hyphens).'
         )
       )
       return
@@ -155,7 +155,7 @@ function ProjectChannelDialog({
       setError(
         translate(
           'projectChannels.saveError',
-          'Could not save the project. Your conversations are unchanged.'
+          'Could not save the team. Your conversations are unchanged.'
         )
       )
     } finally {
@@ -175,20 +175,20 @@ function ProjectChannelDialog({
         <DialogHeader>
           <DialogTitle>
             {existing
-              ? translate('projectChannels.edit', 'Edit project')
-              : translate('projectChannels.new', 'New project')}
+              ? translate('projectChannels.edit', 'Edit team')
+              : translate('projectChannels.new', 'New team')}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {translate(
               'projectChannels.projectDescription',
-              'Choose existing chat tabs to participate in one shared project conversation.'
+              'Choose existing chat tabs to participate in one shared team conversation.'
             )}
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 space-y-5 overflow-y-auto p-1 scrollbar-sleek">
           <div className="space-y-2">
             <Label htmlFor="project-channel-name">
-              {translate('projectChannels.name', 'Project name')}
+              {translate('projectChannels.name', 'Team name')}
             </Label>
             <Input
               id="project-channel-name"
@@ -314,7 +314,7 @@ function ProjectChannelDialog({
           <Button disabled={busy || !loaded} onClick={() => void save()}>
             {busy
               ? translate('projectChannels.saving', 'Saving…')
-              : translate('projectChannels.save', 'Save project')}
+              : translate('projectChannels.save', 'Save team')}
           </Button>
         </DialogFooter>
       </DialogContent>

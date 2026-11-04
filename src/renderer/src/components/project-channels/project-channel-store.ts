@@ -45,7 +45,7 @@ export function loadProjectChannels(): Promise<void> {
     try {
       const api = window.api.projectChannels
       if (!api) {
-        throw new Error('Project conversations are available in the desktop app.')
+        throw new Error('Team conversations are available in the desktop app.')
       }
       const snapshot = await api.read()
       const drafts = recoverProjectDrafts(snapshot)
@@ -65,7 +65,7 @@ export function loadProjectChannels(): Promise<void> {
       }
     } catch {
       useProjectChannels.setState({
-        error: 'Could not load projects. Your saved conversations have not been changed.'
+        error: 'Could not load teams. Your saved conversations have not been changed.'
       })
     } finally {
       loading = null
@@ -80,7 +80,7 @@ export function saveProjectChannels(
   const run = writes.then(async () => {
     const { snapshot, loaded } = useProjectChannels.getState()
     if (!loaded || !window.api.projectChannels) {
-      throw new Error('Projects are not ready.')
+      throw new Error('Teams are not ready.')
     }
     const channels = update(snapshot.channels)
     if (channels === snapshot.channels) {
@@ -92,9 +92,9 @@ export function saveProjectChannels(
       checkpointProjectDrafts(next, useProjectChannels.getState().drafts)
     } catch {
       useProjectChannels.setState({
-        error: 'Could not save this change. Reload projects before trying again.'
+        error: 'Could not save this change. Reload teams before trying again.'
       })
-      throw new Error('Could not save the project conversation.')
+      throw new Error('Could not save the team conversation.')
     }
   })
   writes = run.catch(() => {})

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp, Hash, Plus, Users } from 'lucide-react'
+import { ArrowUp, UsersRound, Plus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { translate } from '@/i18n/i18n'
@@ -22,11 +22,11 @@ export default function ProjectChannelPage(): React.JSX.Element {
     <ProjectChannelConversation key={channel.id} channel={channel} />
   ) : (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-background p-8">
-      <Hash className="size-7 text-muted-foreground" />
-      <h1 className="text-lg font-medium">{translate('projectChannels.projects', 'Projects')}</h1>
+      <UsersRound className="size-7 text-muted-foreground" />
+      <h1 className="text-lg font-medium">{translate('projectChannels.projects', 'Teams')}</h1>
       <Button onClick={() => openProjectChannelEditor({})}>
         <Plus />
-        {translate('projectChannels.new', 'New project')}
+        {translate('projectChannels.new', 'New team')}
       </Button>
     </div>
   )
@@ -77,7 +77,7 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
       aria-label={channel.name}
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
-        <Hash className="size-4 shrink-0 text-muted-foreground" />
+        <UsersRound className="size-4 shrink-0 text-muted-foreground" />
         <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{channel.name}</h1>
         <Button
           variant="ghost"
@@ -98,7 +98,7 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
           }
         }}
         role="log"
-        aria-label={translate('projectChannels.conversation', 'Project conversation')}
+        aria-label={translate('projectChannels.conversation', 'Team conversation')}
         aria-live="polite"
         aria-relevant="additions"
         className="min-h-0 flex-1 overflow-y-auto px-5 py-5 scrollbar-sleek"
@@ -187,8 +187,8 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
         <div className="mx-auto w-full max-w-(--chat-content-max-width) rounded-lg border border-input bg-card p-3 shadow-xs focus-within:ring-1 focus-within:ring-ring">
           <Textarea
             ref={input}
-            aria-label={translate('projectChannels.message', 'Message project')}
-            placeholder={translate('projectChannels.message', 'Message project')}
+            aria-label={translate('projectChannels.message', 'Message team')}
+            placeholder={translate('projectChannels.message', 'Message team')}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             disabled={sending}

@@ -1,4 +1,4 @@
-import { MessagesSquare, Pencil, Pin, PinOff, SquareTerminal, Timer, X } from 'lucide-react'
+import { UsersRound, Pencil, Pin, PinOff, SquareTerminal, Timer, X } from 'lucide-react'
 import { isStructuredTab } from '../../../../shared/agent-session/view/structured-agent-session-tab'
 import { openProjectChannelEditor } from '../project-channels/project-channel-store'
 import {
@@ -164,8 +164,8 @@ export function SortableTabContextMenu({
       {projectChatTab && window.api.projectChannels ? (
         <>
           <ContextMenuItem onSelect={() => openProjectChannelEditor({ tabId: projectChatTab.id })}>
-            <MessagesSquare className="size-3.5 shrink-0" />
-            {translate('projectChannels.promote', 'Use as main project chat…')}
+            <UsersRound className="size-3.5 shrink-0" />
+            {translate('projectChannels.promote', 'Use as main team chat…')}
           </ContextMenuItem>
           <ContextMenuSeparator />
         </>

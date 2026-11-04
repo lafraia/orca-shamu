@@ -129,7 +129,7 @@ export function projectChannelRecipients(
     (handle) => !channel.members.some((member) => member.handle === handle)
   )
   if (unknown) {
-    throw new Error(`Add @${unknown} to this project before sending.`)
+    throw new Error(`Add @${unknown} to this team before sending.`)
   }
   return channel.members.filter((member) =>
     handles.length > 0 ? handles.includes(member.handle) : member.id === channel.mainMemberId

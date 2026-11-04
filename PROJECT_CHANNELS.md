@@ -15,9 +15,11 @@ Shamu uses its own bundle ID, Keychain service and application profile. No produ
 
 ## Use
 
-1. Open **Workspaces**, then right-click a native Chat tab and choose **Use as main project chat…**. Folder workspaces, Git worktrees and floating side chats use the same flow.
-2. Choose a project name, agent display name and unique `@handle`.
-3. Open **Agents** in the project to add other existing native Chat tabs, rename their project identities or choose the main participant.
+The top navigation uses **Teams** with a group icon for shared agent conversations. Workspaces retain Orca's existing project terminology.
+
+1. Open **Workspaces**, then right-click a native Chat tab and choose **Use as main team chat…**. Folder workspaces, Git worktrees and floating side chats use the same flow.
+2. Choose a team name, agent display name and unique `@handle`.
+3. Open **Agents** in the team to add other existing native Chat tabs, rename their team identities or choose the main participant.
 4. Unmentioned messages go to the main participant. `@handle` addresses that participant; `@all` explicitly addresses everyone. Only user sends dispatch turns. Agent output never starts a response loop.
 
 Each native session belongs to one project channel. Participants keep separate provider sessions and original directories; their shared conversation supplies bounded context to each explicit send. Busy agents must finish or answer their native permission request before accepting another project message. Native approval and question cards remain actionable in the project.
@@ -44,7 +46,7 @@ node config/scripts/build-project-channels-mac.mjs
 
 The app is generated under `dist/project-channels/mac-arm64/Orca Shamu.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. Its bundle ID is `com.lafraia.orca-shamu` and its default profile is `~/Library/Application Support/Orca Shamu`. The internal executable remains `Orca` for compatibility with the bundled CLI launcher. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature.
 
-The version carries a `shamu.2` suffix and refuses automatic or manual jumps to official releases. Future upstream upgrades are integrated into the fork source, tested and rebuilt. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
+The version remains `1.4.247-shamu.2` and refuses automatic or manual jumps to official releases. Keep this version and updater policy unchanged while applying local interface changes. Independent Shamu versioning and release updates are deferred to a separate future project. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
 
 ## Updating the fork
 
