@@ -8,7 +8,7 @@ import {
 } from '../shared/agent-session/structured-agent-session-create'
 import type { ProjectChannel, ProjectChannelsSnapshot } from '../shared/project-channels'
 import type { ProjectChannelsStore } from './project-channels-store'
-import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './sidecar-snapshot-file'
+import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
 
 type Primary = {
   read: () => Promise<{ environmentId: string | null }>

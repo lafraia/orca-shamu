@@ -6,7 +6,7 @@ import {
   type ProjectChannel,
   type ProjectChannelsSnapshot
 } from '../shared/project-channels'
-import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './sidecar-snapshot-file'
+import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
 
 export class ProjectChannelsStore {
   private readonly file: string

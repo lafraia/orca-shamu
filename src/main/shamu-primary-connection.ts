@@ -12,7 +12,7 @@ import type { ProjectChannelsSnapshot } from '../shared/project-channels'
 import { verifyRuntimeEnvironmentPairingCode } from './ipc/runtime-environments/runtime-environment-pairing-verification'
 import { publishVerifiedPairing } from './ipc/runtime-environments/runtime-environment-verified-pairing-publish'
 import { invalidateRuntimeEnvironmentTransport } from './ipc/runtime-environments/runtime-environments'
-import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './sidecar-snapshot-file'
+import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
 import { callRuntimeEnvironment } from './ipc/runtime-environments/runtime-environment-transport-routing'
 
 const primarySchema = z.object({
