@@ -1,9 +1,11 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
+import { z } from 'zod'
 import type { Store } from '../persistence/loading-store/store'
 import { ProjectChannelsStore } from '../project-channels-store'
 import { isTrustedUIRenderer } from './ui'
 import type { ShamuPrimaryConnection } from '../shamu-primary-connection'
 import { projectChannelsSnapshotSchema } from '../../shared/project-channels'
+import { BotConversationService } from '../bot-conversation-service'
 
 export function registerProjectChannelsHandlers(
   store: Store,
@@ -12,6 +14,15 @@ export function registerProjectChannelsHandlers(
   const channels = new ProjectChannelsStore(store.getProfileStorageDirectory())
   ipcMain.removeHandler('projectChannels:read')
   ipcMain.removeHandler('projectChannels:write')
+  ipcMain.removeHandler('projectChannels:ensureConversation')
+  const bots = primary
+    ? new BotConversationService(
+        channels,
+        primary,
+        app.getPath('home'),
+        store.getProfileStorageDirectory()
+      )
+    : null
   const trusted = (event: Electron.IpcMainInvokeEvent): void => {
     if (!isTrustedUIRenderer(event.sender)) {
       throw new Error('Untrusted project conversation request.')
@@ -26,5 +37,12 @@ export function registerProjectChannelsHandlers(
     const snapshot = projectChannelsSnapshotSchema.parse(input)
     await primary?.assertChannelAuthority(snapshot)
     return channels.write(snapshot)
+  })
+  ipcMain.handle('projectChannels:ensureConversation', async (event, input: unknown) => {
+    trusted(event)
+    if (!bots) {
+      throw new Error('Open this bot in Orca Shamu connected to the primary Orca.')
+    }
+    return bots.ensure(z.string().min(1).max(1024).parse(input))
   })
 }

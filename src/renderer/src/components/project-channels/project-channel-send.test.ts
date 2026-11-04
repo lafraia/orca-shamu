@@ -44,6 +44,7 @@ describe('shared channel send admission', () => {
     })
     api = {
       read: vi.fn(),
+      ensureConversation: vi.fn(),
       write: vi.fn(async (snapshot) => ({ ...snapshot, revision: snapshot.revision + 1 }))
     }
     Object.defineProperty(window, 'api', { configurable: true, value: { projectChannels: api } })
@@ -67,6 +68,26 @@ describe('shared channel send admission', () => {
   })
   afterEach(async () => {
     await changeProjectChannel('project', (channel) => channel).catch(() => {})
+  })
+
+  it('preserves the draft without recording or dispatching a turn for an unlinked bot', async () => {
+    const channel = {
+      ...channelFixture(),
+      mainMemberId: null,
+      members: [],
+      draft: 'Keep this draft'
+    }
+    useProjectChannels.setState({
+      snapshot: { version: 1, revision: 0, channels: [channel] },
+      drafts: { project: channel.draft }
+    })
+    await expect(sendProjectChannelMessage('project', channel.draft, controllers)).rejects.toThrow(
+      'Link an agent conversation'
+    )
+    expect(api.write).not.toHaveBeenCalled()
+    expect(mocks.reserve).not.toHaveBeenCalled()
+    expect(useProjectChannels.getState().drafts.project).toBe(channel.draft)
+    expect(useProjectChannels.getState().snapshot.channels[0].messages).toEqual([])
   })
 
   it('records the user message and stable delivery ids before issuing any prompt', async () => {
@@ -147,7 +168,7 @@ describe('shared channel send admission', () => {
     mocks.available = true
     await expect(
       sendProjectChannelMessage('project', '@missing Hello', controllers)
-    ).rejects.toThrow('Add @missing')
+    ).rejects.toThrow('Link @missing')
     await changeProjectChannel('project', (channel) => ({
       ...channel,
       members: channel.members.map((member) => ({ ...member, historyImported: false }))

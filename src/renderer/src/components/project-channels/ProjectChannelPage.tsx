@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp, UsersRound, Plus, Users } from 'lucide-react'
+import { ArrowUp, Bot, MessageSquare, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { translate } from '@/i18n/i18n'
@@ -11,6 +11,8 @@ import {
   useProjectChannels
 } from './project-channel-store'
 import { ProjectChannelAgent } from './ProjectChannelAgent'
+import { BotNativeConversation } from './BotNativeConversation'
+import { ProjectChannelSettingsButton } from './ProjectChannelSettingsButton'
 import { sendProjectChannelMessage, type ProjectChannelControllers } from './project-channel-send'
 
 export default function ProjectChannelPage(): React.JSX.Element {
@@ -19,14 +21,18 @@ export default function ProjectChannelPage(): React.JSX.Element {
     state.snapshot.channels.find((row) => row.id === selectedId)
   )
   return channel ? (
-    <ProjectChannelConversation key={channel.id} channel={channel} />
+    channel.home || (channel.members.length === 0 && channel.messages.length === 0) ? (
+      <BotNativeConversation key={channel.id} channel={channel} />
+    ) : (
+      <ProjectChannelConversation key={channel.id} channel={channel} />
+    )
   ) : (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-background p-8">
-      <UsersRound className="size-7 text-muted-foreground" />
-      <h1 className="text-lg font-medium">{translate('projectChannels.projects', 'Teams')}</h1>
+      <Bot className="size-7 text-muted-foreground" />
+      <h1 className="text-lg font-medium">{translate('projectChannels.projects', 'Bots')}</h1>
       <Button onClick={() => openProjectChannelEditor({})}>
         <Plus />
-        {translate('projectChannels.new', 'New team')}
+        {translate('projectChannels.new', 'New bot')}
       </Button>
     </div>
   )
@@ -47,7 +53,7 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
     }
   }, [channel.messages])
   const send = async (): Promise<void> => {
-    if (sending || !draft.trim()) {
+    if (sending || !draft.trim() || channel.members.length === 0) {
       return
     }
     setSending(true)
@@ -77,17 +83,20 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
       aria-label={channel.name}
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
-        <UsersRound className="size-4 shrink-0 text-muted-foreground" />
+        <Bot className="size-4 shrink-0 text-muted-foreground" />
         <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{channel.name}</h1>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => openProjectChannelEditor({ channelId: channel.id })}
+          onClick={() =>
+            openProjectChannelEditor({ channelId: channel.id, section: 'conversations' })
+          }
         >
-          <Users />
-          {translate('projectChannels.agents', 'Agents')}
+          <MessageSquare />
+          {translate('projectChannels.conversations', 'Conversations')}
           <span className="tabular-nums text-muted-foreground">{channel.members.length}</span>
         </Button>
+        <ProjectChannelSettingsButton channelId={channel.id} />
       </header>
       <div
         ref={log}
@@ -98,15 +107,31 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
           }
         }}
         role="log"
-        aria-label={translate('projectChannels.conversation', 'Team conversation')}
+        aria-label={translate('projectChannels.conversation', 'Bot conversation')}
         aria-live="polite"
         aria-relevant="additions"
         className="min-h-0 flex-1 overflow-y-auto px-5 py-5 scrollbar-sleek"
       >
         <div className="mx-auto w-full max-w-(--chat-content-max-width) space-y-6">
           {channel.messages.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              {translate('projectChannels.start', 'Message the main agent or mention a teammate.')}
+            <div className="space-y-3 py-12 text-center">
+              <Bot className="mx-auto size-7 text-muted-foreground" />
+              {channel.instructions ? (
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {channel.instructions}
+                </p>
+              ) : null}
+              <p className="text-sm text-muted-foreground">
+                {channel.members.length === 0
+                  ? translate(
+                      'projectChannels.noLinkedConversations',
+                      'No conversations linked. You can add them later from Conversations.'
+                    )
+                  : translate(
+                      'projectChannels.start',
+                      'Message the bot or mention a linked conversation.'
+                    )}
+              </p>
             </div>
           ) : null}
           {channel.messages.map((message) => {
@@ -177,70 +202,87 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
           />
         ))}
       </div>
-      <form
-        className="shrink-0 px-4 pb-4 pt-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void send()
-        }}
-      >
-        <div className="mx-auto w-full max-w-(--chat-content-max-width) rounded-lg border border-input bg-card p-3 shadow-xs focus-within:ring-1 focus-within:ring-ring">
-          <Textarea
-            ref={input}
-            aria-label={translate('projectChannels.message', 'Message team')}
-            placeholder={translate('projectChannels.message', 'Message team')}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            disabled={sending}
-            maxLength={100_000}
-            variant="chat"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                event.preventDefault()
-                event.currentTarget.form?.requestSubmit()
-              }
-            }}
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            {channel.members.map((member) => (
+      {channel.members.length > 0 ? (
+        <form
+          className="shrink-0 px-4 pb-4 pt-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void send()
+          }}
+        >
+          <div className="mx-auto w-full max-w-(--chat-content-max-width) rounded-lg border border-input bg-card p-3 shadow-xs focus-within:ring-1 focus-within:ring-ring">
+            <Textarea
+              ref={input}
+              aria-label={translate('projectChannels.message', 'Message bot')}
+              placeholder={translate('projectChannels.message', 'Message bot')}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              disabled={sending}
+              maxLength={100_000}
+              variant="chat"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault()
+                  event.currentTarget.form?.requestSubmit()
+                }
+              }}
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              {channel.members.map((member) => (
+                <Button
+                  type="button"
+                  key={member.id}
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => mention(member.handle)}
+                  aria-label={translate('projectChannels.mention', 'Mention {{name}}', {
+                    name: member.name
+                  })}
+                >
+                  @{member.handle}
+                  {member.id === channel.mainMemberId ? (
+                    <span className="text-[11px]">{translate('projectChannels.main', 'Main')}</span>
+                  ) : null}
+                </Button>
+              ))}
+              {channel.members.length > 1 ? (
+                <Button type="button" variant="ghost" size="xs" onClick={() => mention('all')}>
+                  @all
+                </Button>
+              ) : null}
               <Button
-                type="button"
-                key={member.id}
-                variant="ghost"
-                size="xs"
-                onClick={() => mention(member.handle)}
-                aria-label={translate('projectChannels.mention', 'Mention {{name}}', {
-                  name: member.name
-                })}
+                type="submit"
+                size="sm"
+                className="ml-auto"
+                disabled={sending || !draft.trim()}
               >
-                @{member.handle}
-                {member.id === channel.mainMemberId ? (
-                  <span className="text-[11px]">{translate('projectChannels.main', 'Main')}</span>
-                ) : null}
+                <ArrowUp />
+                {sending
+                  ? translate('projectChannels.sending', 'Sending…')
+                  : translate('projectChannels.send', 'Send')}
               </Button>
-            ))}
-            {channel.members.length > 1 ? (
-              <Button type="button" variant="ghost" size="xs" onClick={() => mention('all')}>
-                @all
-              </Button>
-            ) : null}
-            <Button type="submit" size="sm" className="ml-auto" disabled={sending || !draft.trim()}>
-              <ArrowUp />
-              {sending
-                ? translate('projectChannels.sending', 'Sending…')
-                : translate('projectChannels.send', 'Send')}
-            </Button>
+            </div>
           </div>
-        </div>
-        {error ? (
-          <p
-            role="alert"
-            className="mx-auto mt-2 max-w-(--chat-content-max-width) text-xs text-destructive"
-          >
-            {error}
-          </p>
-        ) : null}
-      </form>
+          {error ? (
+            <p
+              role="alert"
+              className="mx-auto mt-2 max-w-(--chat-content-max-width) text-xs text-destructive"
+            >
+              {error}
+            </p>
+          ) : null}
+        </form>
+      ) : channel.messages.length > 0 ? (
+        <p
+          role="status"
+          className="shrink-0 border-t border-border px-5 py-4 text-sm text-muted-foreground"
+        >
+          {translate(
+            'projectChannels.noLinkedConversations',
+            'No conversations linked. You can add them later from Conversations.'
+          )}
+        </p>
+      ) : null}
     </section>
   )
 }

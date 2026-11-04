@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
+import { hasCustomTitleBar, hasMacTrafficLights } from '@/app-shell/app-window-chrome'
 import { runtimeHostContactForEntry } from '../../../../shared/runtime-host-contact'
 import { useProjectChannels } from '../project-channels/project-channel-store'
 import {
@@ -181,6 +182,7 @@ function ShamuConnectionForm({
 }
 
 function ShamuConnectionStatus({ onEdit }: { onEdit: () => void }): React.JSX.Element {
+  const isFullScreen = useAppStore((state) => state.isFullScreen)
   const id = useShamuClient((state) => state.environmentId)
   const hydrationError = useShamuClient((state) => state.error)
   const live = useAppStore(
@@ -219,9 +221,12 @@ function ShamuConnectionStatus({ onEdit }: { onEdit: () => void }): React.JSX.El
   }
   return (
     <div
-      className="flex shrink-0 items-center gap-2 border-b border-border bg-muted/40 px-4 py-1 text-xs text-muted-foreground"
+      className="titlebar shamu-connection-status shrink-0 gap-2 px-4 text-xs text-muted-foreground"
       role="status"
     >
+      {hasMacTrafficLights && !isFullScreen ? (
+        <div className="titlebar-traffic-light-pad" aria-hidden="true" />
+      ) : null}
       <Link2 className="size-3.5" />
       <span>{translate('shamu.primary', 'Primary Orca')}</span>
       {import.meta.env.DEV ? <span>Live reload</span> : null}
@@ -263,6 +268,9 @@ function ShamuConnectionStatus({ onEdit }: { onEdit: () => void }): React.JSX.El
             {translate('shamu.updateLink', 'Update access link')}
           </Button>
         </>
+      ) : null}
+      {hasCustomTitleBar ? (
+        <div className="window-controls-titlebar-spacer" aria-hidden="true" />
       ) : null}
     </div>
   )

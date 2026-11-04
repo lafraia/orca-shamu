@@ -15,26 +15,38 @@ Shamu uses its own bundle ID, Keychain service and application profile. No produ
 
 ## Use
 
-The top navigation uses **Teams** with a group icon for shared agent conversations. Workspaces retain Orca's existing project terminology.
+The top navigation uses **Bots** with a bot icon. Bots have a saved name and optional instructions, independent of any existing conversation. Workspaces retain Orca's existing project terminology.
 
-1. Open **Workspaces**, then right-click a native Chat tab and choose **Use as main team chat…**. Folder workspaces, Git worktrees and floating side chats use the same flow.
-2. Choose a team name, agent display name and unique `@handle`.
-3. Open **Agents** in the team to add other existing native Chat tabs, rename their team identities or choose the main participant.
-4. Unmentioned messages go to the main participant. `@handle` addresses that participant; `@all` explicitly addresses everyone. Only user sends dispatch turns. Agent output never starts a response loop.
+1. Choose **New bot**, enter a name and optional instructions, then **Create bot**. The bot opens its own native Chat immediately, with the standard model, permissions, attachments and history controls. No existing conversation is required. Opening an existing empty bot provisions its chat the same way.
+2. Each bot gets a permanent folder workspace in **Bots** on the primary Orca, stored at `~/orca/bots/bot-<stable-id>`. **Workspace** opens its original tab. Returning to a bot reuses the same session, history and native draft.
+3. Use the gear on the right to open **Bot settings**, edit its identity and view its **Bot folder**. The folder's `bot.json` records its name and instructions. Generated `AGENTS.md` and `CLAUDE.md` direct the provider to read that configuration. Existing instruction files are never overwritten. The bot inherits the primary's Claude default or uses Codex and retains normal session permission controls.
+4. **Conversations** keeps optional links for future bot control. The bot's own chat stays fixed. To retain the existing shared conversation workflow, right-click a native Chat tab and choose **Create bot from chat…**. This preserves its original directory, session and prior history instead of allocating a new chat.
 
-Each native session belongs to one project channel. Participants keep separate provider sessions and original directories; their shared conversation supplies bounded context to each explicit send. Busy agents must finish or answer their native permission request before accepting another project message. Native approval and question cards remain actionable in the project.
+Autonomous control of other conversations and routines are future capabilities. Bot creation opens an idle native session without sending a prompt or starting a paid turn.
+
+For promoted shared conversations, unmentioned messages go to the default participant; `@handle` addresses that participant and `@all` explicitly addresses everyone. Each native session belongs to one project channel. Participants keep separate provider sessions and original directories; their shared conversation supplies bounded context to each explicit send. Busy agents must finish or answer their native permission request before accepting another project message. Native approval and question cards remain actionable in the project.
 
 The main participant's loaded history appears as **Earlier conversation**. **Load earlier conversation** pages older native history without losing its user questions. Other participants' prior history is not imported. New replies enter the shared chat only when the native turn can be attributed to a send from that channel; messages sent directly in the original tab remain there.
 
-**Open chat** returns to the original tab and its execution host. Removing a participant does not stop its process or erase history. Closing a source tab can make it unavailable to the project; the project retains its existing messages. Terminal-backed agents must first use the existing **Continue with Chat Agent** flow.
+**Open chat** returns to the original tab and its execution host. Unlinking a conversation does not stop its process or erase history. Removing the final link keeps the bot and its instructions saved. Closing a source tab can make it unavailable to the project; the project retains its existing messages. Terminal-backed agents must first use the existing **Continue with Chat Agent** flow.
 
 ## Data and recovery
 
-Channels, participants, aliases, delivery identities, history and drafts live in `project-channels.json` in the active desktop profile. Writes are durable, mode `0600`, serialized and checked against a revision. Unreadable or newer files are never reset to an empty project list.
+Bot identities, permanent workspace/session references, instructions, optional conversation links and promoted shared transcripts live in `project-channels.json` in the active Shamu desktop profile. The permanent bot folder holds configuration and working files. Native messages, provider history and native drafts remain in the primary Orca's existing persistent session storage. Writes are durable, mode `0600`, serialized and checked against a revision. Unreadable or newer files are never reset to an empty project list.
+
+Provisioning records the canonical native create operation and session identity before dispatch. A failed or lost create reply leaves a retryable bot with that same operation; reopening cannot allocate another native session. The permanent conversation and storage path cannot be replaced through the link editor. Removing a bot profile does not remove its folder, native session or history.
 
 Draft edits are kept in memory and saved outside the keystroke path. A renderer-unload checkpoint protects text typed immediately before reload; it cannot replace a different draft already saved by another window. Message and delivery identities are saved before submission. Reload does not retry a pending or uncertain send.
 
-The desktop owns the project list. Existing native sessions on supported paired runtimes retain their stamped host; this preview does not add channel sharing or a channel interface to mobile/web clients. Those clients fall back to their workspace view. Attachments and project-driven creation of fresh agents remain available through the original Chat tabs rather than the shared composer.
+The desktop owns the project list. Existing native sessions on supported paired runtimes retain their stamped host; this preview does not add channel sharing or a channel interface to mobile/web clients. Those clients fall back to their workspace view. Permanent bot chats reuse the full native composer; promoted shared conversations retain their simpler text composer.
+
+## Memory
+
+Normal use opens the packaged Shamu without Vite. Use live reload only while editing the interface. Its server loads source modules on demand instead of prebuilding all desktop and web entries.
+
+Shamu keeps one recent hidden terminal view warm and parks other restorable views sooner. Live agents, PTYs, history and permissions stay on the primary; unrestorable, visible and starting views retain their existing safeguards. A returning view remounts from the same session. Session search, agent state rule updates and hibernation decisions stay on the primary instead of running again in the client.
+
+Both Electron apps still have independent main, renderer and GPU processes. Their remaining memory is not eliminated by sharing agent sessions.
 
 ## Build
 

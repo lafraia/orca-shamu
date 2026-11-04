@@ -1,4 +1,4 @@
-import { UsersRound, Layers, Plus, Settings2 } from 'lucide-react'
+import { Bot, Layers, Plus, Settings2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
@@ -33,8 +33,8 @@ export function ProjectNavigationSwitch(): React.JSX.Element | null {
           useAppStore.setState({ activeView: 'project-chat' })
         }}
       >
-        <UsersRound />
-        {translate('projectChannels.projects', 'Teams')}
+        <Bot />
+        {translate('projectChannels.projects', 'Bots')}
       </Button>
       <Button
         variant={mode === 'workspaces' ? 'secondary' : 'ghost'}
@@ -67,13 +67,13 @@ export function ProjectChannelSidebar(): React.JSX.Element {
   )
   return (
     <nav
-      aria-label={translate('projectChannels.projects', 'Teams')}
+      aria-label={translate('projectChannels.projects', 'Bots')}
       className="flex min-h-0 flex-1 flex-col px-2 pb-2 pt-3"
     >
       <div className="mb-2 flex items-center gap-2">
         <Input
-          aria-label={translate('projectChannels.search', 'Find team')}
-          placeholder={translate('projectChannels.search', 'Find team')}
+          aria-label={translate('projectChannels.search', 'Find bot')}
+          placeholder={translate('projectChannels.search', 'Find bot')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           density="compact"
@@ -82,7 +82,7 @@ export function ProjectChannelSidebar(): React.JSX.Element {
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label={translate('projectChannels.new', 'New team')}
+          aria-label={translate('projectChannels.new', 'New bot')}
           onClick={() => openProjectChannelEditor({})}
         >
           <Plus />
@@ -92,14 +92,14 @@ export function ProjectChannelSidebar(): React.JSX.Element {
         <div role="alert" className="space-y-2 p-2 text-xs text-destructive">
           {error}
           <Button variant="outline" size="xs" onClick={() => void reloadProjectChannels()}>
-            {translate('projectChannels.reload', 'Reload teams')}
+            {translate('projectChannels.reload', 'Reload bots')}
           </Button>
         </div>
       ) : null}
       {!loaded && !error ? (
         <div
           aria-busy="true"
-          aria-label={translate('projectChannels.loading', 'Loading teams')}
+          aria-label={translate('projectChannels.loading', 'Loading bots')}
           className="space-y-2 px-2 py-3"
         >
           {[0, 1, 2].map((key) => (
@@ -124,21 +124,32 @@ export function ProjectChannelSidebar(): React.JSX.Element {
                 'bg-worktree-sidebar-accent'
             )}
           >
-            <UsersRound className="size-3.5 shrink-0 text-muted-foreground" />
+            <Bot className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate font-medium">{channel.name}</span>
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {channel.members.length}
-            </span>
+            {channel.members.length > (channel.home ? 1 : 0) ? (
+              <span
+                className="text-xs tabular-nums text-muted-foreground"
+                aria-label={translate(
+                  'projectChannels.linkedCount',
+                  'Linked conversations: {{count}}',
+                  {
+                    count: channel.members.length - (channel.home ? 1 : 0)
+                  }
+                )}
+              >
+                {channel.members.length - (channel.home ? 1 : 0)}
+              </span>
+            ) : null}
           </button>
         ))}
         {loaded && channels.length === 0 ? (
           <div className="px-2 py-4 text-xs text-muted-foreground">
             {search ? (
-              translate('projectChannels.noResults', 'No teams found')
+              translate('projectChannels.noResults', 'No bots found')
             ) : (
               <Button variant="outline" size="sm" onClick={() => openProjectChannelEditor({})}>
                 <Plus />
-                {translate('projectChannels.new', 'New team')}
+                {translate('projectChannels.new', 'New bot')}
               </Button>
             )}
           </div>

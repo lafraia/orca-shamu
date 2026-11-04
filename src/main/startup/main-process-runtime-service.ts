@@ -148,18 +148,17 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     applySessionSearchSettings: applySessionSearchSettingsChange,
     skillTransactionRecovery: state.skillTransactionRecovery
   })
-  // Both desktop and headless serve own a host-local search service.
-  const sessionSearch = installChildSessionSearchService({
-    dataRoot: getCanonicalUserDataPath(),
-    getSettings: () => store.getSettings(),
-    // Read the host catalog per search so added repos/renamed workspaces are immediately in scope.
-    getScopeCatalog: () => sessionSearchScopeCatalogFromStore(store, LOCAL_EXECUTION_HOST_ID)
-  })
-  app.once('will-quit', () => sessionSearch?.dispose())
-  // Desktop and headless hosts each evaluate their own panes' rules.
-  startAgentStateRulesLiveUpdates(store, (rules) =>
-    recordDurableCrashBreadcrumb('agent_state_rules_active', rules)
-  )
+  if (!isShamuClientMode()) {
+    const sessionSearch = installChildSessionSearchService({
+      dataRoot: getCanonicalUserDataPath(),
+      getSettings: () => store.getSettings(),
+      getScopeCatalog: () => sessionSearchScopeCatalogFromStore(store, LOCAL_EXECUTION_HOST_ID)
+    })
+    app.once('will-quit', () => sessionSearch?.dispose())
+    startAgentStateRulesLiveUpdates(store, (rules) =>
+      recordDurableCrashBreadcrumb('agent_state_rules_active', rules)
+    )
+  }
   state.runtime = runtime
   runtime.attachAgentStatusStore(agentHookServer)
   agentHookServer.subscribeEnrichedStatus((enriched) =>

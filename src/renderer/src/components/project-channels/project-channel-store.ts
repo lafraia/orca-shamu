@@ -11,7 +11,7 @@ type ProjectChannelState = {
   snapshot: ProjectChannelsSnapshot
   selectedId: string | null
   mode: 'projects' | 'workspaces'
-  editor: { channelId?: string; tabId?: string } | null
+  editor: { channelId?: string; tabId?: string; section?: 'conversations' } | null
   loaded: boolean
   error: string | null
   drafts: Record<string, string>
@@ -31,6 +31,7 @@ export const useProjectChannels = create<ProjectChannelState>(() => ({
 
 let loading: Promise<void> | null = null
 let writes: Promise<unknown> = Promise.resolve()
+const conversations = new Map<string, Promise<void>>()
 const draftTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const draftVersions = new Map<string, number>()
 
@@ -45,7 +46,7 @@ export function loadProjectChannels(): Promise<void> {
     try {
       const api = window.api.projectChannels
       if (!api) {
-        throw new Error('Team conversations are available in the desktop app.')
+        throw new Error('Bots are available in the desktop app.')
       }
       const snapshot = await api.read()
       const drafts = recoverProjectDrafts(snapshot)
@@ -65,7 +66,7 @@ export function loadProjectChannels(): Promise<void> {
       }
     } catch {
       useProjectChannels.setState({
-        error: 'Could not load teams. Your saved conversations have not been changed.'
+        error: 'Could not load bots. Your saved conversations have not been changed.'
       })
     } finally {
       loading = null
@@ -80,7 +81,7 @@ export function saveProjectChannels(
   const run = writes.then(async () => {
     const { snapshot, loaded } = useProjectChannels.getState()
     if (!loaded || !window.api.projectChannels) {
-      throw new Error('Teams are not ready.')
+      throw new Error('Bots are not ready.')
     }
     const channels = update(snapshot.channels)
     if (channels === snapshot.channels) {
@@ -92,9 +93,9 @@ export function saveProjectChannels(
       checkpointProjectDrafts(next, useProjectChannels.getState().drafts)
     } catch {
       useProjectChannels.setState({
-        error: 'Could not save this change. Reload teams before trying again.'
+        error: 'Could not save this change. Reload bots before trying again.'
       })
-      throw new Error('Could not save the team conversation.')
+      throw new Error('Could not save the bot.')
     }
   })
   writes = run.catch(() => {})
@@ -119,6 +120,38 @@ export function changeProjectChannel(
   })
 }
 
+export function ensureProjectChannelConversation(id: string): Promise<void> {
+  const pending = conversations.get(id)
+  if (pending) {
+    return pending
+  }
+  const run = writes.then(async () => {
+    if (!window.api.projectChannels) {
+      throw new Error('Bots are available in the desktop app.')
+    }
+    try {
+      const snapshot = await window.api.projectChannels.ensureConversation(id)
+      useProjectChannels.setState({ snapshot, error: null })
+      const channel = snapshot.channels.find((row) => row.id === id)
+      const member = channel?.members.find((row) => row.id === channel.home?.memberId)
+      if (member?.target.kind === 'environment') {
+        const options = { runtimeEnvironmentId: member.target.environmentId, throwOnError: true }
+        await useAppStore.getState().fetchProjectGroups(options)
+        await useAppStore.getState().fetchFolderWorkspaces(options)
+      }
+    } catch (error) {
+      // Provisioning may have committed its durable session identity before the host reply was lost.
+      const snapshot = await window.api.projectChannels.read()
+      useProjectChannels.setState({ snapshot })
+      throw error
+    }
+  })
+  writes = run.catch(() => {})
+  conversations.set(id, run)
+  void run.finally(() => conversations.delete(id)).catch(() => {})
+  return run
+}
+
 export function openProjectChannel(id: string): void {
   useProjectChannels.setState({ selectedId: id, mode: 'projects' })
   useAppStore.setState({ activeView: 'project-chat' })
@@ -135,7 +168,9 @@ export function openProjectChannelEditor(editor: NonNullable<ProjectChannelState
           channel.members.some((member) => member.tabId === editor.tabId)
         )
       : null
-    useProjectChannels.setState({ editor: linked ? { channelId: linked.id } : editor })
+    useProjectChannels.setState({
+      editor: linked ? { channelId: linked.id, section: 'conversations' } : editor
+    })
   })
 }
 

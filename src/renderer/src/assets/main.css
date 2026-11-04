@@ -1107,6 +1107,10 @@ html.native-shell .app-layout {
   flex-shrink: 0;
 }
 
+.shamu-connection-status button {
+  -webkit-app-region: no-drag;
+}
+
 /* Divide window-DIP viewport presets by live renderer zoom to match the CDP-emulated page width (STA-7568). */
 .browser-page-preset-viewport {
   width: calc(var(--browser-page-viewport-width) / var(--ui-zoom-factor, 1));

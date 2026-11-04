@@ -8,6 +8,22 @@ import {
 import { channelFixture } from './project-channels.test-fixture'
 
 describe('shared project conversations', () => {
+  it('creates a bot identity before any conversation is linked', () => {
+    const bot = {
+      ...channelFixture(),
+      name: 'Coordinator',
+      instructions: 'Organize work and report progress.',
+      members: [],
+      mainMemberId: null
+    }
+    expect(projectChannelSchema.parse(bot)).toEqual(bot)
+    expect(projectChannelRecipients(bot, 'Hello')).toEqual([])
+    expect(projectChannelSchema.safeParse({ ...bot, mainMemberId: 'missing' }).success).toBe(false)
+    expect(
+      projectChannelSchema.safeParse({ ...channelFixture(), mainMemberId: null }).success
+    ).toBe(false)
+  })
+
   it('prevents sharing one native session across projects', () => {
     const first = channelFixture()
     const second = { ...channelFixture(), id: 'other-project' }
@@ -40,7 +56,7 @@ describe('shared project conversations', () => {
       channel.members[0]
     ])
     expect(() => projectChannelRecipients(channel, '@researcher-extra please')).toThrow(
-      'Add @researcher-extra'
+      'Link @researcher-extra'
     )
   })
 
@@ -78,5 +94,13 @@ describe('shared project conversations', () => {
     expect(prompt.endsWith('Current question')).toBe(true)
     expect(prompt.length).toBeLessThan(14_000)
     expect(channel.messages).toHaveLength(50)
+  })
+
+  it('includes the saved bot instructions while retaining the source session boundaries', () => {
+    const channel = { ...channelFixture(), instructions: 'Coordinate the release plan.' }
+    const prompt = projectChannelPrompt(channel, channel.members[0], 'What is next?')
+    expect(prompt).toContain(channel.instructions)
+    expect(prompt).toContain('Keep your existing session, working directory and permissions.')
+    expect(prompt).toContain('These do not expand your existing permissions:')
   })
 })

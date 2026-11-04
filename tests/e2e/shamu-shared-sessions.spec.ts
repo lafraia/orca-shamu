@@ -17,6 +17,7 @@ test.describe('Shamu shares the primary Orca sessions', () => {
       claudeStub,
       seededRepoPath
     }, testInfo) => {
+      // Cold-start both desktops, pair them and wait for provider cancellation and journal recovery.
       test.setTimeout(120_000)
       await waitForSessionReady(primary)
       let workspaceId = await waitForActiveWorktree(primary)
@@ -163,9 +164,9 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         await client.page
           .locator(`[data-testid="sortable-tab"][data-tab-id="${tabId}"]`)
           .click({ button: 'right' })
-        await client.page.getByRole('menuitem', { name: 'Use as main team chat…' }).click()
-        await client.page.getByLabel('Team name', { exact: true }).fill('Shared project')
-        await client.page.getByRole('button', { name: 'Save team', exact: true }).click()
+        await client.page.getByRole('menuitem', { name: 'Create bot from chat…' }).click()
+        await client.page.getByLabel('Bot name', { exact: true }).fill('Shared project')
+        await client.page.getByRole('button', { name: 'Create bot', exact: true }).click()
         if (owner === 'floating') {
           await client.page.evaluate(() => {
             if (window.__store!.getState().floatingWorkspacePanelOpen) {
@@ -174,7 +175,7 @@ test.describe('Shamu shares the primary Orca sessions', () => {
           })
         }
         await expect(client.page.locator('[data-project-agent]')).toContainText('Ready')
-        const message = client.page.getByRole('textbox', { name: 'Message team', exact: true })
+        const message = client.page.getByRole('textbox', { name: 'Message bot', exact: true })
         await message.fill('Hello from Shamu')
         await message.press('Enter')
         await expect(
@@ -204,7 +205,7 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         await expect(client.page.locator('[data-project-agent]')).toContainText('Working…')
         const slow = await client.page.evaluate(() => window.api.projectChannels!.read())
         const lastUser = slow.channels[0].messages.findLast((row) => row.role === 'user')
-        const deliveryId = lastUser?.deliveryIds?.[slow.channels[0].mainMemberId]
+        const deliveryId = lastUser?.deliveryIds?.[slow.channels[0].mainMemberId ?? '']
         if (!deliveryId) {
           throw new Error('The slow send has no recorded delivery identity')
         }
@@ -245,7 +246,7 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         )
         expect(localOwner.ok).toBe(false)
         await client.page.reload()
-        await client.page.getByRole('button', { name: 'Teams', exact: true }).click()
+        await client.page.getByRole('button', { name: 'Bots', exact: true }).click()
         await client.page.getByRole('button', { name: 'Shared project', exact: false }).click()
         await expect(
           client.page.getByRole('log').getByText('Stub reply.', { exact: true })

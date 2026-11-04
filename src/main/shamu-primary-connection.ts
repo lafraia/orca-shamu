@@ -13,6 +13,7 @@ import { verifyRuntimeEnvironmentPairingCode } from './ipc/runtime-environments/
 import { publishVerifiedPairing } from './ipc/runtime-environments/runtime-environment-verified-pairing-publish'
 import { invalidateRuntimeEnvironmentTransport } from './ipc/runtime-environments/runtime-environments'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './sidecar-snapshot-file'
+import { callRuntimeEnvironment } from './ipc/runtime-environments/runtime-environment-transport-routing'
 
 const primarySchema = z.object({
   version: z.literal(1),
@@ -120,5 +121,23 @@ export class ShamuPrimaryConnection {
     ) {
       throw new Error('Shamu project chats must use sessions from the primary Orca.')
     }
+  }
+
+  async call(method: string, params: unknown): Promise<unknown> {
+    const { environmentId } = await this.read()
+    if (!environmentId) {
+      throw new Error('Connect Shamu to the primary Orca to open this bot conversation.')
+    }
+    const reply = await callRuntimeEnvironment(
+      this.registryDirectory,
+      environmentId,
+      method,
+      params,
+      30_000
+    )
+    if (!reply.ok) {
+      throw new Error(reply.error.message)
+    }
+    return reply.result
   }
 }

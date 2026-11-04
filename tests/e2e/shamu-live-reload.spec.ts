@@ -10,11 +10,12 @@ import { createChatOnHost, SUPPORTED } from './helpers/structured-claude-stub'
 import { launchPairedElectronClient } from './helpers/paired-electron-client'
 import { createShamuLiveServer } from '../../config/scripts/shamu-live-server.mjs'
 
-test('hot reloads Teams without restarting its window, losing its draft or duplicating a reply', async ({
+test('hot reloads Bots without restarting its window, losing its draft or duplicating a reply', async ({
   orcaPage: primary,
   claudeStub
 }, testInfo) => {
   test.skip(!SUPPORTED, 'the isolated Claude protocol fixture requires POSIX')
+  // Cold-start Vite and both desktops, exercise HMR and replace the live server before shutdown.
   test.setTimeout(180_000)
   await waitForSessionReady(primary)
   const workspaceId = await waitForActiveWorktree(primary)
@@ -50,9 +51,10 @@ test('hot reloads Teams without restarting its window, losing its draft or dupli
       if (id.split('?')[0] !== sidebar) {
         return
       }
+      this.addWatchFile(probeFile)
       return `import { shamuHmrProbe } from ${JSON.stringify(`/@fs/${probeFile}`)};\n${code.replace(
-        '<UsersRound />',
-        '<UsersRound data-shamu-hmr={shamuHmrProbe} />'
+        '<Bot />',
+        '<Bot data-shamu-hmr={shamuHmrProbe} />'
       )}`
     }
   }
@@ -81,7 +83,7 @@ test('hot reloads Teams without restarting its window, losing its draft or dupli
     const { page } = client
     await expect(page.getByText('Live reload', { exact: true })).toBeVisible()
     await expect(
-      page.getByRole('button', { name: 'Teams', exact: true }).locator('svg')
+      page.getByRole('button', { name: 'Bots', exact: true }).locator('svg')
     ).toHaveAttribute('data-shamu-hmr', 'initial')
     await page.getByRole('button', { name: 'Workspaces', exact: true }).click()
     await expect
@@ -114,11 +116,11 @@ test('hot reloads Teams without restarting its window, losing its draft or dupli
     await page
       .locator(`[data-testid="sortable-tab"][data-tab-id="${tabId}"]`)
       .click({ button: 'right' })
-    await page.getByRole('menuitem', { name: 'Use as main team chat…' }).click()
-    await page.getByLabel('Team name', { exact: true }).fill('Live team')
-    await page.getByRole('button', { name: 'Save team', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Create bot from chat…' }).click()
+    await page.getByLabel('Bot name', { exact: true }).fill('Live team')
+    await page.getByRole('button', { name: 'Create bot', exact: true }).click()
     await expect(page.locator('[data-project-agent]')).toContainText('Ready')
-    const composer = page.getByRole('textbox', { name: 'Message team', exact: true })
+    const composer = page.getByRole('textbox', { name: 'Message bot', exact: true })
     await composer.fill('One reply before hot reload')
     await composer.press('Enter')
     await expect(page.getByRole('log').getByText('Stub reply.', { exact: true })).toHaveCount(1)
@@ -128,9 +130,17 @@ test('hot reloads Teams without restarting its window, losing its draft or dupli
       return document.documentElement.dataset.shamuHmrDocument
     })
     const editStarted = Date.now()
+    live.server.watcher.add(probeFile)
+    await expect
+      .poll(() =>
+        Object.values(live.server.watcher.getWatched()).some((files) =>
+          files.includes(basename(probeFile))
+        )
+      )
+      .toBe(true)
     writeFileSync(probeFile, "export const shamuHmrProbe = 'updated'\n")
     await expect(
-      page.getByRole('button', { name: 'Teams', exact: true }).locator('svg')
+      page.getByRole('button', { name: 'Bots', exact: true }).locator('svg')
     ).toHaveAttribute('data-shamu-hmr', 'updated', { timeout: 30_000 })
     await testInfo.attach('hmr-latency', {
       body: JSON.stringify({ updateMs: Date.now() - editStarted }),
@@ -148,7 +158,7 @@ test('hot reloads Teams without restarting its window, losing its draft or dupli
     ).toBe(false)
     await page.screenshot({ path: testInfo.outputPath('shamu-live-reload.png') })
     await page.reload()
-    await page.getByRole('button', { name: 'Teams', exact: true }).click()
+    await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await expect(composer).toHaveValue('Keep this unsent draft')
     await expect(page.getByRole('log').getByText('Stub reply.', { exact: true })).toHaveCount(1)
     await live.server.close()

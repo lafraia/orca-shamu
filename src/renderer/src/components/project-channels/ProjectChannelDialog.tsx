@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, X } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -26,7 +19,8 @@ import {
   projectChannelSessionKey,
   type ProjectChannelMember
 } from '../../../../shared/project-channels'
-import { projectChannelCandidates, uniqueProjectChannelHandle } from './project-channel-candidates'
+import { projectChannelCandidates } from './project-channel-candidates'
+import { ProjectChannelConversations } from './ProjectChannelConversations'
 import {
   loadProjectChannels,
   checkpointProjectChannelDrafts,
@@ -52,7 +46,7 @@ export function ProjectChannelsHost(): React.JSX.Element | null {
 function ProjectChannelDialog({
   editor
 }: {
-  editor: { channelId?: string; tabId?: string }
+  editor: { channelId?: string; tabId?: string; section?: 'conversations' }
 }): React.JSX.Element {
   const channels = useProjectChannels((state) => state.snapshot.channels)
   const loaded = useProjectChannels((state) => state.loaded)
@@ -61,11 +55,12 @@ function ProjectChannelDialog({
   const candidates = useMemo(() => projectChannelCandidates(useAppStore.getState(), tabs), [tabs])
   const source = candidates.find((candidate) => candidate.tabId === editor.tabId)
   const [name, setName] = useState(existing?.name ?? source?.name ?? '')
+  const [instructions, setInstructions] = useState(existing?.instructions ?? '')
+  const showConversations = editor.section === 'conversations' || Boolean(editor.tabId)
   const [members, setMembers] = useState<ProjectChannelMember[]>(
     existing?.members ?? (source ? [{ ...source, importHistory: true }] : [])
   )
-  const [mainId, setMainId] = useState(existing?.mainMemberId ?? source?.id ?? '')
-  const [pick, setPick] = useState('')
+  const [mainId, setMainId] = useState<string | null>(existing?.mainMemberId ?? source?.id ?? null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const close = (): void => useProjectChannels.setState({ editor: null })
@@ -84,32 +79,13 @@ function ProjectChannelDialog({
           JSON.stringify(member.target) === JSON.stringify(candidate.target)
       )
   )
-  const add = (): void => {
-    const candidate = candidates.find((row) => row.id === pick)
-    if (!candidate) {
-      return
-    }
-    setMembers((current) => [
-      ...current,
-      {
-        ...candidate,
-        importHistory: current.length === 0,
-        handle: uniqueProjectChannelHandle(
-          candidate.handle,
-          current.map((member) => member.handle)
-        )
-      }
-    ])
-    if (!mainId) {
-      setMainId(candidate.id)
-    }
-    setPick('')
-  }
   const save = async (): Promise<void> => {
     const id = existing?.id ?? createBrowserUuid()
     const validation = projectChannelSchema.safeParse({
       id,
       name,
+      instructions,
+      home: existing?.home,
       mainMemberId: mainId,
       members,
       messages: existing?.messages ?? [],
@@ -120,7 +96,7 @@ function ProjectChannelDialog({
       setError(
         translate(
           'projectChannels.invalid',
-          'Choose a team name, a main agent and unique @handles (letters, numbers, underscores or hyphens).'
+          'Choose a bot name. Linked conversations need a default and unique @handles (letters, numbers, underscores or hyphens).'
         )
       )
       return
@@ -132,6 +108,7 @@ function ProjectChannelDialog({
         const latest = current.find((row) => row.id === id)
         const saved = {
           ...validation.data,
+          home: latest?.home ?? validation.data.home,
           messages: latest?.messages ?? validation.data.messages,
           draft: latest?.draft ?? validation.data.draft,
           members: validation.data.members.map((member) => {
@@ -155,7 +132,7 @@ function ProjectChannelDialog({
       setError(
         translate(
           'projectChannels.saveError',
-          'Could not save the team. Your conversations are unchanged.'
+          'Could not save the bot. Your conversations are unchanged.'
         )
       )
     } finally {
@@ -175,20 +152,36 @@ function ProjectChannelDialog({
         <DialogHeader>
           <DialogTitle>
             {existing
-              ? translate('projectChannels.edit', 'Edit team')
-              : translate('projectChannels.new', 'New team')}
+              ? showConversations
+                ? translate('projectChannels.linkedConversations', 'Linked conversations')
+                : translate('projectChannels.edit', 'Bot settings')
+              : translate('projectChannels.new', 'New bot')}
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            {translate(
-              'projectChannels.projectDescription',
-              'Choose existing chat tabs to participate in one shared team conversation.'
-            )}
+          <DialogDescription>
+            {existing || showConversations
+              ? translate(
+                  'projectChannels.projectDescription',
+                  'Give your bot a name and instructions. You can link conversations later.'
+                )
+              : translate(
+                  'projectChannels.createDescription',
+                  'Give your bot a name and instructions. Its own permanent chat opens when you create it.'
+                )}
           </DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 space-y-5 overflow-y-auto p-1 scrollbar-sleek">
+        <form
+          id="project-channel-form"
+          className="min-h-0 space-y-5 overflow-y-auto p-1 scrollbar-sleek"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (!busy && loaded) {
+              void save()
+            }
+          }}
+        >
           <div className="space-y-2">
             <Label htmlFor="project-channel-name">
-              {translate('projectChannels.name', 'Team name')}
+              {translate('projectChannels.name', 'Bot name')}
             </Label>
             <Input
               id="project-channel-name"
@@ -198,123 +191,74 @@ function ProjectChannelDialog({
               autoFocus
             />
           </div>
-          <fieldset className="space-y-2">
-            <legend className="mb-2 text-sm font-medium">
-              {translate('projectChannels.agents', 'Agents')}
-            </legend>
-            {members.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center gap-2 rounded-md border border-border px-3 py-2"
-              >
-                <input
-                  type="radio"
-                  name="project-main-agent"
-                  aria-label={translate('projectChannels.makeMain', 'Main agent: {{name}}', {
-                    name: member.name
-                  })}
-                  checked={member.id === mainId}
-                  onChange={() => setMainId(member.id)}
-                />
-                <div className="min-w-0 flex-1 space-y-1">
-                  <Input
-                    aria-label={translate('projectChannels.agentName', 'Agent name')}
-                    value={member.name}
-                    maxLength={80}
-                    density="compact"
-                    onChange={(event) =>
-                      setMembers((rows) =>
-                        rows.map((row) =>
-                          row.id === member.id ? { ...row, name: event.target.value } : row
-                        )
-                      )
-                    }
-                  />
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <span>@</span>
-                    <Input
-                      aria-label={translate('projectChannels.handle', 'Agent handle')}
-                      value={member.handle}
-                      maxLength={32}
-                      density="compact"
-                      onChange={(event) =>
-                        setMembers((rows) =>
-                          rows.map((row) =>
-                            row.id === member.id
-                              ? { ...row, handle: event.target.value.toLowerCase() }
-                              : row
-                          )
-                        )
-                      }
-                    />
-                    <span className="shrink-0">{member.agent}</span>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={translate('projectChannels.removeAgent', 'Remove agent: {{name}}', {
-                    name: member.name
-                  })}
-                  disabled={member.id === mainId}
-                  onClick={() => setMembers((rows) => rows.filter((row) => row.id !== member.id))}
-                >
-                  <X />
-                </Button>
-              </div>
-            ))}
-            {available.length ? (
-              <div className="flex gap-2">
-                <Select value={pick} onValueChange={setPick}>
-                  <SelectTrigger
-                    aria-label={translate('projectChannels.chooseChat', 'Choose chat tab')}
-                  >
-                    <SelectValue
-                      placeholder={translate('projectChannels.chooseChat', 'Choose chat tab')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {available.map((candidate) => (
-                      <SelectItem key={candidate.id} value={candidate.id}>
-                        {candidate.name} · {candidate.agent}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!pick || members.length >= 20}
-                  onClick={add}
-                >
-                  <Plus />
-                  {translate('projectChannels.add', 'Add')}
-                </Button>
-              </div>
-            ) : null}
-            {candidates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+          <div className="space-y-2">
+            <Label htmlFor="project-channel-instructions">
+              {translate('projectChannels.instructions', 'Instructions (optional)')}
+            </Label>
+            <Textarea
+              id="project-channel-instructions"
+              value={instructions}
+              maxLength={20_000}
+              rows={4}
+              onChange={(event) => setInstructions(event.target.value)}
+              placeholder={translate(
+                'projectChannels.instructionsPlaceholder',
+                'Describe what this bot is responsible for and how it should work.'
+              )}
+            />
+          </div>
+          {existing?.home && !showConversations ? (
+            <div className="space-y-2">
+              <Label htmlFor="project-channel-folder">
+                {translate('projectChannels.folder', 'Bot folder')}
+              </Label>
+              <Input
+                id="project-channel-folder"
+                value={existing.home.directory}
+                readOnly
+                variant="code"
+                aria-describedby="project-channel-folder-description"
+              />
+              <p id="project-channel-folder-description" className="text-xs text-muted-foreground">
                 {translate(
-                  'projectChannels.noChats',
-                  'Open a Chat agent in a folder workspace or worktree first, then choose it here.'
+                  'projectChannels.folderDescription',
+                  'The bot’s instructions and working files are stored here.'
                 )}
               </p>
-            ) : null}
-          </fieldset>
+            </div>
+          ) : null}
+          {showConversations ? (
+            <ProjectChannelConversations
+              members={members}
+              mainId={mainId}
+              permanentMemberId={existing?.home?.memberId}
+              available={available}
+              onChange={(next, main) => {
+                setMembers(next)
+                setMainId(main)
+              }}
+            />
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           ) : null}
-        </div>
+        </form>
         <DialogFooter>
-          <Button variant="outline" disabled={busy} onClick={close}>
+          <Button variant="ghost" disabled={busy} onClick={close}>
             {translate('projectChannels.cancel', 'Cancel')}
           </Button>
-          <Button disabled={busy || !loaded} onClick={() => void save()}>
+          <Button
+            type="submit"
+            form="project-channel-form"
+            disabled={busy || !loaded || !name.trim()}
+          >
             {busy
               ? translate('projectChannels.saving', 'Saving…')
-              : translate('projectChannels.save', 'Save team')}
+              : existing
+                ? translate('projectChannels.save', 'Save bot')
+                : translate('projectChannels.create', 'Create bot')}
           </Button>
         </DialogFooter>
       </DialogContent>

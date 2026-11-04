@@ -28,6 +28,37 @@ describe('project conversation persistence', () => {
     }
   })
 
+  it('persists bots without conversations alongside existing shared chats', async () => {
+    const store = new ProjectChannelsStore(directory)
+    const existing = channelFixture()
+    const bot = {
+      ...channelFixture(),
+      id: 'bot',
+      name: 'Coordinator',
+      instructions: 'Track the project.',
+      mainMemberId: null,
+      members: []
+    }
+    const initial = await store.read()
+    const saved = await store.write({ ...initial, channels: [existing, bot] })
+    expect(await new ProjectChannelsStore(directory).read()).toEqual(saved)
+    expect(saved.channels[0]).toEqual(existing)
+    const linked = await store.write({
+      ...saved,
+      channels: [
+        existing,
+        {
+          ...bot,
+          members: [{ ...existing.members[0], sessionId: 'new-session' }],
+          mainMemberId: existing.members[0].id
+        }
+      ]
+    })
+    expect(linked.channels[1].instructions).toBe(bot.instructions)
+    const unlinked = await store.write({ ...linked, channels: [existing, bot] })
+    expect(await new ProjectChannelsStore(directory).read()).toEqual(unlinked)
+  })
+
   it('refuses a stale concurrent save rather than losing another window changes', async () => {
     const store = new ProjectChannelsStore(directory)
     const initial = await store.read()

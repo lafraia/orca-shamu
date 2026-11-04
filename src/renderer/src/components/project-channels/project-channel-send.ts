@@ -29,6 +29,9 @@ export async function sendProjectChannelMessage(
     return
   }
   const recipients = projectChannelRecipients(channel, text)
+  if (recipients.length === 0) {
+    throw new Error('Link an agent conversation to this bot before sending.')
+  }
   for (const member of recipients) {
     const controller = controllers.get(member.id)?.()
     if (

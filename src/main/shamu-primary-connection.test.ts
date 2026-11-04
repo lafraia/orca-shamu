@@ -18,6 +18,9 @@ vi.mock('./ipc/runtime-environments/runtime-environment-verified-pairing-publish
 vi.mock('./ipc/runtime-environments/runtime-environments', () => ({
   invalidateRuntimeEnvironmentTransport: vi.fn()
 }))
+vi.mock('./ipc/runtime-environments/runtime-environment-transport-routing', () => ({
+  callRuntimeEnvironment: vi.fn()
+}))
 
 function link(key = 1, endpoint = 'ws://127.0.0.1:12345'): string {
   return encodePairingOffer({

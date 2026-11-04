@@ -26,6 +26,7 @@ export async function createShamuLiveServer({
   }
   const server = await createServer({
     ...renderer,
+    experimental: { ...renderer.experimental, bundledDev: false },
     cacheDir: cacheDir ?? resolve(repoRoot, '.cache/vite/shamu-live'),
     configFile: false,
     plugins: [
@@ -65,6 +66,7 @@ export async function createShamuLiveServer({
       strictPort: true,
       open: false,
       cors: false,
+      headers: { ...renderer.server?.headers, 'Cache-Control': 'no-store' },
       allowedHosts: ['127.0.0.1'],
       hmr: { host: '127.0.0.1' },
       fs: { strict: true, allow: [repoRoot] }
