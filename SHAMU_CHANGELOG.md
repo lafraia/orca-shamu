@@ -14,6 +14,7 @@ Upstream commit: `965978bc78bf03a6a43187c1ed28fcffe0e01bb5`
 
 ### Shamu changes
 
+- Add a model picker to each bot chat header, sharing the native session catalog, confirmed options and persisted per-session selection without replacing the conversation.
 - Extend `@` suggestions with host-qualified workspace, project and issue references, persistent clickable pills and task-source issue search; remove automatic bot preselection and unify pointer and keyboard highlighting.
 - Identify the independent open source fork, its maintainer and canonical repository in Shamu settings, with upstream credit, MIT license links and a qualified warranty and liability notice.
 - Keep the Shamu titlebar, accessible app name and window title branded as `Orca Shamu`, distinct from the primary Orca.

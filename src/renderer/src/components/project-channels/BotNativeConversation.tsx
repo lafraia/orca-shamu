@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Bot, Brain, CalendarClock, FolderOpen, RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Bot } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import NativeChatView from '../native-chat/NativeChatView'
 import type { ProjectChannel } from '../../../../shared/project-channels'
-import { openProjectChannelSource } from './project-channel-candidates'
 import { ensureProjectChannelConversation } from './project-channel-store'
-import { ProjectChannelSettingsButton } from './ProjectChannelSettingsButton'
-import { BotAvatar } from './BotAvatar'
+import { BotConversationHeader } from './BotConversationHeader'
+import type { NativeChatSessionOptionPickersProps } from '../native-chat/NativeChatSessionOptionPickers'
 import { BotMemoryPanel } from './BotMemoryPanel'
 import { BotRoutinesPanel } from './BotRoutinesPanel'
 import { useBotUnread } from './bot-unread-store'
@@ -53,33 +51,23 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
     channel.identity?.image,
     attempt
   ])
+  const header = (options?: NativeChatSessionOptionPickersProps) => (
+    <BotConversationHeader
+      channel={channel}
+      ready={Boolean(ready)}
+      options={options}
+      error={error}
+      onMemory={() => setMemoryOpen(true)}
+      onRoutines={() => setRoutinesOpen(true)}
+      onRetry={() => setAttempt((value) => value + 1)}
+    />
+  )
   return (
     <section
       className="flex min-h-0 flex-1 flex-col bg-background text-foreground"
       aria-label={channel.name}
     >
-      <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
-        <BotAvatar id={channel.id} identity={channel.identity} />
-        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{channel.name}</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!ready}
-          onClick={() => member && openProjectChannelSource(member)}
-        >
-          <FolderOpen />
-          {translate('projectChannels.openWorkspace', 'Workspace')}
-        </Button>
-        <Button variant="ghost" size="sm" disabled={!ready} onClick={() => setMemoryOpen(true)}>
-          <Brain />
-          {translate('shamu.memory.button', 'Memory')}
-        </Button>
-        <Button variant="ghost" size="sm" disabled={!ready} onClick={() => setRoutinesOpen(true)}>
-          <CalendarClock />
-          {translate('shamu.routines.button', 'Routines')}
-        </Button>
-        <ProjectChannelSettingsButton channelId={channel.id} disabled={!ready} />
-      </header>
+      {!ready ? header() : null}
       {routinesOpen ? (
         <BotRoutinesPanel
           botId={channel.id}
@@ -90,21 +78,10 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
       {memoryOpen ? (
         <BotMemoryPanel channel={channel} open={memoryOpen} onOpenChange={setMemoryOpen} />
       ) : null}
-      {error ? (
-        <div
-          role="alert"
-          className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3"
-        >
-          <p className="text-sm text-destructive">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => setAttempt((value) => value + 1)}>
-            <RotateCcw />
-            {translate('projectChannels.retryConversation', 'Retry')}
-          </Button>
-        </div>
-      ) : null}
       {ready ? (
         <NativeChatView
           mode="structured"
+          renderHeader={header}
           tabId={member.tabId}
           sessionId={member.sessionId}
           target={member.target}

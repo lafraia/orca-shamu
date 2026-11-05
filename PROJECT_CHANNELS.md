@@ -102,6 +102,10 @@ The two-instance journeys connect through the Shamu UI using a real loopback acc
 
 Delivery checks also cover a host rejecting a submission after transport acknowledgement, an unknown dispatch result, a late acknowledgement arriving after the journal's refusal and an orphaned send expiring while the reader stays unchanged after reload. The journal remains authoritative; none of these transitions automatically resends the message.
 
+## Bot model selection
+
+Each permanent bot chat exposes its native model picker in the header as well as the composer. Both controls use the same host session, model catalogue and option writer. A selection changes that conversation's model without replacing its session, history, bot identity or composer draft. Reopening the bot reads the recorded session options from the owning Orca. Loading, unavailable models, pending writes and refusals use the existing native picker behavior. This control offers models of the bot's current agent.
+
 ## Bot mentions
 
 In any structured native chat in Shamu, type `@` and select a bot from the Bots group. File suggestions remain in the Files group. Selected bot pills retain their stable identity when drafts are saved and restored. A literal pasted mention or an assistant reply does not dispatch anything.

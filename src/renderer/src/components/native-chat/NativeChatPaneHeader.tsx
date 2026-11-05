@@ -12,6 +12,29 @@ import { useStructuredChatPaneActions } from './use-structured-chat-pane-actions
 import { NativeChatResumeInCliButton } from './NativeChatResumeInCliButton'
 import type { NativeChatStructuredViewProps } from './native-chat-view-types'
 import type { NativeChatHandOff } from './use-native-chat-hand-off'
+import type {
+  SessionOptionDescriptor,
+  SessionOptionsSurface
+} from '../../../../shared/native-chat/input/native-chat-session-options'
+
+export function nativeChatSessionHeader(
+  view: Pick<NativeChatStructuredViewProps, 'renderHeader'>,
+  controller: {
+    optionSurface: SessionOptionsSurface
+    optionSnapshot: SessionOptionDescriptor[]
+    isWorking: boolean
+  },
+  focusComposer: () => void
+): React.ReactNode {
+  return (
+    view.renderHeader?.({
+      surface: controller.optionSurface,
+      snapshot: controller.optionSnapshot,
+      isWorking: controller.isWorking,
+      focusComposer
+    }) ?? null
+  )
+}
 
 const HEADER_STYLE: React.CSSProperties & Record<'--orca-pane-title-bg', string> = {
   '--orca-pane-title-bg': 'var(--chat-canvas)'

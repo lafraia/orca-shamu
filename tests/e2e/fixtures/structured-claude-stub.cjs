@@ -20,10 +20,20 @@ function argValue(name) {
 }
 
 const sessionId = argValue('--session-id') ?? argValue('--resume') ?? randomUUID()
+const modelSwitching = args.includes('--orca-test-model-switching')
+let currentModel = argValue('--model') ?? 'default'
 const write = (frame) => process.stdout.write(`${JSON.stringify(frame)}\n`)
 const initializeResponse = {
   commands: [],
-  models: [{ value: 'default', displayName: 'Default', description: '' }],
+  models: [
+    { value: 'default', displayName: 'Default', description: '' },
+    ...(modelSwitching
+      ? [
+          { value: 'sonnet', displayName: 'Test Sonnet', description: '' },
+          { value: 'haiku', displayName: 'Test Haiku', description: '' }
+        ]
+      : [])
+  ],
   account: {},
   output_style: 'default',
   available_output_styles: ['default']
@@ -49,7 +59,7 @@ function startTurn(frame) {
         message: {
           id: randomUUID(),
           role: 'assistant',
-          model: 'claude-fake',
+          model: modelSwitching ? currentModel : 'claude-fake',
           content: [{ type: 'text', text: 'Stub reply.' }]
         }
       })
@@ -103,7 +113,11 @@ process.stdin.on('data', (chunk) => {
         pid: process.pid,
         uuid: frame?.uuid ?? null,
         type: frame?.type ?? null,
-        subtype: frame?.request?.subtype ?? null
+        subtype: frame?.request?.subtype ?? null,
+        ...(modelSwitching && frame?.request?.subtype === 'set_model'
+          ? { model: frame.request.model }
+          : {}),
+        ...(modelSwitching && frame?.type === 'user' ? { model: currentModel } : {})
       })}\n`
     )
     if (frame?.type === 'user') {
@@ -114,6 +128,9 @@ process.stdin.on('data', (chunk) => {
       continue
     }
     const subtype = frame.request?.subtype
+    if (modelSwitching && subtype === 'set_model') {
+      currentModel = frame.request.model ?? 'default'
+    }
     if (subtype === 'interrupt') {
       interruptTurn()
     }
@@ -122,7 +139,14 @@ process.stdin.on('data', (chunk) => {
       response: {
         subtype: 'success',
         request_id: frame.request_id,
-        response: subtype === 'initialize' ? initializeResponse : {}
+        response:
+          subtype === 'initialize'
+            ? initializeResponse
+            : subtype === 'list_models' && modelSwitching
+              ? { models: initializeResponse.models }
+              : subtype === 'get_settings' && modelSwitching
+                ? { applied: { model: currentModel }, effective: { model: currentModel } }
+                : {}
       }
     })
     if (subtype === 'initialize' && !initSent) {
@@ -132,7 +156,7 @@ process.stdin.on('data', (chunk) => {
         subtype: 'init',
         session_id: sessionId,
         uuid: randomUUID(),
-        model: 'claude-fake',
+        model: modelSwitching ? currentModel : 'claude-fake',
         cwd: process.cwd(),
         tools: [],
         mcp_servers: [],
