@@ -11,11 +11,13 @@ test('moves Shamu connection to the statusbar and exposes its own searchable set
   // Start two isolated desktop profiles, pair them and reload the settings route.
   test.setTimeout(120_000)
   await waitForSessionReady(primary)
+  await expect(primary).toHaveTitle('Orca')
   const offer = await createRuntimeDesktopPairingOffer(primary)
   const client = await launchPairedElectronClient(offer, testInfo, 'Orca principal', {
     extraEnv: { ORCA_SHAMU_CLIENT: '1' },
     connect: async (page) => {
       await page.setViewportSize({ width: 1280, height: 900 })
+      await expect(page).toHaveTitle('Orca Shamu')
       await page.getByLabel('Primary Orca access link', { exact: true }).fill(offer.pairingUrl)
       await page.getByRole('button', { name: 'Connect to primary Orca', exact: true }).click()
       await expect(page.getByRole('heading', { name: 'Orca Shamu', exact: true })).toHaveCount(0)
@@ -45,7 +47,13 @@ test('moves Shamu connection to the statusbar and exposes its own searchable set
     expect(chrome.drag).toBe('drag')
     if (chrome.mac) {
       expect(chrome.trafficLights).toBeGreaterThan(0)
+      const appName = titlebar.locator('.titlebar-app-name')
+      await expect(appName).toHaveText('Orca Shamu')
+      await expect(appName).toHaveAttribute('aria-label', 'Orca Shamu')
+      expect(await appName.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
+      await expect(primary.locator('.titlebar-app-name')).toHaveText('Orca')
     }
+    await expect(page).toHaveTitle('Orca Shamu')
     await status.click()
     const section = page.locator('[data-settings-section="orca-shamu"]')
     await expect(section.getByRole('heading', { name: 'Orca Shamu', exact: true })).toBeVisible()
@@ -57,6 +65,7 @@ test('moves Shamu connection to the statusbar and exposes its own searchable set
     await expect(section).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('shamu-settings.png') })
     await page.reload()
+    await expect(page).toHaveTitle('Orca Shamu')
     await expect(status).toBeVisible()
     await status.click()
     await expect(section.getByRole('button', { name: 'Import interface settings' })).toBeVisible()

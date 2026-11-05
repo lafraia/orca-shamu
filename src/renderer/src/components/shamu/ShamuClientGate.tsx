@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { loadShamuClient, reloadShamuClient, useShamuClient } from './shamu-client-store'
 import { ShamuConnectionForm } from './ShamuConnectionForm'
+import { SHAMU_APP_NAME } from '../../../../shared/shamu-client'
 
 export function ShamuClientGate({ children }: { children: ReactNode }): React.JSX.Element {
   const connection = useShamuClient()
@@ -12,6 +13,11 @@ export function ShamuClientGate({ children }: { children: ReactNode }): React.JS
       void loadShamuClient()
     }
   }, [hasApi])
+  useEffect(() => {
+    if (connection.enabled) {
+      document.title = SHAMU_APP_NAME
+    }
+  }, [connection.enabled])
   if (!hasApi) {
     return <>{children}</>
   }
