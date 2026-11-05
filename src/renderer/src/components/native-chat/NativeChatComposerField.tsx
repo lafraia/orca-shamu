@@ -11,6 +11,10 @@ import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
 import { NativeChatMentionMenu, NativeChatPickerMenu } from './NativeChatAutocompleteMenus'
 import type { NativeChatMentionOptions } from './use-native-chat-bot-mentions'
+import {
+  nativeChatAutocompleteAria,
+  type NativeChatMentionTarget
+} from './native-chat-mention-choices'
 import type { BotMention } from '../../../../shared/bot-mentions'
 import { NativeChatComposerActions } from './NativeChatComposerActions'
 import { NativeChatComposerNotices } from './NativeChatComposerNotices'
@@ -48,6 +52,7 @@ export type NativeChatComposerFieldProps = {
   autocomplete: ComposerAutocomplete
   mentionFiles: NativeChatMentionOptions
   activeSuggestion: number
+  onActiveSuggestionChange?: (index: number) => void
   notices: readonly NativeChatComposerNotice[]
   imageAttachments: readonly NativeChatComposerImageAttachment[]
   /** A structured chat numbers its images, as its chips in the prompt read. */
@@ -79,7 +84,7 @@ export type NativeChatComposerFieldProps = {
   pickerListboxId: string
   onChoosePickerItem: (item: NativeChatPickerItem) => void
   onRetrySkills: () => void
-  onChooseMentionFile: (path: string) => void
+  onChooseMentionFile: (target: NativeChatMentionTarget) => void
   onChooseMentionBot?: (bot: BotMention) => void
   onRemoveImageAttachment: (id: string) => void
   onAttach: () => void
@@ -142,6 +147,7 @@ export function NativeChatComposerField({
   autocomplete,
   mentionFiles,
   activeSuggestion,
+  onActiveSuggestionChange,
   notices,
   imageAttachments,
   numberImages = false,
@@ -184,12 +190,6 @@ export function NativeChatComposerField({
   launchPrompt
 }: NativeChatComposerFieldProps): React.JSX.Element {
   const draftNotSaved = useNativeChatComposerDraftUnsaved(draftScopeKey)
-  const optionCount =
-    autocomplete.mode === 'slash'
-      ? autocomplete.items.length
-      : autocomplete.mode === 'mention'
-        ? mentionFiles.files.length + (mentionFiles.bots?.length ?? 0)
-        : 0
   // Value the IME started from, and whether a programmatic clear was dropped on top of it.
   const compositionBaseRef = useRef('')
   const imageRow = useMemo(() => imageAttachments.map(({ id }) => id), [imageAttachments])
@@ -289,7 +289,7 @@ export function NativeChatComposerField({
           {autocomplete.mode === 'slash' ? (
             <NativeChatPickerMenu
               autocomplete={autocomplete}
-              activeIndex={activeSuggestion}
+              activeIndex={Math.max(0, activeSuggestion)}
               listboxId={pickerListboxId}
               onChoose={onChoosePickerItem}
               onRetry={onRetrySkills}
@@ -302,6 +302,7 @@ export function NativeChatComposerField({
               listboxId={pickerListboxId}
               onChoose={onChooseMentionFile}
               onChooseBot={onChooseMentionBot}
+              onActiveIndexChange={onActiveSuggestionChange}
             />
           ) : null}
           <NativeChatComposerNotices
@@ -360,13 +361,12 @@ export function NativeChatComposerField({
               onCompositionEnd={editorCompositionEnd}
               onPasteCapture={editorPaste}
               onSelect={editorSelect}
-              aria-expanded={autocomplete.mode !== 'none'}
-              aria-controls={autocomplete.mode !== 'none' ? pickerListboxId : undefined}
-              aria-activedescendant={
-                optionCount > 0
-                  ? `${pickerListboxId}-option-${Math.min(activeSuggestion, optionCount - 1)}`
-                  : undefined
-              }
+              {...nativeChatAutocompleteAria(
+                autocomplete,
+                mentionFiles,
+                activeSuggestion,
+                pickerListboxId
+              )}
               placeholder={
                 launchPrompt
                   ? launchPrompt.placeholder

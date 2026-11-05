@@ -19,6 +19,7 @@ import { withoutPendingNativeChatVisualDirectiveTail } from '../../../../shared/
 import { NativeChatMarkdownRowKeyContext } from './native-chat-disclosure-store'
 import { useNativeChatVisualMarkdownExtension } from './native-chat-visual-markdown-extension'
 import { useNativeChatBotMarkdown } from './use-native-chat-bot-markdown'
+import { useNativeChatResourceMarkdown } from './use-native-chat-resource-markdown'
 import { useNativeChatFileLinkExists } from './use-native-chat-file-link-existence'
 import {
   NativeChatMarkdownImage,
@@ -141,7 +142,8 @@ export function NativeChatMarkdown({
         : withFileDestinations(visualExtension),
     [onLinkClick, variant, visualExtension]
   )
-  const extension = useNativeChatBotMarkdown(baseExtension, onLinkClick)
+  const botExtension = useNativeChatBotMarkdown(baseExtension, onLinkClick)
+  const extension = useNativeChatResourceMarkdown(botExtension, onLinkClick)
   const fileLinkExists = useNativeChatFileLinkExists(linkifyFilePaths, streaming)
   const { githubRepo } = useContext(NativeChatLinkPeekContext)
   return (

@@ -1,5 +1,7 @@
-import { NativeChatBotReference, insertBotReference } from './native-chat-bot-reference'
-import { insertAgentReferences, NativeChatAgentReference } from './native-chat-agent-reference'
+import {
+  nativeChatReferenceExtensions,
+  nativeChatReferenceInsertion
+} from './native-chat-reference-extensions'
 import { nativeChatDraftPositions } from './native-chat-composer-draft-memory'
 import { createNativeChatPastedTextHistory } from './native-chat-pasted-text-history'
 import { resolveNativeChatPastedText } from './native-chat-composer-pasted-text-references'
@@ -99,8 +101,7 @@ function NativePromptEditor({
           underline: false,
           trailingNode: false
         }),
-        NativeChatAgentReference,
-        NativeChatBotReference,
+        ...nativeChatReferenceExtensions,
         NativeChatSkill,
         NativeChatFileReference,
         NativeChatImageReference,
@@ -119,7 +120,11 @@ function NativePromptEditor({
           'aria-multiline': 'true',
           'aria-label': placeholder,
           class: `${className ?? ''} whitespace-pre-wrap break-words [&_p]:m-0 [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:text-chat-foreground-faint [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:pointer-events-none`,
-          ...Object.fromEntries(Object.entries(events).filter(([key]) => key.startsWith('aria-')))
+          ...Object.fromEntries(
+            Object.entries(events).filter(
+              ([key, value]) => key.startsWith('aria-') && value !== undefined
+            )
+          )
         },
         // Clipboard input is always literal text; only the picker and attachments create pills.
         handlePaste: (view, event) => {
@@ -244,7 +249,7 @@ function NativePromptEditor({
     () =>
       editor
         ? {
-            insertAgentReferences: (references) => insertAgentReferences(editor, references),
+            ...nativeChatReferenceInsertion(editor),
             insertText: (text) => {
               const content = editor.schema.nodeFromJSON(promptTextContent(text))
               editor.view.dispatch(
@@ -346,7 +351,6 @@ function NativePromptEditor({
                 to: promptTextPosition(doc, to ?? 0)
               })
             },
-            insertBotReference: (from, to, bot) => insertBotReference(editor, from, to, bot),
             insertSkill: (from, to, token, path) => {
               const { doc } = editor.state
               const range = { from: promptTextPosition(doc, from), to: promptTextPosition(doc, to) }

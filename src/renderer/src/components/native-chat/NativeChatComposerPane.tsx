@@ -79,7 +79,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       setDraft,
       setCaret
     })
-    const [activeSuggestion, setActiveSuggestion] = useState(0)
+    const [activeSuggestion, setActiveSuggestion] = useState(-1)
     const holdNotice = useNativeChatMobileHoldNotice(
       structuredTransport ? null : targetPtyId,
       canSend
@@ -378,6 +378,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
           autocomplete={autocomplete}
           mentionFiles={mentionFiles}
           activeSuggestion={activeSuggestion}
+          onActiveSuggestionChange={setActiveSuggestion}
           notices={notices}
           imageAttachments={imageAttachments}
           numberImages={Boolean(structuredTransport)}

@@ -9,6 +9,10 @@ import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
 import { isMacPlatform } from './native-chat-shortcut'
 import type { NativeChatMentionOptions } from './use-native-chat-bot-mentions'
+import {
+  nativeChatMentionChoices,
+  type NativeChatMentionTarget
+} from './native-chat-mention-choices'
 import type { BotMention } from '../../../../shared/bot-mentions'
 import type { NativeChatComposerSendIntent } from './native-chat-composer-types'
 import {
@@ -21,7 +25,7 @@ import {
 export type UseNativeChatComposerKeyDownArgs = {
   autocomplete: ComposerAutocomplete
   mentionFiles: NativeChatMentionOptions
-  completeMention: (path: string) => void
+  completeMention: (target: NativeChatMentionTarget) => void
   completeBotMention?: (bot: BotMention) => void
   activeSuggestion: number
   draft: string
@@ -83,7 +87,7 @@ export function useNativeChatComposerKeyDown({
         const items =
           autocomplete.mode === 'slash'
             ? autocomplete.items
-            : [...(mentionFiles.bots ?? []), ...mentionFiles.files]
+            : nativeChatMentionChoices(mentionFiles)
         if (event.key === 'ArrowDown' && items.length > 0) {
           event.preventDefault()
           setActiveSuggestion((index) => (index + 1) % items.length)
@@ -91,24 +95,34 @@ export function useNativeChatComposerKeyDown({
         }
         if (event.key === 'ArrowUp' && items.length > 0) {
           event.preventDefault()
-          setActiveSuggestion((index) => (index - 1 + items.length) % items.length)
+          setActiveSuggestion((index) =>
+            index < 0 ? items.length - 1 : (index - 1 + items.length) % items.length
+          )
           return
         }
         // Shift keeps its own meaning: a newline for Enter, focus back for Tab.
         const picks = (event.key === 'Enter' || event.key === 'Tab') && !event.shiftKey
+        if (
+          event.key === 'Tab' &&
+          picks &&
+          autocomplete.mode === 'mention' &&
+          activeSuggestion < 0
+        ) {
+          dismissPicker(autocomplete.triggerKey)
+          return
+        }
         if (picks && items.length > 0) {
           event.preventDefault()
           if (autocomplete.mode === 'mention') {
-            const index = Math.min(activeSuggestion, items.length - 1)
-            const bot = mentionFiles.bots?.[index]
-            if (bot) {
-              completeBotMention?.(bot)
-            } else {
-              completeMention(mentionFiles.files[index - (mentionFiles.bots?.length ?? 0)])
+            const choice = nativeChatMentionChoices(mentionFiles)[activeSuggestion]
+            if (choice?.kind === 'bot') {
+              completeBotMention?.(choice.bot)
+            } else if (choice) {
+              completeMention(choice.kind === 'file' ? choice.path : choice.reference)
             }
             return
           }
-          const item = autocomplete.items[activeSuggestion] ?? autocomplete.items[0]
+          const item = autocomplete.items[Math.max(0, activeSuggestion)] ?? autocomplete.items[0]
           // Only dispatch a command at a dispatchable prompt position; embedded tokens merely complete.
           if (event.key === 'Enter' && item.kind === 'command' && autocomplete.dispatchable) {
             dispatchPickerCommand(item)
@@ -117,8 +131,12 @@ export function useNativeChatComposerKeyDown({
           }
           return
         }
-        // Why: the files are still on their way, so Enter here is a pick that came early, not a send.
-        if (picks && autocomplete.mode === 'mention' && mentionFiles.loading) {
+        // A pending or unselected mention pick must never become an accidental send.
+        if (
+          picks &&
+          autocomplete.mode === 'mention' &&
+          (activeSuggestion < 0 || mentionFiles.loading || mentionFiles.issueSearch?.loading)
+        ) {
           event.preventDefault()
           return
         }

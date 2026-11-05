@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import type { NativeChatComposerInput } from './native-chat-composer-input'
+import { nativeChatSuggestionResetIndex } from './native-chat-mention-choices'
 
 export function useNativeChatDraftEvents({
   setDraft,
@@ -24,7 +25,7 @@ export function useNativeChatDraftEvents({
       setDraft(value)
       setCaret(caret)
       handleDraftOrCaretChange(value, caret)
-      setActiveSuggestion(0)
+      setActiveSuggestion(nativeChatSuggestionResetIndex(value, caret))
     },
     [setDraft, setCaret, handleDraftOrCaretChange, setActiveSuggestion]
   )
@@ -34,7 +35,7 @@ export function useNativeChatDraftEvents({
       const caret = element.selectionStart ?? element.value.length
       setCaret(caret)
       handleDraftOrCaretChange(element.value, caret)
-      setActiveSuggestion(0)
+      setActiveSuggestion(nativeChatSuggestionResetIndex(element.value, caret))
     },
     onImeSettled: (element: NativeChatComposerInput) => {
       if (element.value !== draft) {

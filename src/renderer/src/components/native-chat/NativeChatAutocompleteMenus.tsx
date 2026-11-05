@@ -1,17 +1,12 @@
+import { PickerOptionButton, PickerStatus } from './NativeChatPickerOption'
 import { NativeChatPickerListbox as PickerListbox } from './NativeChatPickerListbox'
 import { memo, useEffect, useRef } from 'react'
 import { Package, RotateCcw } from 'lucide-react'
-import { BotAvatar } from '../project-channels/BotAvatar'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
-import { cn } from '@/lib/utils'
 import type { SkillSourceKind } from '../../../../shared/skills'
-import { FilenameFirstPath } from '@/components/file-path-cursor-tooltip'
-import { FileTypeIcon } from '@/components/FileTypeIcon'
 import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/native-chat-composer-autocomplete'
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
-import type { NativeChatMentionOptions } from './use-native-chat-bot-mentions'
-import type { BotMention } from '../../../../shared/bot-mentions'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { localizeSlashCommandDescription } from './native-chat-slash-command-descriptions'
 
@@ -164,14 +159,6 @@ function PickerGroupHeading({ kind }: { kind: 'commands' | 'skills' }): React.JS
   )
 }
 
-function PickerStatus({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
-      {children}
-    </div>
-  )
-}
-
 function PickerOption({
   item,
   index,
@@ -229,44 +216,6 @@ function PickerOption({
   )
 }
 
-function PickerOptionButton({
-  id,
-  selected,
-  activeItemRef,
-  onChoose,
-  children
-}: {
-  id: string
-  selected: boolean
-  activeItemRef: React.MutableRefObject<HTMLButtonElement | null>
-  onChoose: () => void
-  children: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <button
-      id={id}
-      ref={selected ? activeItemRef : null}
-      role="option"
-      aria-selected={selected}
-      type="button"
-      onPointerDown={(event) => {
-        // Accept before focus transfer because the textarea owns query and caret state.
-        event.preventDefault()
-        if (event.button === 0) {
-          onChoose()
-        }
-      }}
-      className={cn(
-        'flex w-full items-start gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground hover:[--muted-foreground:var(--accent-foreground)]',
-        selected &&
-          'border-border bg-accent text-accent-foreground [--muted-foreground:var(--accent-foreground)]'
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 function getPickerAnnotation(item: NativeChatPickerItem): string | null {
   if (item.kind === 'skill' && item.location) {
     return item.location
@@ -298,89 +247,4 @@ function scopeLabel(sourceKind: SkillSourceKind | undefined): string {
   return sourceKind ? (labels[sourceKind] ?? '') : ''
 }
 
-export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
-  mention,
-  activeIndex,
-  listboxId,
-  onChoose,
-  onChooseBot
-}: {
-  mention: NativeChatMentionOptions
-  activeIndex: number
-  listboxId: string
-  onChoose: (path: string) => void
-  onChooseBot?: (bot: BotMention) => void
-}): React.JSX.Element {
-  useUiLanguageRevision()
-  const activeItemRef = useRef<HTMLButtonElement | null>(null)
-  const bots = mention.bots ?? []
-  const selectedIndex = Math.min(activeIndex, bots.length + mention.files.length - 1)
-
-  useEffect(() => {
-    activeItemRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [selectedIndex, mention.files, mention.bots])
-
-  const statusText =
-    bots.length + mention.files.length > 0
-      ? null
-      : mention.loading
-        ? translate('components.native-chat.composer.loadingFiles', 'Loading files...')
-        : mention.failed
-          ? translate('components.native-chat.composer.filesLoadFailed', "Couldn't load files")
-          : translate('components.native-chat.composer.noFiles', 'No matching files')
-
-  return (
-    <PickerListbox id={listboxId}>
-      {bots.length > 0 ? (
-        <PickerStatus>{translate('shamu.mentions.bots', 'Bots')}</PickerStatus>
-      ) : null}
-      {bots.map((bot, index) => (
-        <PickerOptionButton
-          key={bot.id}
-          id={`${listboxId}-option-${index}`}
-          selected={index === selectedIndex}
-          activeItemRef={activeItemRef}
-          onChoose={() => onChooseBot?.(bot)}
-        >
-          <BotAvatar id={bot.id} identity={bot.identity} className="size-7 rounded-lg" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate">{bot.name}</span>
-            <span className="block text-xs text-muted-foreground">
-              {translate('shamu.mentions.ownChat', 'Replies in its own chat')}
-            </span>
-          </span>
-        </PickerOptionButton>
-      ))}
-      {bots.length > 0 && mention.files.length > 0 ? (
-        <PickerStatus>{translate('shamu.mentions.files', 'Files')}</PickerStatus>
-      ) : null}
-      {mention.files.map((path, fileIndex) => {
-        const index = bots.length + fileIndex
-        return (
-          <PickerOptionButton
-            key={path}
-            id={`${listboxId}-option-${index}`}
-            selected={index === selectedIndex}
-            activeItemRef={activeItemRef}
-            onChoose={() => onChoose(path)}
-          >
-            <FileTypeIcon
-              filePath={path}
-              className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-            />
-            <FilenameFirstPath path={path} />
-          </PickerOptionButton>
-        )
-      })}
-      {statusText ? (
-        <PickerStatus>
-          {mention.loading ? <LoadingSpinner className="size-3.5" /> : null}
-          {statusText}
-        </PickerStatus>
-      ) : null}
-      <div aria-live="polite" className="sr-only">
-        {statusText ?? ''}
-      </div>
-    </PickerListbox>
-  )
-})
+export { NativeChatMentionMenu } from './NativeChatMentionMenu'

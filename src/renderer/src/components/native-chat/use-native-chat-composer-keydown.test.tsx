@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import type { BotMention } from '../../../../shared/bot-mentions'
+import type { NativeChatResourceReference } from '../../../../shared/native-chat/native-chat-resource-reference'
 import { cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
 import { useState, type KeyboardEventHandler } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -45,11 +46,13 @@ function setup(
   {
     files = [],
     bots = [],
+    resources = [],
     activeSuggestion = 0,
     loading = false
   }: {
     files?: readonly string[]
     bots?: readonly BotMention[]
+    resources?: readonly NativeChatResourceReference[]
     activeSuggestion?: number
     loading?: boolean
   } = {}
@@ -69,7 +72,7 @@ function setup(
   const hook = renderHook(() =>
     useNativeChatComposerKeyDown({
       autocomplete,
-      mentionFiles: { files, bots, loading, failed: false },
+      mentionFiles: { files, bots, resources, loading, failed: false },
       activeSuggestion,
       draft,
       isComposing: () => composing,
@@ -94,6 +97,57 @@ describe('useNativeChatComposerKeyDown', () => {
 
   const setupMention = (options?: Parameters<typeof setup>[3]) =>
     setup(mention, false, 'open @app', options)
+
+  it('does not send a query with no selected result while the catalogue is empty', () => {
+    const { handler, callbacks } = setupMention({ activeSuggestion: -1 })
+    press(handler, 'Enter')
+    expect(callbacks.send).not.toHaveBeenCalled()
+    expect(callbacks.completeMention).not.toHaveBeenCalled()
+  })
+
+  it('requires an explicit reference selection before Enter can notify a bot', () => {
+    const initial = setupMention({
+      bots: [{ id: 'ceo', name: 'CEO' }],
+      files: ['README.md'],
+      activeSuggestion: -1
+    })
+    press(initial.handler, 'Enter')
+    expect(initial.callbacks.completeBotMention).not.toHaveBeenCalled()
+    expect(initial.callbacks.completeMention).not.toHaveBeenCalled()
+    expect(initial.callbacks.send).not.toHaveBeenCalled()
+    const tab = setupMention({ bots: [{ id: 'ceo', name: 'CEO' }], activeSuggestion: -1 })
+    press(tab.handler, 'Tab')
+    expect(tab.callbacks.dismissPicker).toHaveBeenCalledWith(mention.triggerKey)
+    expect(tab.callbacks.completeBotMention).not.toHaveBeenCalled()
+  })
+
+  it('completes resources with the same global index as bots and files', () => {
+    const reference: NativeChatResourceReference = {
+      kind: 'workspace',
+      id: 'folder:launch',
+      hostId: 'runtime:primary',
+      label: 'Launch',
+      description: '/launch',
+      path: '/launch'
+    }
+    const selected = setupMention({
+      bots: [{ id: 'ceo', name: 'CEO' }],
+      resources: [reference],
+      files: ['README.md'],
+      activeSuggestion: 1
+    })
+    press(selected.handler, 'Enter')
+    expect(selected.callbacks.completeMention).toHaveBeenCalledWith(reference)
+    expect(selected.callbacks.completeBotMention).not.toHaveBeenCalled()
+    const last = setupMention({
+      bots: [{ id: 'ceo', name: 'CEO' }],
+      resources: [reference],
+      files: ['README.md'],
+      activeSuggestion: 2
+    })
+    press(last.handler, 'Tab')
+    expect(last.callbacks.completeMention).toHaveBeenCalledWith('README.md')
+  })
 
   it('picks a bot with Enter and a file after the bot rows with Tab', () => {
     const bot = { id: 'ceo', name: 'CEO' }

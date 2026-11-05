@@ -55,6 +55,7 @@ afterEach(() => {
   clearNativeChatComposerDraftsForTests()
   clearStructuredAgentSessionPendingSends('test-session')
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 const first = { label: 'Same name', address: 'term_first', hostKey: 'local' }
 const second = { ...first, address: 'dispatch:ctx_second' }
@@ -140,6 +141,7 @@ it('keeps a split’s caret, duplicate-name identities, literal unsent copy and 
 })
 
 it('serializes the captured draft before structured and PTY sends', async () => {
+  vi.stubGlobal('api', {})
   const pane = editor('send')
   act(() => {
     pane.input.setSelectionRange(6, 6)
