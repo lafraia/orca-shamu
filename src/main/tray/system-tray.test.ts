@@ -303,6 +303,49 @@ describe('createSystemTray', () => {
 })
 
 describe('dev instance indicator', () => {
+  it.each([
+    [false, null, 'Orca Shamu'],
+    [true, 'my-branch', 'Orca Shamu DEV (my-branch)']
+  ] as const)(
+    'preserves the Shamu menu identity through attention, language rebuilds and recreation (dev: %s)',
+    async (isDevInstance, devInstanceLabel, name) => {
+      setPlatform('darwin')
+      const { createSystemTray, destroySystemTray, rebuildSystemTrayMenu, setTrayAttention } =
+        await loadModule()
+      const { setMainUiLanguage } = await import('../i18n/main-i18n')
+      await setMainUiLanguage('en')
+      const options = {
+        ...createOptions({ isDevInstance, devInstanceLabel }),
+        appName: 'Orca Shamu'
+      }
+      createSystemTray(options)
+      expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith(name)
+      expect(builtMenuItems()[0]).toMatchObject({ label: name, enabled: false })
+      builtMenuItems()
+        .find((item) => item.label === 'Open Orca Shamu')
+        ?.click?.()
+      expect(options.onOpen).toHaveBeenCalledOnce()
+      setTrayAttention(true)
+      flushTraySceneMutation()
+      expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith(`${name}: activity waiting`)
+      await setMainUiLanguage('ja')
+      rebuildSystemTrayMenu()
+      flushTraySceneMutation()
+      expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith(
+        `${name}: 件のアクティビティが待機中`
+      )
+      expect(builtMenuItems()[0]).toMatchObject({ label: name, enabled: false })
+      expect(builtMenuItems()[2].label).toBe('Open Orca Shamu')
+      setTrayAttention(false)
+      flushTraySceneMutation()
+      expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith(name)
+      destroySystemTray()
+      createSystemTray(options)
+      expect(trayInstances[1].setToolTip).toHaveBeenLastCalledWith(name)
+      expect(builtMenuItems()[0]).toMatchObject({ label: name, enabled: false })
+    }
+  )
+
   it('stamps the DEV badge into the macOS template with a rebuilt Retina rep', async () => {
     setPlatform('darwin')
     const { createSystemTray } = await loadModule()

@@ -9,6 +9,7 @@ import { composeTrayAttentionIcon, tintTrayTemplateForAttention } from './tray-a
 import { stampTrayDevBadge } from './tray-dev-badge'
 
 export type SystemTrayOptions = {
+  appName?: string
   /** App icon id from settings; the tray reuses the app icon image. */
   appIcon: unknown
   /** True for dev/unpackaged instances; shows a DEV marker on the tray. */
@@ -44,10 +45,11 @@ let nativeThemeUpdatedListener: (() => void) | null = null
 
 // Per-worktree tooltips distinguish concurrent dev instances.
 function baseTooltip(): string {
+  const appName = trayOptions?.appName ?? 'Orca'
   if (!devIndicator) {
-    return 'Orca'
+    return appName
   }
-  return devIndicator.label ? `Orca DEV (${devIndicator.label})` : 'Orca DEV'
+  return devIndicator.label ? `${appName} DEV (${devIndicator.label})` : `${appName} DEV`
 }
 
 // Downscale the app image for Windows' 16px notification-area slot.
@@ -79,9 +81,11 @@ function applyTrayImage(): void {
         attentionImage.setTemplateImage(false)
         tray.setImage(attentionImage)
         tray.setToolTip(
-          devIndicator
-            ? `${baseTooltip()} - ${translateMain('tray.activityWaitingSuffix', 'activity waiting')}`
-            : translateMain('tray.activityWaiting', 'Orca - activity waiting')
+          trayOptions?.appName
+            ? `${baseTooltip()}: ${translateMain('tray.activityWaitingSuffix', 'activity waiting')}`
+            : devIndicator
+              ? `${baseTooltip()} - ${translateMain('tray.activityWaitingSuffix', 'activity waiting')}`
+              : translateMain('tray.activityWaiting', 'Orca - activity waiting')
         )
         return
       } catch (error) {
@@ -223,9 +227,9 @@ export function createSystemTray(opts: SystemTrayOptions): Tray | null {
   }
 
   tray = new Tray(baseTrayImage)
+  trayOptions = opts
   applyTrayImage()
 
-  trayOptions = opts
   tray.setContextMenu(buildTrayMenu(opts))
   if (process.platform === 'win32') {
     tray.setToolTip(baseTooltip())
@@ -242,15 +246,17 @@ export function createSystemTray(opts: SystemTrayOptions): Tray | null {
 
 function buildTrayMenu(opts: SystemTrayOptions): Menu {
   return Menu.buildFromTemplate([
-    ...(devIndicator
+    ...(devIndicator || opts.appName
       ? ([
-          // Label dev trays by worktree/branch to distinguish concurrent instances.
+          // Name fork and dev instances so their native menus stay distinguishable.
           { label: baseTooltip(), enabled: false },
           { type: 'separator' }
         ] satisfies Electron.MenuItemConstructorOptions[])
       : []),
     {
-      label: translateMain('tray.openOrca', 'Open Orca'),
+      label: opts.appName
+        ? translateMain('tray.openNamedApp', 'Open {{appName}}', { appName: opts.appName })
+        : translateMain('tray.openOrca', 'Open Orca'),
       click: safeMenuAction(() => opts.onOpen())
     },
     { type: 'separator' },

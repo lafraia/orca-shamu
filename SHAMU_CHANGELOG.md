@@ -14,6 +14,7 @@ Upstream commit: `965978bc78bf03a6a43187c1ed28fcffe0e01bb5`
 
 ### Shamu changes
 
+- Identify the macOS menu bar item as Orca Shamu in its menu heading, open action and activity tooltip, including development instances and menu rebuilds.
 - Present recalled memory as readable notes with sources, selection reasons, exclusions and the additional context budget. Render saved bot links and legacy bot IDs as named chat references, and guide new memory authoring toward English.
 - Link known bot names in durable memory notes, source labels and recalled memory to their permanent chats, closing the memory panel on navigation and preserving the saved text.
 - Add a model picker to each bot chat header, sharing the native session catalog, confirmed options and persisted per-session selection without replacing the conversation.
