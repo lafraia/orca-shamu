@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
 import { BotSidebarGroups } from './BotSidebarGroups'
+import { BotUnreadBadge } from './BotUnreadBadge'
+import { botUnreadDescription, useBotUnread } from './bot-unread-store'
 import {
   openProjectChannelEditor,
   reloadProjectChannels,
@@ -13,6 +15,9 @@ import {
 
 export function ProjectNavigationSwitch(): React.JSX.Element | null {
   const mode = useProjectChannels((state) => state.mode)
+  const counts = useBotUnread((state) => state.counts)
+  const pending = useBotUnread((state) => state.pending.length > 0)
+  const count = Object.values(counts).reduce((sum, value) => sum + value, 0)
   if (!window.api.projectChannels) {
     return null
   }
@@ -27,6 +32,7 @@ export function ProjectNavigationSwitch(): React.JSX.Element | null {
         size="xs"
         className="flex-1"
         aria-pressed={mode === 'projects'}
+        aria-description={botUnreadDescription(count, pending)}
         onClick={() => {
           useProjectChannels.setState({ mode: 'projects' })
           useAppStore.setState({ activeView: 'project-chat' })
@@ -34,6 +40,7 @@ export function ProjectNavigationSwitch(): React.JSX.Element | null {
       >
         <Bot />
         {translate('projectChannels.projects', 'Bots')}
+        <BotUnreadBadge count={count} pending={pending} />
       </Button>
       <Button
         variant={mode === 'workspaces' ? 'secondary' : 'ghost'}

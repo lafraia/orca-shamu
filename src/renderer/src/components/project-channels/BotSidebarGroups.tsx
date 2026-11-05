@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { BotAvatar } from './BotAvatar'
+import { BotUnreadBadge } from './BotUnreadBadge'
+import { botUnreadDescription, useBotUnread } from './bot-unread-store'
 import { BotSidebarActions } from './BotSidebarActions'
 import { openProjectChannel } from './project-channel-store'
 import { runBotRosterCommand } from './bot-roster-actions'
@@ -35,6 +37,8 @@ export function BotSidebarGroups({
   const [sectionName, setSectionName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const counts = useBotUnread((state) => state.counts)
+  const pending = useBotUnread((state) => state.pending)
   const groups = [
     {
       key: 'pinned',
@@ -71,7 +75,13 @@ export function BotSidebarGroups({
               />
               {group.pinned ? <Pin className="size-3" /> : null}
               <span className="truncate">{group.name}</span>
-              <span className="ml-auto text-muted-foreground">{group.bots.length}</span>
+              <span className="ml-auto flex items-center gap-1.5">
+                <span className="text-muted-foreground">{group.bots.length}</span>
+                <BotUnreadBadge
+                  count={group.bots.reduce((sum, bot) => sum + (counts[bot.id] ?? 0), 0)}
+                  pending={group.bots.some((bot) => pending.includes(bot.id))}
+                />
+              </span>
             </Button>
           ) : null}
           {!collapsed[group.key]
@@ -90,6 +100,10 @@ export function BotSidebarGroups({
                     type="button"
                     data-current={active && channel.id === selectedId}
                     aria-current={active && channel.id === selectedId ? 'page' : undefined}
+                    aria-description={botUnreadDescription(
+                      counts[channel.id] ?? 0,
+                      pending.includes(channel.id)
+                    )}
                     onClick={() => openProjectChannel(channel.id)}
                     className={cn(
                       'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -109,6 +123,10 @@ export function BotSidebarGroups({
                     >
                       {channel.name}
                     </span>
+                    <BotUnreadBadge
+                      count={counts[channel.id] ?? 0}
+                      pending={pending.includes(channel.id)}
+                    />
                   </button>
                 </BotSidebarActions>
               ))

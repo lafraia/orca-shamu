@@ -10,6 +10,7 @@ import { ProjectChannelSettingsButton } from './ProjectChannelSettingsButton'
 import { BotAvatar } from './BotAvatar'
 import { BotMemoryPanel } from './BotMemoryPanel'
 import { BotRoutinesPanel } from './BotRoutinesPanel'
+import { useBotUnread } from './bot-unread-store'
 
 export function BotNativeConversation({ channel }: { channel: ProjectChannel }): React.JSX.Element {
   const [attempt, setAttempt] = useState(0)
@@ -18,6 +19,18 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
   const [error, setError] = useState<string | null>(null)
   const member = channel.members.find((row) => row.id === channel.home?.memberId)
   const ready = channel.home?.ready && member
+  const hasConversation = Boolean(ready)
+  useEffect(() => {
+    if (!hasConversation || memoryOpen || routinesOpen) {
+      return
+    }
+    useBotUnread.setState({ openChatId: channel.id })
+    return () => {
+      if (useBotUnread.getState().openChatId === channel.id) {
+        useBotUnread.setState({ openChatId: null })
+      }
+    }
+  }, [channel.id, hasConversation, memoryOpen, routinesOpen])
   useEffect(() => {
     let current = true
     setError(null)

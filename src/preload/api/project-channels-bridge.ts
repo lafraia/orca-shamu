@@ -2,6 +2,13 @@ import { ipcRenderer } from 'electron'
 import type { ProjectChannelsApi } from '../../shared/project-channels'
 
 export const projectChannelsApi: ProjectChannelsApi = {
+  readUnread: (ids) => ipcRenderer.invoke('projectChannels:readUnread', ids),
+  markRead: (mark) => ipcRenderer.invoke('projectChannels:markRead', mark),
+  onUnreadChanged: (listener) => {
+    const handle = (_event: Electron.IpcRendererEvent, id: string): void => listener(id)
+    ipcRenderer.on('projectChannels:unreadChanged', handle)
+    return () => ipcRenderer.removeListener('projectChannels:unreadChanged', handle)
+  },
   command: (command) => ipcRenderer.invoke('projectChannels:command', command),
   onChanged: (listener) => {
     const handle = (): void => listener()

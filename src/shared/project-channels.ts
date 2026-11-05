@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { botIdentitySchema } from './bot-identity'
 import type { BotMemory, BotMemorySnapshot } from './bot-memory'
 import type { BotCommand } from './bot-commands'
+import type { BotReadMark, BotUnreadSnapshot } from './bot-unread'
 import type { AgentType } from './agent-status-types'
 import { isStructuredAgentId } from './agent-session/lifecycle/agent-session-provider-handle-encoding'
 
@@ -130,6 +131,9 @@ export function projectChannelSessionKey(
 }
 
 export type ProjectChannelsApi = {
+  readUnread: (botIds?: string[]) => Promise<BotUnreadSnapshot>
+  markRead: (mark: BotReadMark) => Promise<BotUnreadSnapshot>
+  onUnreadChanged: (listener: (botId: string) => void) => () => void
   onChanged: (listener: () => void) => () => void
   command: (command: BotCommand) => Promise<unknown>
   readMemory: (channelId: string) => Promise<BotMemorySnapshot>

@@ -3,6 +3,8 @@ import { botMentionRequestSchema } from '../../shared/bot-mentions'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { BotCommandService, installBotCommandService } from '../shamu-bots/bot-command-service'
 import { BotRoutineService } from '../shamu-bots/bot-routine-service'
+import { BotUnreadService } from '../shamu-bots/bot-unread-service'
+import { botReadMarkSchema } from '../../shared/bot-unread'
 import { getBundledLauncherPath } from '../cli/bundled-cli-launcher-path'
 import { z } from 'zod'
 import type { Store } from '../persistence/loading-store/store'
@@ -18,6 +20,33 @@ export function registerProjectChannelsHandlers(
   primary?: ShamuPrimaryConnection | null
 ): void {
   const channels = new ProjectChannelsStore(store.getProfileStorageDirectory())
+  const unread = primary
+    ? new BotUnreadService(channels, primary, store.getProfileStorageDirectory())
+    : null
+  for (const name of ['readUnread', 'markRead']) {
+    ipcMain.removeHandler(`projectChannels:${name}`)
+  }
+  ipcMain.handle('projectChannels:readUnread', async (event, ids: unknown) => {
+    trusted(event)
+    if (!unread) {
+      throw new Error('Bot unread messages are available in Orca Shamu.')
+    }
+    return unread.read(z.array(z.string().min(1).max(1024)).max(100).optional().parse(ids))
+  })
+  ipcMain.handle('projectChannels:markRead', async (event, mark: unknown) => {
+    trusted(event)
+    if (!unread) {
+      throw new Error('Bot unread messages are available in Orca Shamu.')
+    }
+    const input = botReadMarkSchema.parse(mark)
+    const snapshot = await unread.markRead(input)
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (isTrustedUIRenderer(window.webContents)) {
+        window.webContents.send('projectChannels:unreadChanged', input.botId)
+      }
+    }
+    return snapshot
+  })
   const memory = primary ? new BotMemoryService(channels, primary) : null
   for (const name of ['readMemory', 'writeMemory', 'prepareMessage']) {
     ipcMain.removeHandler(`projectChannels:${name}`)

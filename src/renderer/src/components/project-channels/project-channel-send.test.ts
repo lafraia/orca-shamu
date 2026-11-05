@@ -43,6 +43,9 @@ describe('shared channel send admission', () => {
       error: null
     })
     api = {
+      readUnread: vi.fn(),
+      markRead: vi.fn(),
+      onUnreadChanged: vi.fn(),
       command: vi.fn(),
       onChanged: vi.fn(),
       readMemory: vi.fn(),

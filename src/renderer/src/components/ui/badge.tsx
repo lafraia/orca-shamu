@@ -9,6 +9,8 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        notification:
+          'notification-count-badge h-4.5 min-w-4.5 bg-notification-badge px-1 text-2xs font-semibold leading-none tabular-nums text-notification-badge-foreground',
         default: 'bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
         secondary: 'bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
         dot: 'bg-background text-foreground border-border shadow-xs dark:bg-secondary dark:border-white/20',

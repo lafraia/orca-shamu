@@ -21,6 +21,7 @@ import {
 import { projectChannelCandidates } from './project-channel-candidates'
 import { BotIdentityFields } from './BotIdentityFields'
 import { defaultBotIdentity } from '../../../../shared/bot-identity'
+import { BotUnreadHost } from './BotUnreadHost'
 import {
   loadProjectChannels,
   refreshProjectChannelRoster,
@@ -45,9 +46,14 @@ export function ProjectChannelsHost(): React.JSX.Element | null {
       window.removeEventListener('beforeunload', checkpointProjectChannelDrafts)
     }
   }, [])
-  return editor ? (
-    <ProjectChannelDialog key={editor.channelId ?? editor.tabId ?? 'new'} editor={editor} />
-  ) : null
+  return (
+    <>
+      <BotUnreadHost />
+      {editor ? (
+        <ProjectChannelDialog key={editor.channelId ?? editor.tabId ?? 'new'} editor={editor} />
+      ) : null}
+    </>
+  )
 }
 
 function ProjectChannelDialog({
