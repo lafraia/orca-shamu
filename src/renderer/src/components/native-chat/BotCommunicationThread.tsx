@@ -1,8 +1,7 @@
 import {
   CommunicationParticipant,
   CommunicationPost,
-  CommunicationSkeleton,
-  type CommunicationPostData
+  CommunicationSkeleton
 } from './BotCommunicationThreadPosts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeftRight, RefreshCw } from 'lucide-react'
@@ -30,6 +29,7 @@ import {
   projectChannelCandidates
 } from '../project-channels/project-channel-candidates'
 import { BotCommunicationPeer, type BotCommunicationPeerSnapshot } from './BotCommunicationPeer'
+import { botCommunicationPosts } from './bot-communication-posts'
 import { useNativeChatAppearanceStyle } from './native-chat-appearance-style'
 
 export function BotCommunicationThread({
@@ -55,15 +55,38 @@ export function BotCommunicationThread({
   const settings = useAppStore((state) => state.settings)
   const appearance = useNativeChatAppearanceStyle(settings)
   const pair = botCommunicationPairKey(selected)
+  const baseEntries = useMemo(
+    () => [
+      ...new Map(
+        [...entries, selected]
+          .filter((entry) => botCommunicationPairKey(entry) === pair)
+          .map((entry) => [entry.id, entry])
+      ).values()
+    ],
+    [entries, selected, pair]
+  )
   const pairEntries = useMemo(
-    () => entries.filter((entry) => botCommunicationPairKey(entry) === pair),
-    [entries, pair]
+    () =>
+      [
+        ...new Map(
+          [
+            ...baseEntries,
+            ...Object.values(peers)
+              .flatMap((peer) => peer.nativeEntries)
+              .filter((entry) => botCommunicationPairKey(entry) === pair)
+          ].map((entry) => [entry.id, entry])
+        ).values()
+      ].toSorted((a, b) => a.createdAt - b.createdAt),
+    [baseEntries, peers, pair]
   )
   const shown = useMemo(() => {
     const tail = pairEntries.slice(-count)
     return tail.some((entry) => entry.id === selected.id) ? tail : [selected, ...tail]
   }, [pairEntries, count, selected])
-  const referenceIds = useMemo(() => [...new Set(shown.map((entry) => entry.referenceId))], [shown])
+  const referenceIds = useMemo(
+    () => [...new Set(shown.filter((entry) => !entry.native).map((entry) => entry.referenceId))],
+    [shown]
+  )
   useEffect(() => {
     let current = true
     setLoading(true)
@@ -100,59 +123,9 @@ export function BotCommunicationThread({
     )
   }, [])
   const sessions = useMemo(
-    () => [...new Set(shown.map((entry) => entry.recipient.sessionId))],
-    [shown]
+    () => [selected.source.sessionId, selected.recipient.sessionId],
+    [selected.source.sessionId, selected.recipient.sessionId]
   )
-  const posts = useMemo(() => {
-    const ids = new Set(shown.map((entry) => entry.id))
-    const requests: CommunicationPostData[] = shown.flatMap((entry) => {
-      const text = texts.get(entry.referenceId)
-      return text
-        ? [
-            {
-              id: `request:${entry.id}`,
-              entryId: entry.id,
-              author: entry.source,
-              at: entry.createdAt,
-              blocks: [{ type: 'text', text: text.text }, ...(text.attachments ?? [])],
-              request: true,
-              ...(entry.actor !== 'bot'
-                ? {
-                    caption:
-                      entry.actor === 'user'
-                        ? translate('shamu.communication.yourMention', 'Your mention')
-                        : translate('shamu.communication.reference', 'Conversation reference')
-                  }
-                : {})
-            }
-          ]
-        : []
-    })
-    const replies: CommunicationPostData[] = Object.values(peers).flatMap((peer) =>
-      peer.replies
-        .filter(({ entry }) => ids.has(entry.id))
-        .map(({ entry, message }) => ({
-          id: message.id,
-          entryId: entry.id,
-          author: entry.recipient,
-          at: Math.max(entry.createdAt, message.timestamp ?? entry.createdAt),
-          request: false,
-          blocks: message.blocks.filter(
-            (block) => block.type === 'text' || block.type === 'image-ref'
-          )
-        }))
-    )
-    return [...requests, ...replies].toSorted(
-      (a, b) => a.at - b.at || Number(b.request) - Number(a.request)
-    )
-  }, [shown, texts, peers])
-  useEffect(() => {
-    if (loading || scrolled.current === selected.id || !selectedElement.current) {
-      return
-    }
-    scrolled.current = selected.id
-    selectedElement.current.scrollIntoView({ block: 'start', behavior: motionSafeScrollBehavior() })
-  }, [loading, posts, selected.id])
   const open = (participant: BotCommunicationParticipant): void => {
     if (participant.botId) {
       onClose()
@@ -182,6 +155,64 @@ export function BotCommunicationThread({
       )
     )
   )
+  const recipientAvailable = useAppStore((state) =>
+    Boolean(
+      selected.recipient.botId ||
+      projectChannelCandidates(state).some(
+        (member) =>
+          member.sessionId === selected.recipient.sessionId &&
+          member.target.kind === 'environment' &&
+          member.target.environmentId === selected.environmentId
+      )
+    )
+  )
+  const recipientName = useAppStore(
+    (state) =>
+      projectChannelCandidates(state).find(
+        (member) =>
+          member.sessionId === selected.recipient.sessionId &&
+          member.target.kind === 'environment' &&
+          member.target.environmentId === selected.environmentId
+      )?.name
+  )
+  const sourceName = useAppStore(
+    (state) =>
+      projectChannelCandidates(state).find(
+        (member) =>
+          member.sessionId === selected.source.sessionId &&
+          member.target.kind === 'environment' &&
+          member.target.environmentId === selected.environmentId
+      )?.name
+  )
+  const source = useMemo(
+    () =>
+      selected.source.botId || !sourceName
+        ? selected.source
+        : { ...selected.source, name: sourceName },
+    [selected.source, sourceName]
+  )
+  const recipient = useMemo(
+    () =>
+      selected.recipient.botId || !recipientName
+        ? selected.recipient
+        : { ...selected.recipient, name: recipientName },
+    [selected.recipient, recipientName]
+  )
+  const posts = useMemo(
+    () =>
+      botCommunicationPosts(shown, texts, Object.values(peers)).map((post) => ({
+        ...post,
+        author: post.author.sessionId === source.sessionId ? source : recipient
+      })),
+    [shown, texts, peers, source, recipient]
+  )
+  useEffect(() => {
+    if (loading || scrolled.current === selected.id || !selectedElement.current) {
+      return
+    }
+    scrolled.current = selected.id
+    selectedElement.current.scrollIntoView({ block: 'start', behavior: motionSafeScrollBehavior() })
+  }, [loading, posts, selected.id])
   const replied = Object.values(peers).some((peer) =>
     peer.replies.some(({ entry }) => entry.id === selected.id)
   )
@@ -208,7 +239,7 @@ export function BotCommunicationThread({
               <SheetTitle>
                 <span className="flex min-w-0 items-center gap-2">
                   <CommunicationParticipant
-                    participant={selected.source}
+                    participant={source}
                     available={sourceAvailable}
                     onOpen={() => open(selected.source)}
                   />
@@ -217,7 +248,8 @@ export function BotCommunicationThread({
                     className="size-3.5 shrink-0 text-chat-foreground-faint"
                   />
                   <CommunicationParticipant
-                    participant={selected.recipient}
+                    participant={recipient}
+                    available={recipientAvailable}
                     onOpen={() => open(selected.recipient)}
                   />
                 </span>
@@ -274,12 +306,12 @@ export function BotCommunicationThread({
               {mixed
                 ? translate(
                     'shamu.communication.sharedTurn',
-                    'This reply shares a turn with your message. Open the bot chat to read it in context.'
+                    'This reply shares a turn with your message. Open the original chat to read it in context.'
                   )
                 : selected.state === 'refused'
                   ? translate(
                       'shamu.communication.notDelivered',
-                      'The message was not delivered. Open the bot chat to check its status.'
+                      'The message was not delivered. Open the original chat to check its status.'
                     )
                   : translate('shamu.communication.noReply', 'No reply in the loaded history yet.')}
             </p>
@@ -290,7 +322,7 @@ export function BotCommunicationThread({
                 key={sessionId}
                 sessionId={sessionId}
                 target={target}
-                entries={shown}
+                entries={baseEntries}
                 selected={selected}
                 onSnapshot={receive}
               />

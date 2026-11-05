@@ -5,6 +5,8 @@ import type { BotCommunication } from '../../../../shared/bot-communications'
 import type { RuntimeClientTarget } from '../../../../shared/runtime-client-target'
 import { useStructuredAgentSessionRead } from './use-structured-agent-session-read'
 import { botCommunicationReplies } from './bot-communication-replies'
+import { useProjectChannels } from '../project-channels/project-channel-store'
+import { createNativeBotCommunicationProjection } from './native-bot-communications'
 
 export type BotCommunicationPeerSnapshot = ReturnType<typeof botCommunicationReplies>
 
@@ -28,9 +30,16 @@ export function BotCommunicationPeer({
     isViewed: false
   })
   const { state, loadingOlder, loadOlder } = read
+  const bots = useProjectChannels((store) => store.snapshot.channels)
+  const project = useMemo(() => createNativeBotCommunicationProjection(), [])
   const snapshot = useMemo(
-    () => botCommunicationReplies(sessionId, entries, state),
-    [sessionId, entries, state]
+    () =>
+      botCommunicationReplies(sessionId, entries, state, {
+        environmentId: selected.environmentId,
+        bots,
+        project
+      }),
+    [sessionId, entries, state, selected.environmentId, bots, project]
   )
   const paged = useRef(0)
   const queued = state.queuedMessages?.some(
@@ -69,7 +78,7 @@ export function BotCommunicationPeer({
       <p role="alert" className="text-sm text-chat-warning">
         {translate(
           'shamu.communication.readFailed',
-          'Could not read replies. Open the bot chat to inspect its history.'
+          'Could not read replies. Open the original chat to inspect its history.'
         )}
       </p>
     )

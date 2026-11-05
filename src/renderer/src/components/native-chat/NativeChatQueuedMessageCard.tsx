@@ -1,9 +1,8 @@
-import { BotCommunicationContext } from '../project-channels/bot-communication-context'
 import { BotCommunicationRow } from './BotCommunicationRow'
-import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
+import { useQueuedBotCommunication } from './use-queued-bot-communication'
 import { QueuedMessageImageCount } from './NativeChatQueuedMessageImageCount'
 import type { QueuedMessageDragPresentation } from './NativeChatQueuedMessageRows'
-import { useContext, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import {
   AlertCircle,
   ChevronDown,
@@ -162,13 +161,7 @@ export function NativeChatQueuedMessageCard({
   editDisabled?: boolean
   drag?: QueuedMessageDragPresentation
 }): React.JSX.Element {
-  const communicationContext = useContext(BotCommunicationContext)
-  const cardText = readBotTurnPrompt(card.text)?.message ?? card.text
-  const communication = communicationContext?.entries.find(
-    (entry) =>
-      entry.recipient.operationId === card.messageId &&
-      cardText.includes(`Notification reference: ${entry.referenceId}.`)
-  )
+  const communication = useQueuedBotCommunication(card)
   const caption = queuedMessageCardCaption(card, agentName, statedFailures)
   const line = queuedMessageCardLine(card, nativeChatImageLabelCopy())
   const returned = card.state === 'returned'
@@ -180,9 +173,10 @@ export function NativeChatQueuedMessageCard({
   const [expanded, setExpanded] = useState(false)
   const [clipped, measureLine] = useNativeChatClippedLine(false)
   const textId = useId()
-  const sender = card.from ? (
-    <NativeChatAgentMessageSenders from={card.from} chatWorktreeId={chatWorktreeId} queued />
-  ) : null
+  const sender =
+    card.from && !communication ? (
+      <NativeChatAgentMessageSenders from={card.from} chatWorktreeId={chatWorktreeId} queued />
+    ) : null
   if (editor) {
     return (
       // The editor fills the row, so a drop anywhere on the card reaches it.

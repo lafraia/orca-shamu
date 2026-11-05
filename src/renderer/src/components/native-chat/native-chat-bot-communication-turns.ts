@@ -41,6 +41,11 @@ export function nativeChatBotCommunicationTurns(
   const aliases = new Map(
     incoming.map((entry) => [agentJournalSubmissionKey(entry.recipient.operationId), entry])
   )
+  for (const entry of incoming) {
+    if (entry.native) {
+      aliases.set(entry.native.itemId, entry)
+    }
+  }
   for (const submission of submissions) {
     const entry = operations.get(submission.queuedMessageId ?? submission.clientMessageId)
     if (!entry) {
@@ -65,7 +70,12 @@ export function nativeChatBotCommunicationTurns(
       continue
     }
     const entry = aliases.get(message.id)
-    if (!entry || notificationReference(message) !== entry.referenceId) {
+    const matches = entry?.native
+      ? message.from?.senders.length === 1 &&
+        message.from.senders[0].party.orcaSessionId === entry.source.sessionId &&
+        !message.from.senders[0].party.address.startsWith('dispatch:')
+      : entry && notificationReference(message) === entry.referenceId
+    if (!entry || !matches) {
       continue
     }
     prompts.set(message.id, entry)

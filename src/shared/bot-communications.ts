@@ -1,4 +1,4 @@
-import type { NativeChatImageRefBlock } from './native-chat/native-chat-types'
+import type { NativeChatBlock, NativeChatImageRefBlock } from './native-chat/native-chat-types'
 
 export type BotCommunicationParticipant = {
   botId?: string
@@ -12,9 +12,10 @@ export type BotCommunication = {
   environmentId: string
   createdAt: number
   source: BotCommunicationParticipant & { itemId?: string }
-  recipient: BotCommunicationParticipant & { botId: string; operationId: string }
-  actor: 'user' | 'bot' | 'unknown'
+  recipient: BotCommunicationParticipant & { operationId: string }
+  actor: 'user' | 'bot' | 'workspace' | 'unknown'
   state: 'ready' | 'issued' | 'recorded' | 'refused' | 'unconfirmed'
+  native?: { itemId: string; blocks: NativeChatBlock[] }
 }
 
 export type BotCommunicationSnapshot = {

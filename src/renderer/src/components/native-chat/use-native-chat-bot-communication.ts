@@ -4,6 +4,8 @@ import type {
   AgentJournalSubmission
 } from '../../../../shared/agent-session/journal/agent-session-journal-types'
 import { BotCommunicationContext } from '../project-channels/bot-communication-context'
+import { useProjectChannels } from '../project-channels/project-channel-store'
+import { createNativeBotCommunicationProjection } from './native-bot-communications'
 import { createNativeChatBotCommunicationProjection } from './native-chat-bot-communication-slots'
 import type { NativeChatRailOutlineEntry } from './native-chat-message-rail-items'
 import type { NativeChatTranscriptSlot } from './native-chat-transcript-slots'
@@ -29,12 +31,26 @@ export function useNativeChatBotCommunication({
   railOutline?: readonly NativeChatRailOutlineEntry[] | null
 }) {
   const communication = useContext(BotCommunicationContext)
+  const bots = useProjectChannels((state) => state.snapshot.channels)
+  const nativeProject = useMemo(() => createNativeBotCommunicationProjection(), [])
+  const storedEntries = communication?.entries
+  const environmentId =
+    communication?.target.kind === 'environment' ? communication.target.environmentId : null
+  const entries = useMemo(() => {
+    if (!storedEntries || !environmentId) {
+      return []
+    }
+    return [
+      ...storedEntries,
+      ...nativeProject(turnRows.messages, sessionId ?? '', environmentId, bots, submissions)
+    ]
+  }, [storedEntries, environmentId, sessionId, turnRows.messages, bots, submissions, nativeProject])
   const project = useMemo(() => createNativeChatBotCommunicationProjection(), [])
   const view = useMemo(
     () =>
       project(
         slots,
-        communication?.entries ?? [],
+        entries,
         sessionId ?? '',
         turnRows,
         submissions ?? [],
@@ -45,7 +61,7 @@ export function useNativeChatBotCommunication({
     [
       project,
       slots,
-      communication?.entries,
+      entries,
       sessionId,
       turnRows,
       submissions,

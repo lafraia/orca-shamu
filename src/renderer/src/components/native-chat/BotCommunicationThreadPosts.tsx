@@ -83,7 +83,7 @@ export function CommunicationPost({
           {post.caption ? <span>{post.caption}</span> : null}
           <span className="ml-auto flex items-center gap-1">
             <NativeChatCopyButton text={text} />
-            <NativeChatMessageTimestamp timestamp={post.at} />
+            {post.at > 0 ? <NativeChatMessageTimestamp timestamp={post.at} /> : null}
           </span>
         </div>
         <NativeChatMarkdownImageOwnerContext.Provider value={media}>

@@ -49,11 +49,19 @@ export function BotCommunicationRow({ row }: { row: Row }): React.JSX.Element {
           ? 'completed'
           : 'idle'
   const label =
-    row.direction === 'outgoing' && row.entry.actor === 'bot'
-      ? translate('shamu.communication.sent', 'Messaged {{name}}', { name: peer.name })
-      : row.direction === 'outgoing' && row.entry.actor === 'user'
-        ? translate('shamu.communication.notified', 'Notified {{name}}', { name: peer.name })
-        : translate('shamu.communication.with', 'Communication with {{name}}', { name: peer.name })
+    row.direction === 'incoming' && peer.botId
+      ? translate('shamu.communication.fromBot', 'Message from bot {{name}}', { name: peer.name })
+      : row.direction === 'incoming' && row.entry.native
+        ? translate('shamu.communication.fromWorkspace', 'Message from {{name}}', {
+            name: peer.name
+          })
+        : row.direction === 'outgoing' && row.entry.actor === 'bot'
+          ? translate('shamu.communication.sent', 'Messaged {{name}}', { name: peer.name })
+          : row.direction === 'outgoing' && row.entry.actor === 'user'
+            ? translate('shamu.communication.notified', 'Notified {{name}}', { name: peer.name })
+            : translate('shamu.communication.with', 'Communication with {{name}}', {
+                name: peer.name
+              })
   const states = {
     sending: translate('shamu.communication.sending', 'Sending'),
     sent: translate('shamu.communication.delivered', 'Sent'),

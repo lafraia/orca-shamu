@@ -18,6 +18,7 @@ Upstream commit: `965978bc78bf03a6a43187c1ed28fcffe0e01bb5`
 - Add permanent bot chats, bot identities and avatars, memory controls, routines, authorized bot creation and contextual mentions.
 - Keep bot mentions recognizable and clickable in the composer and transcript.
 - Show internal bot communication as compact native activity rows with a separate read-only conversation view.
+- Identify native messages from a bot by its saved name in workspace chats and open the separate bot/workspace exchange, with links to both original conversations.
 - Organize bots with prominent pinned entries, editable group names and persistent group order.
 - Use small static unread dots on individual bots without repeating notifications on group headers or navigation tabs.
 - Move Shamu settings into their own Settings section and connection status into the statusbar; preserve native window dragging.
