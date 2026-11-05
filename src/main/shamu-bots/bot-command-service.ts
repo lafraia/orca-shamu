@@ -92,7 +92,12 @@ export class BotCommandService {
             throw new Error('A bot handoff must reference its own source conversation.')
           }
         }
-        return this.mentions.deliver(command.request)
+        return this.mentions.deliver(
+          command.request,
+          caller === 'agent' && command.actorId && command.sourceItemId
+            ? { actorId: command.actorId, sourceItemId: command.sourceItemId }
+            : undefined
+        )
       }
       case 'routine.list':
         return this.routines.view(command.botId)

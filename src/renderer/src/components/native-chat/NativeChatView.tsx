@@ -1,3 +1,4 @@
+import { BotCommunicationProvider } from '../project-channels/BotCommunicationProvider'
 import { NativeChatSessionGate } from './NativeChatSessionGate'
 import { NativeChatStructuredSession } from './NativeChatStructuredSession'
 import { NativeChatResolvedView } from './NativeChatResolvedView'
@@ -26,7 +27,13 @@ export default function NativeChatView(props: NativeChatViewProps): React.JSX.El
               isVisible={props.isVisible}
               sessionId={props.sessionId}
             >
-              <NativeChatStructuredSession {...props} />
+              <BotCommunicationProvider
+                sessionId={props.sessionId}
+                target={props.target}
+                isVisible={props.isVisible}
+              >
+                <NativeChatStructuredSession {...props} />
+              </BotCommunicationProvider>
             </NativeChatMarkdownImageOwnerProvider>
           </NativeChatFileLinkExistenceProvider>
         </NativeChatVisualOwnerProvider>

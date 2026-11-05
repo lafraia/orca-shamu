@@ -1,6 +1,9 @@
+import { BotCommunicationContext } from '../project-channels/bot-communication-context'
+import { BotCommunicationRow } from './BotCommunicationRow'
+import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
 import { QueuedMessageImageCount } from './NativeChatQueuedMessageImageCount'
 import type { QueuedMessageDragPresentation } from './NativeChatQueuedMessageRows'
-import { useId, useState } from 'react'
+import { useContext, useId, useState } from 'react'
 import {
   AlertCircle,
   ChevronDown,
@@ -159,6 +162,13 @@ export function NativeChatQueuedMessageCard({
   editDisabled?: boolean
   drag?: QueuedMessageDragPresentation
 }): React.JSX.Element {
+  const communicationContext = useContext(BotCommunicationContext)
+  const cardText = readBotTurnPrompt(card.text)?.message ?? card.text
+  const communication = communicationContext?.entries.find(
+    (entry) =>
+      entry.recipient.operationId === card.messageId &&
+      cardText.includes(`Notification reference: ${entry.referenceId}.`)
+  )
   const caption = queuedMessageCardCaption(card, agentName, statedFailures)
   const line = queuedMessageCardLine(card, nativeChatImageLabelCopy())
   const returned = card.state === 'returned'
@@ -221,7 +231,15 @@ export function NativeChatQueuedMessageCard({
         </span>
         <div className="min-w-0 flex-1">
           {sender}
-          {expanded ? null : (
+          {communication ? (
+            <BotCommunicationRow
+              row={{
+                entry: communication,
+                direction: 'incoming',
+                state: card.state === 'returned' ? 'unconfirmed' : 'queued'
+              }}
+            />
+          ) : expanded ? null : (
             <p ref={measureLine} className="truncate text-sm" title={line}>
               {line}
             </p>
@@ -245,7 +263,7 @@ export function NativeChatQueuedMessageCard({
           ) : null}
         </div>
         {card.images ? <QueuedMessageImageCount images={card.images} /> : null}
-        {expanded || clipped ? (
+        {!communication && (expanded || clipped) ? (
           <QueuedMessageExpandToggle
             expanded={expanded}
             controls={expanded ? textId : undefined}
@@ -308,7 +326,7 @@ export function NativeChatQueuedMessageCard({
               </TooltipContent>
             </Tooltip>
             {/* A command's text is not a draft: edited, it would become a message. */}
-            {!card.command && onEdit ? (
+            {!communication && !card.command && onEdit ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -335,7 +353,7 @@ export function NativeChatQueuedMessageCard({
           </>
         )}
       </div>
-      {expanded ? (
+      {!communication && expanded ? (
         <p
           id={textId}
           className="scrollbar-sleek mt-1 max-h-60 overflow-y-auto whitespace-pre-wrap break-words pl-5.5 text-sm"

@@ -1,3 +1,4 @@
+import { BotCommunicationRow, BotCommunicationRowsContext } from './BotCommunicationRow'
 import { memo, useContext } from 'react'
 import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
 import { cn } from '@/lib/utils'
@@ -52,6 +53,19 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
 }): React.JSX.Element {
   // Offered only on the conversation's own turn-opening prompts (`nativeChatRowOffersRewind`).
   const rewind = useContext(NativeChatRewindContext)
+  const communication = useContext(BotCommunicationRowsContext).get(
+    slot.kind === 'message' ? slot.message.id : ''
+  )
+  if (communication) {
+    return (
+      <div>
+        {newRowsMarker ? (
+          <NativeChatNewRowsMarker marker={newRowsMarker} onReveal={context.onScrollMessageToTop} />
+        ) : null}
+        <BotCommunicationRow row={communication} />
+      </div>
+    )
+  }
   const sectionClassName = cn(
     slot.depth > 0 && 'border-l-2 border-border/60 pl-3',
     slot.depth > 1 && 'ml-4'

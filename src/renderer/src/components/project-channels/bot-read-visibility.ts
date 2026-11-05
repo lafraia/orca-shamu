@@ -8,7 +8,12 @@ import { useProjectChannels } from './project-channel-store'
 import { useBotUnread } from './bot-unread-store'
 
 export function isBotChatViewed(botId: string, member: ProjectChannelMember): boolean {
-  if (!isOrcaWindowForegroundFocused() || !isPresenceConfirmed()) {
+  if (
+    !isOrcaWindowForegroundFocused() ||
+    !isPresenceConfirmed() ||
+    (typeof document !== 'undefined' &&
+      document.querySelector('[data-bot-communication-thread][data-state="open"]'))
+  ) {
     return false
   }
   const state = useAppStore.getState()

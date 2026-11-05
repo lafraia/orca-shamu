@@ -13,6 +13,8 @@ If selection fans out excessively, use scoped checks and report limits. Use the 
 
 Use `pnpm dev:shamu` for renderer changes; see `PROJECT_CHANNELS.md`. Track the upstream tag and Shamu revision in `config/shamu-release.json`. Keep official release updates disabled. React/CSS changes use the local live server; changes to main, preload or native code still require rebuilding Shamu. Keep the primary Orca process running because it owns the shared sessions. Do not copy profiles or pairing credentials into another application.
 
+Reloading or restarting the user's running Shamu requires an explicit user request. This includes replacing the installed app or enabling live reload. Inspect active turns and pending queues first; if their state cannot be verified, treat it as busy, never as idle. Prepare changes and run isolated hidden tests without interrupting the live app. A completed build does not authorize a reload.
+
 # Don't Poll the CI
 
 Use `gh run watch <run-id> --compact --exit-status` or `gh pr checks --watch` to prevent token waste

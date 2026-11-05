@@ -10,6 +10,8 @@ import { createNativeChatMessageListProjection } from './native-chat-message-lis
 import { projectNativeChatTaskListFrames } from '../../../../shared/native-chat/input/native-chat-task-list-frames'
 import { omitNativeChatThreadGoalRows } from './native-chat-thread-goal-rows'
 import type { NativeChatLiveSession } from './use-native-chat-live-session'
+import { desktopStructuredTranscript } from './structured-agent-session-message-projection'
+import type { NativeChatResolvedPrompt } from '../../../../shared/native-chat/native-chat-resolution-receipt'
 
 /** Separate conversation/subagent rows, using journal turn placement when available. */
 export function useNativeChatTranscriptProjection(
@@ -20,7 +22,13 @@ export function useNativeChatTranscriptProjection(
 ): {
   messages: NativeChatMessage[]
   subagentRows: ReadonlyMap<string, readonly NativeChatSubagentRow[]>
+  receipts: ReadonlyMap<string, NativeChatResolvedPrompt>
 } {
+  const receipts = useMemo(
+    () =>
+      journalItems ? desktopStructuredTranscript.transcript(journalItems).receipts : new Map(),
+    [journalItems]
+  )
   const projectMessages = useMemo(
     () => createNativeChatMessageListProjection(),
     // Rebound sessions must release the previous transcript's cached rows.
@@ -42,5 +50,5 @@ export function useNativeChatTranscriptProjection(
     // Structured sessions show goal state in the banner above the composer.
     return journalItems ? omitNativeChatThreadGoalRows(projected) : projected
   }, [journalItems, projection.conversation])
-  return { messages, subagentRows: projection.subagentRows }
+  return { messages, subagentRows: projection.subagentRows, receipts }
 }

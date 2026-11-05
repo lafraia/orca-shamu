@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { BotCommunicationContext } from '../project-channels/bot-communication-context'
+import { useContext, useMemo } from 'react'
 import { Bot } from 'lucide-react'
 import type {
   CommentMarkdownExtension,
@@ -22,6 +23,8 @@ export function useNativeChatBotMarkdown(
   base: CommentMarkdownExtension,
   onLinkClick?: CommentMarkdownLinkClickHandler
 ): CommentMarkdownExtension {
+  const communication = useContext(BotCommunicationContext)
+  const closeCommunication = communication?.close
   const enabled = useShamuClient((state) => state.enabled && state.environmentId !== null)
   const catalogue = useProjectChannels((state) =>
     enabled ? nativeChatBotCatalogue(state.snapshot.channels) : EMPTY_BOT_CATALOGUE
@@ -66,6 +69,7 @@ export function useNativeChatBotMarkdown(
                 ) {
                   return
                 }
+                closeCommunication?.()
                 const state = useAppStore.getState()
                 if (state.floatingWorkspacePanelOpen) {
                   state.setFloatingWorkspacePanelOpen(false)
@@ -78,5 +82,5 @@ export function useNativeChatBotMarkdown(
         }
       }
     }
-  }, [base, catalogue, fallbackAnchor])
+  }, [base, catalogue, fallbackAnchor, closeCommunication])
 }

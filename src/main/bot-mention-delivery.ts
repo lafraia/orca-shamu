@@ -14,25 +14,15 @@ import type { BotConversationService } from './bot-conversation-service'
 import type { BotMemoryService } from './bot-memory-service'
 import type { ShamuPrimaryConnection } from './shamu-primary-connection'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
-import { botReferenceContextSchema, readBotReferenceContext } from './shamu-bots/bot-journal-reader'
+import { readBotReferenceContext } from './shamu-bots/bot-journal-reader'
+import {
+  botMentionRecordSchema as savedSchema,
+  type botMentionReceiptSchema as receiptSchema,
+  type BotMentionOrigin,
+  type BotMentionRecord
+} from './shamu-bots/bot-mention-record'
 import { dispatchBotPrompt } from './shamu-bots/bot-prompt-dispatch'
 import type { AgentJournalCursor } from '../shared/agent-session/journal/agent-session-journal-identity'
-
-const receiptSchema = z.object({
-  botId: z.string(),
-  name: z.string(),
-  state: z.enum(['ready', 'issued', 'recorded', 'refused', 'unconfirmed', 'self']),
-  operationId: z.string().regex(/^\d{13}-[0-9a-f]{32}$/),
-  sessionId: z.string(),
-  message: z.string().optional()
-})
-const savedSchema = z.object({
-  version: z.literal(1),
-  fingerprint: z.string(),
-  request: botMentionRequestSchema,
-  receipts: z.array(receiptSchema),
-  context: botReferenceContextSchema.optional()
-})
 
 export class BotMentionDelivery {
   constructor(
@@ -40,10 +30,11 @@ export class BotMentionDelivery {
     private readonly bots: Pick<BotConversationService, 'ensure'>,
     private readonly primary: Pick<ShamuPrimaryConnection, 'read' | 'call'>,
     private readonly profileDirectory: string,
-    private readonly memory?: Pick<BotMemoryService, 'prepare'> | null
+    private readonly memory?: Pick<BotMemoryService, 'prepare'> | null,
+    private readonly changed?: () => void
   ) {}
 
-  deliver(input: BotMentionRequest): Promise<BotMentionReceipt[]> {
+  deliver(input: BotMentionRequest, origin?: BotMentionOrigin): Promise<BotMentionReceipt[]> {
     const request = botMentionRequestSchema.parse(input)
     const file = join(this.profileDirectory, 'bot-mentions', `${request.id}.json`)
     return withSidecarSnapshotQueue(file, async () => {
@@ -95,15 +86,23 @@ export class BotMentionDelivery {
             state: member.sessionId === request.source.sessionId ? 'self' : 'ready'
           })
         }
-        saved = { version: 1, fingerprint, request, receipts, context }
+        saved = {
+          version: 1,
+          fingerprint,
+          request,
+          receipts,
+          context,
+          createdAt: Date.now(),
+          ...(origin ? { origin } : {})
+        }
         await mkdir(join(this.profileDirectory, 'bot-mentions'), { recursive: true, mode: 0o700 })
-        await writeSidecarSnapshot(file, saved, 0o600)
+        await this.persist(file, saved)
       }
       for (const receipt of saved.receipts) {
         if (receipt.state === 'issued') {
           receipt.state = 'unconfirmed'
           receipt.message = 'Delivery was interrupted. Check the bot chat before sending again.'
-          await writeSidecarSnapshot(file, saved, 0o600)
+          await this.persist(file, saved)
         }
         if (receipt.state !== 'ready') {
           continue
@@ -138,7 +137,7 @@ export class BotMentionDelivery {
             async () => {
               issued = true
               receipt.state = 'issued'
-              await writeSidecarSnapshot(file, saved, 0o600)
+              await this.persist(file, saved)
             }
           )
           receipt.state =
@@ -155,7 +154,7 @@ export class BotMentionDelivery {
           receipt.message =
             error instanceof Error ? error.message : 'Could not deliver the mention.'
         }
-        await writeSidecarSnapshot(file, saved, 0o600)
+        await this.persist(file, saved)
       }
       return saved.receipts.map(({ botId, name, state, message }) => ({
         botId,
@@ -164,6 +163,11 @@ export class BotMentionDelivery {
         ...(message ? { message } : {})
       }))
     })
+  }
+
+  private async persist(file: string, saved: BotMentionRecord): Promise<void> {
+    await writeSidecarSnapshot(file, saved, 0o600)
+    this.changed?.()
   }
 
   async context(botId: string, referenceId: string, cursor?: AgentJournalCursor) {

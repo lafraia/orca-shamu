@@ -107,6 +107,22 @@ describe('bot mention delivery', () => {
     )
   })
 
+  it('publishes durable communication changes with the actual bot author and authorized source', async () => {
+    const changed = vi.fn()
+    const delivery = new BotMentionDelivery(channels, bots, primary, directory, null, changed)
+    const origin = { actorId: 'source-bot', sourceItemId: 'actual-user-request' }
+    await delivery.deliver(request, origin)
+    const saved = JSON.parse(
+      await readFile(join(directory, 'bot-mentions', `${request.id}.json`), 'utf8')
+    )
+    expect(saved.origin).toEqual(origin)
+    expect(saved.createdAt).toEqual(expect.any(Number))
+    expect(changed).toHaveBeenCalledTimes(3)
+    await delivery.deliver(request, origin)
+    expect(changed).toHaveBeenCalledTimes(3)
+    expect(call.mock.calls.filter(([method]) => method === 'agentSession.send')).toHaveLength(1)
+  })
+
   it('retains an ambiguous result across restart without resending', async () => {
     const normal = call.getMockImplementation()!
     call.mockImplementation(async (method, input) => {

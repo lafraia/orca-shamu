@@ -1,3 +1,4 @@
+import type { BotCommunicationsApi } from './bot-communications'
 import type { BotMentionReceipt, BotMentionRequest } from './bot-mentions'
 import { z } from 'zod'
 import { botIdentitySchema } from './bot-identity'
@@ -131,6 +132,7 @@ export function projectChannelSessionKey(
 }
 
 export type ProjectChannelsApi = {
+  communications?: BotCommunicationsApi
   readUnread: (botIds?: string[]) => Promise<BotUnreadSnapshot>
   markRead: (mark: BotReadMark) => Promise<BotUnreadSnapshot>
   onUnreadChanged: (listener: (botId: string) => void) => () => void
