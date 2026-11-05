@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { BotAvatar } from './BotAvatar'
-import { BotUnreadBadge } from './BotUnreadBadge'
+import { BotUnreadDot } from './BotUnreadDot'
 import { botUnreadDescription, useBotUnread } from './bot-unread-store'
 import { BotSidebarActions } from './BotSidebarActions'
 import { openProjectChannel } from './project-channel-store'
@@ -75,13 +75,7 @@ export function BotSidebarGroups({
               />
               {group.pinned ? <Pin className="size-3" /> : null}
               <span className="truncate">{group.name}</span>
-              <span className="ml-auto flex items-center gap-1.5">
-                <span className="text-muted-foreground">{group.bots.length}</span>
-                <BotUnreadBadge
-                  count={group.bots.reduce((sum, bot) => sum + (counts[bot.id] ?? 0), 0)}
-                  pending={group.bots.some((bot) => pending.includes(bot.id))}
-                />
-              </span>
+              <span className="ml-auto text-muted-foreground">{group.bots.length}</span>
             </Button>
           ) : null}
           {!collapsed[group.key]
@@ -123,10 +117,7 @@ export function BotSidebarGroups({
                     >
                       {channel.name}
                     </span>
-                    <BotUnreadBadge
-                      count={counts[channel.id] ?? 0}
-                      pending={pending.includes(channel.id)}
-                    />
+                    <BotUnreadDot count={counts[channel.id] ?? 0} />
                   </button>
                 </BotSidebarActions>
               ))

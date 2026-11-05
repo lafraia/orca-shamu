@@ -88,8 +88,6 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-notification-badge: var(--notification-badge);
-  --color-notification-badge-foreground: var(--notification-badge-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -437,8 +435,6 @@
   color-scheme: light;
   --destructive: #e40014;
   --destructive-foreground: #fff;
-  --notification-badge: var(--destructive);
-  --notification-badge-foreground: var(--destructive-foreground);
   --status-success: #147638;
   --status-success-background: color-mix(in srgb, var(--status-success) 10%, transparent);
   --status-success-border: color-mix(in srgb, var(--status-success) 25%, transparent);
@@ -477,8 +473,6 @@
   --destructive: #ff6568;
   /* Dark --destructive is a light red, so its label needs dark ink to clear AA. */
   --destructive-foreground: #450a0a;
-  --notification-badge: var(--destructive);
-  --notification-badge-foreground: var(--destructive-foreground);
   --status-success: #86efac;
   --status-success-background: color-mix(in srgb, var(--status-success) 10%, transparent);
   --status-success-border: color-mix(in srgb, var(--status-success) 25%, transparent);
@@ -3664,22 +3658,5 @@ html.native-shell .app-layout {
   .bot-avatar .bot-avatar-face {
     animation: none !important;
     transition: none !important;
-  }
-}
-
-.notification-count-badge {
-  animation: notification-count-enter var(--duration-fast) var(--ease-smooth-out);
-}
-@keyframes notification-count-enter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .notification-count-badge {
-    animation: none;
   }
 }
