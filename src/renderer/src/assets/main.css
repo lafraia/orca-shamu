@@ -1107,7 +1107,8 @@ html.native-shell .app-layout {
   flex-shrink: 0;
 }
 
-.shamu-connection-status button {
+[data-floating-terminal-panel],
+[data-floating-terminal-panel] button {
   -webkit-app-region: no-drag;
 }
 

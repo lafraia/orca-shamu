@@ -48,28 +48,12 @@ test('creates and reopens permanent native bot chats, including existing empty b
   })
   try {
     const page = client.page
-    const connectionBar = page.getByRole('status').filter({ hasText: 'Primary Orca' })
-    await expect(
-      connectionBar.getByRole('button', { name: 'Import interface settings' })
-    ).toBeVisible()
-    const chrome = await connectionBar.evaluate((node) => {
-      const button = node.querySelector('button')!
-      const gutter = node.querySelector('.titlebar-traffic-light-pad')
-      return {
-        drag: getComputedStyle(node).getPropertyValue('-webkit-app-region'),
-        selection: getComputedStyle(node).userSelect,
-        buttonDrag: getComputedStyle(button).getPropertyValue('-webkit-app-region'),
-        gutterWidth: gutter?.getBoundingClientRect().width ?? 0,
-        buttonRight: button.getBoundingClientRect().right,
-        viewportWidth: window.innerWidth,
-        mac: navigator.userAgent.includes('Mac')
-      }
-    })
-    expect(chrome).toMatchObject({ drag: 'drag', selection: 'none', buttonDrag: 'no-drag' })
-    if (chrome.mac) {
-      expect(chrome.gutterWidth).toBeGreaterThan(0)
-    }
-    expect(chrome.buttonRight).toBeLessThanOrEqual(chrome.viewportWidth)
+    const connection = page
+      .locator('[data-orca-status-bar]')
+      .getByRole('button', { name: 'Primary Orca Connected', exact: true })
+    await expect(connection).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Import interface settings' })).toHaveCount(0)
+    await expect(page.locator('.shamu-connection-status')).toHaveCount(0)
     await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.getByRole('button', { name: 'New bot', exact: true }).first().click()
     const dialog = page.getByRole('dialog')

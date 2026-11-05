@@ -62,6 +62,11 @@ test('mentions a bot from a floating chat, keeps its origin, and anchors the pic
     const snapshot = await page.evaluate(() => window.api.projectChannels!.read())
     const bot = snapshot.channels[0]
     const activateSource = async () => {
+      await page.evaluate(() => {
+        if (window.__store!.getState().floatingWorkspacePanelOpen) {
+          window.dispatchEvent(new Event('orca-toggle-floating-terminal'))
+        }
+      })
       await page.getByRole('button', { name: 'Workspaces', exact: true }).click()
       await expect
         .poll(() =>
@@ -94,6 +99,19 @@ test('mentions a bot from a floating chat, keeps its origin, and anchors the pic
     await activateSource()
     const panel = page.locator('[data-floating-terminal-panel][aria-hidden="false"]')
     const composer = panel.locator('[data-native-chat-root="true"]').getByRole('textbox')
+    await expect(composer).toBeVisible()
+    await panel.getByRole('button', { name: 'Maximize floating workspace', exact: true }).click()
+    const minimize = panel.getByRole('button', { name: 'Minimize floating workspace', exact: true })
+    const region = await minimize.evaluate((node) => ({
+      top: node.getBoundingClientRect().top,
+      drag: getComputedStyle(node).getPropertyValue('-webkit-app-region')
+    }))
+    expect(region.top).toBeGreaterThanOrEqual(36)
+    expect(region.top).toBeLessThan(72)
+    expect(region.drag).toBe('no-drag')
+    await minimize.click()
+    await expect(panel).toHaveCount(0)
+    await page.evaluate(() => window.dispatchEvent(new Event('orca-toggle-floating-terminal')))
     await expect(composer).toBeVisible()
     await composer.fill('Please @CE')
     const picker = page.locator('[role="listbox"][data-focus-behavior="composer-suggestions"]')

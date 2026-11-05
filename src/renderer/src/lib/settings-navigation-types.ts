@@ -15,6 +15,7 @@ export type SettingsNavInstallStatus =
 
 const SETTINGS_NAV_TARGETS = [
   'general',
+  'orca-shamu',
   'integrations',
   'accounts',
   'browser',

@@ -1,3 +1,4 @@
+import { getShamuSettingsSearchEntries } from '@/components/shamu/shamu-settings-search'
 import { LinearIcon } from '@/components/icons/LinearIcon'
 import { getAccountsPaneSearchEntries } from '@/components/settings/accounts/accounts-search'
 import { getAgentsPaneSearchEntries } from '@/components/settings/agents/agents-search'
@@ -124,10 +125,26 @@ export function buildCapabilitySettingsSections({
 
 export function buildSetupSettingsSections({
   isLocalWindowsHost,
-  isWebClient
+  isWebClient,
+  isShamu
 }: SettingsNavigationBuildOptions): SettingsNavSection[] {
   const showDesktopOnlySettings = !isWebClient
   return [
+    ...(isShamu && !isWebClient
+      ? [
+          {
+            id: 'orca-shamu',
+            title: 'Orca Shamu',
+            description: translate(
+              'shamu.settings.description',
+              'Settings and connection for this Orca Shamu interface.'
+            ),
+            icon: OrcaLogoSettingsIcon,
+            searchEntries: getShamuSettingsSearchEntries(),
+            group: 'setup'
+          }
+        ]
+      : []),
     ...(showDesktopOnlySettings
       ? [
           {

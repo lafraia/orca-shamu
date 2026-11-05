@@ -1,3 +1,4 @@
+import { ShamuStatusSegment } from '../shamu/ShamuStatusSegment'
 import { PanelsTopLeft, RefreshCw } from 'lucide-react'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
@@ -300,6 +301,7 @@ export function StatusBarSurface({
               <CaffeinateStatusSegment iconOnly={segmentsIconOnly} />
             </>
           ) : null}
+          <ShamuStatusSegment iconOnly={segmentsIconOnly} />
           <RemoteServerUpdateStatusSegment iconOnly={segmentsIconOnly} />
           <SkillUpdateStatusSegment iconOnly={segmentsIconOnly} />
           <NativeChatResumeStatusSegment iconOnly={segmentsIconOnly} />
