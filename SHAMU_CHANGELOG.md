@@ -4,13 +4,15 @@ Shamu changes are tracked separately from [upstream Orca releases](https://githu
 
 ## Unreleased
 
-Upstream: `1.4.248`
-Upstream commit: `965978bc78bf03a6a43187c1ed28fcffe0e01bb5`
+Upstream: `1.4.250`
+Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Upstream integrations
 
+- Merged upstream [v1.4.250](https://github.com/stablyai/orca/releases/tag/v1.4.250) at `b98a0fba16561fadc06868fe3e8710781d705efd` in local merge `29e4a5b9c34`, adapting Shamu imports to the reorganized modules. See [the upstream comparison](https://github.com/stablyai/orca/compare/v1.4.248...v1.4.250). The new base starts at Shamu revision 1 and remains Unreleased.
+
 - Merged upstream [v1.4.248](https://github.com/stablyai/orca/releases/tag/v1.4.248) over the previous v1.4.247 base in merge commit `ff194e6730c`. See the [upstream comparison](https://github.com/stablyai/orca/compare/v1.4.247...v1.4.248).
-- Track the temporary native autocomplete positioning fix against [upstream issue #38234](https://github.com/stablyai/orca/issues/38234). Removal criteria remain in `UPSTREAM_PATCHES.md`.
+- Retire the temporary autocomplete positioning workaround after validating the fixes included in `v1.4.250`. Keep Shamu menu selection, focus ownership and floating chat layers. The regression evidence and upstream references are recorded in `UPSTREAM_PATCHES.md`. Imported publishing workflows retain their disabled fork settings; this import adds no new workflow files.
 
 ### Shamu changes
 
@@ -36,8 +38,8 @@ Upstream commit: `965978bc78bf03a6a43187c1ed28fcffe0e01bb5`
 
 ### Pull requests
 
-The initial Shamu work is currently local on `lafraia/project-channels`. Add the actual merged Shamu PR links here as they become available. Do not treat local commits or preview tags as merged PRs or published releases.
+Initial Shamu development and the `lafraia/upstream-v1.4.250` integration remain local. Add the actual merged Shamu PR links here as they become available. Do not treat local commits or preview tags as merged PRs or published releases.
 
 ## Local preview history
 
-`1.4.248-shamu.1` through `1.4.248-shamu.11` were local development checkpoints. They have no published GitHub distribution release. Keep those existing tags and commits intact; do not reuse them for a different build. The next distribution on this upstream base must advance beyond revision 11 when explicitly requested. New work stays in **Unreleased** until that request.
+`1.4.248-shamu.1` through `1.4.248-shamu.11` were local development checkpoints. They have no published GitHub distribution release. Keep those existing tags and commits intact; do not reuse them for a different build. Those revisions belong to the previous `v1.4.248` base. The imported `v1.4.250` base starts its own revision sequence at 1. New work stays in **Unreleased** until a distribution is explicitly requested.

@@ -1,6 +1,6 @@
 # Orca Shamu
 
-Based on the upstream `v1.4.248` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep the primary process running; its window can stay hidden or minimized. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
+Based on the upstream `v1.4.250` release. Shamu is a separate desktop interface connected to the primary Orca through its existing paired runtime control transport. Keep the primary process running; its window can stay hidden or minimized. The primary Orca continues to own the agents, native sessions, execution directories, permission policies and original transcripts. Shamu reads and controls those same session IDs.
 
 ## Connect once
 
@@ -82,9 +82,9 @@ node config/scripts/build-project-channels-mac.mjs
 
 The app is generated under `dist/project-channels/mac-arm64/Orca Shamu.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. Its bundle ID is `com.lafraia.orca-shamu` and its default profile is `~/Library/Application Support/Orca Shamu`. The internal executable remains `Orca` for compatibility with the bundled CLI launcher. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature.
 
-The packaged version is `<upstream>-shamu.<revision>`; the latest existing local preview is `1.4.248-shamu.11`. `config/shamu-release.json` records the exact upstream tag and commit plus the Shamu revision. Keep `package.json.version` equal to upstream. Local builds and ordinary PRs do not bump this revision or create release tags. Accumulate changes in `SHAMU_CHANGELOG.md` under **Unreleased** and follow `SHAMU_RELEASES.md` only after an explicit request to close a distribution. A plain `pnpm shamu:version bump` is refused; closing a version requires the explicit `--close-release` flag and reviewed release notes. `pnpm shamu:check` verifies the merged upstream pin and changelog. The historical preview tags remain local development checkpoints, not published distributions.
+The development version is `1.4.250-shamu.1`, using the `<upstream>-shamu.<revision>` format. The latest existing built local preview remains `1.4.248-shamu.11` until a new app is built separately. `config/shamu-release.json` records the exact upstream tag and commit plus the Shamu revision. Keep `package.json.version` equal to upstream. Local builds and ordinary PRs do not bump this revision or create release tags. Accumulate changes in `SHAMU_CHANGELOG.md` under **Unreleased** and follow `SHAMU_RELEASES.md` only after an explicit request to close a distribution. A plain `pnpm shamu:version bump` is refused; closing a version requires the explicit `--close-release` flag and reviewed release notes. `pnpm shamu:check` verifies the merged upstream pin and changelog. The historical preview tags remain local development checkpoints, not published distributions.
 
-About continues showing the upstream version and Shamu revision separately, for example `Version 1.4.248 (Shamu 11)`. The builder validates and embeds the metadata. Official automatic and manual updates remain blocked; publishing an independent update feed is separate from creating local versioned builds. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
+About continues showing the upstream version and Shamu revision separately, for example `Version 1.4.250 (Shamu 1)`. The builder validates and embeds the metadata. Official automatic and manual updates remain blocked; publishing an independent update feed is separate from creating local versioned builds. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
 
 ## Updating the fork
 
@@ -160,7 +160,7 @@ Bots can use the same controls through the bundled `orca bots` commands document
 
 The local runtime RPC is authenticated through the existing CLI transport and refuses paired/mobile callers. Bot metadata updates notify Shamu's sidebar without discarding local drafts. Hidden paired Electron journeys exercise the real CLI, user-request provenance, idempotent child creation, pins, sections, manual/event routines, journal completion and restart without duplicate paid turns using a synthetic provider.
 
-See `UPSTREAM_PATCHES.md` for temporary upstream fixes and their removal criteria.
+See `UPSTREAM_PATCHES.md` for upstream fix reviews, retired workarounds and regression coverage.
 
 ## Shamu settings and connection status
 

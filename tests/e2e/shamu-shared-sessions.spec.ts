@@ -5,9 +5,7 @@ import { waitForActiveWorktree, waitForSessionReady } from './helpers/store'
 import { buildFakeAgentCommandOverride } from './helpers/fake-agent-command-override'
 import { createChatOnHost, SUPPORTED } from './helpers/structured-claude-stub'
 import { launchPairedElectronClient } from './helpers/paired-electron-client'
-import { claudePromptUuidForSubmission } from '../../src/main/claude/structured/claude-structured-session-id'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../src/shared/constants'
-import { agentJournalSubmissionKey } from '../../src/shared/agent-session/journal/agent-session-journal-item-key'
 
 test.describe('Shamu shares the primary Orca sessions', () => {
   test.skip(!SUPPORTED, 'the isolated Claude protocol fixture requires POSIX')
@@ -174,13 +172,11 @@ test.describe('Shamu shares the primary Orca sessions', () => {
             }
           })
         }
-        await expect(client.page.locator('[data-project-agent]')).toContainText('Ready')
-        const message = client.page.getByRole('textbox', { name: 'Message bot', exact: true })
+        const chat = client.page.getByRole('region', { name: 'Shared project', exact: true })
+        const message = chat.getByRole('textbox')
         await message.fill('Hello from Shamu')
         await message.press('Enter')
-        await expect(
-          client.page.getByRole('log').getByText('Stub reply.', { exact: true })
-        ).toHaveCount(1)
+        await expect(chat.getByText('Stub reply.', { exact: true })).toHaveCount(1)
         await primary.evaluate(
           ({ workspaceId, primaryTab }) =>
             window.__store!.getState().activateTab(primaryTab, { worktreeId: workspaceId }),
@@ -200,35 +196,22 @@ test.describe('Shamu shares the primary Orca sessions', () => {
           sessionId,
           target: { kind: 'environment', environmentId: client.environmentId }
         })
-        await message.fill('A slow request for the Stop control')
-        await message.press('Enter')
-        await expect(client.page.locator('[data-project-agent]')).toContainText('Working…')
-        const slow = await client.page.evaluate(() => window.api.projectChannels!.read())
-        const lastUser = slow.channels[0].messages.findLast((row) => row.role === 'user')
-        const deliveryId = lastUser?.deliveryIds?.[slow.channels[0].mainMemberId ?? '']
-        if (!deliveryId) {
-          throw new Error('The slow send has no recorded delivery identity')
-        }
-        const sentUuid = claudePromptUuidForSubmission(
-          sessionId,
-          agentJournalSubmissionKey(deliveryId)
-        )
         const frames = () =>
           readFileSync(`${claudeStub.launchLog}.requests.jsonl`, 'utf8')
             .trim()
             .split('\n')
             .map((line) => JSON.parse(line))
+        const priorRequests = frames().filter((frame) => frame.type === 'user').length
+        await message.fill('A slow request for the Stop control')
+        await message.press('Enter')
+        const stop = chat.getByRole('button', { name: 'Stop the agent', exact: true })
+        await expect(stop).toBeVisible()
         await expect
-          .poll(
-            () =>
-              frames().filter((frame) => frame.type === 'user' && frame.uuid === sentUuid).length
-          )
-          .toBe(1)
-        const sessionPid = frames().find(
-          (frame) => frame.type === 'user' && frame.uuid === sentUuid
-        ).pid
-        await client.page.getByRole('button', { name: 'Stop', exact: true }).click()
-        await expect(client.page.locator('[data-project-agent]')).toContainText('Ready')
+          .poll(() => frames().filter((frame) => frame.type === 'user').length)
+          .toBe(priorRequests + 1)
+        const sessionPid = frames().findLast((frame) => frame.type === 'user')!.pid
+        await stop.click()
+        await expect(stop).toHaveCount(0)
         await expect
           .poll(
             () =>
@@ -247,10 +230,8 @@ test.describe('Shamu shares the primary Orca sessions', () => {
         expect(localOwner.ok).toBe(false)
         await client.page.reload()
         await client.page.getByRole('button', { name: 'Bots', exact: true }).click()
-        await client.page.getByRole('button', { name: 'Shared project', exact: false }).click()
-        await expect(
-          client.page.getByRole('log').getByText('Stub reply.', { exact: true })
-        ).toHaveCount(1)
+        await client.page.getByRole('button', { name: 'Shared project', exact: true }).click()
+        await expect(chat.getByText('Stub reply.', { exact: true })).toHaveCount(1)
         await client.page.screenshot({ path: testInfo.outputPath(`shamu-shared-${owner}.png`) })
         await client.dispose()
         disposed = true

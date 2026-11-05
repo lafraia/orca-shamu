@@ -1,8 +1,8 @@
 {
   "upstream": {
     "repository": "stablyai/orca",
-    "tag": "v1.4.248",
-    "commit": "965978bc78bf03a6a43187c1ed28fcffe0e01bb5"
+    "tag": "v1.4.250",
+    "commit": "b98a0fba16561fadc06868fe3e8710781d705efd"
   },
-  "revision": 11
+  "revision": 1
 }
