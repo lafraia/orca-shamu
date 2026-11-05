@@ -85,8 +85,10 @@ test('opens bot references from saved memory, sources and recalled notes without
         key: 'coordination',
         kind: 'fact' as const,
         scope: 'vagalume',
-        text: 'CEO coordinates Dev: Vagalume. Ask @CEO for priorities.',
-        sources: [{ sessionId: source.sessionId, label: 'CEO, notification source-1' }],
+        text: `CEO (${ceo.id}) coordinates [@Dev: Vagalume](#orca-shamu-bot/${dev.id}). Ask @CEO for priorities.`,
+        sources: [
+          { sessionId: source.sessionId, label: `CEO (bot ${ceo.id}), notification source-1` }
+        ],
         pinned: true,
         archived: false,
         updatedAt: Date.UTC(2026, 10, 5)
@@ -102,12 +104,35 @@ test('opens bot references from saved memory, sources and recalled notes without
               id: '22222222-2222-4222-8222-222222222222',
               key: 'previous coordination',
               archived: true
+            },
+            {
+              ...entry,
+              id: '33333333-3333-4333-8333-333333333333',
+              key: 'next action',
+              kind: 'task',
+              text: 'Await authorization.',
+              pinned: false
+            },
+            {
+              ...entry,
+              id: '44444444-4444-4444-8444-444444444444',
+              key: 'latest summary',
+              kind: 'summary',
+              text: 'Previous work completed.',
+              pinned: false
+            },
+            {
+              ...entry,
+              id: '55555555-5555-4555-8555-555555555555',
+              key: 'travel ideas',
+              text: 'Birthday gift ideas',
+              pinned: false
             }
           ]
         },
         current.fingerprint
       )
-      return { id: dev.id, snapshot }
+      return { id: dev.id, ceoId: ceo.id, snapshot }
     })
     const memory = page.getByRole('dialog', { name: 'Dev: Vagalume memory', exact: true })
     const openMemory = async () => {
@@ -128,6 +153,8 @@ test('opens bot references from saved memory, sources and recalled notes without
     await expect(
       entry.getByRole('button', { name: 'Open bot chat: Dev: Vagalume', exact: true })
     ).toBeVisible()
+    await expect(entry).not.toContainText(saved.ceoId)
+    await expect(entry).not.toContainText(saved.id)
     await memory.getByRole('button', { name: 'Edit memory: coordination', exact: true }).click()
     await memory.getByLabel('Note', { exact: true }).fill('Unfinished memory edit')
     await expect(
@@ -153,7 +180,55 @@ test('opens bot references from saved memory, sources and recalled notes without
     await composer.fill('Review the coordination note')
     await composer.press('Enter')
     await expect(chat('Dev: Vagalume').getByText('Stub reply.', { exact: true })).toHaveCount(1)
-    await chat('Dev: Vagalume').getByText('Recalled memory: 1', { exact: true }).click()
+    const recall = chat('Dev: Vagalume').getByRole('button', {
+      name: 'Memory context (3)',
+      exact: true
+    })
+    await expect(recall).toHaveAttribute('aria-expanded', 'false')
+    await recall.click()
+    await expect(recall).toHaveAttribute('aria-expanded', 'true')
+    await expect(
+      chat('Dev: Vagalume').getByText('3 of 4 active notes included with this message.', {
+        exact: true
+      })
+    ).toBeVisible()
+    await expect(
+      chat('Dev: Vagalume').getByText(
+        '1 without a match or priority; 0 did not fit the note budget.',
+        { exact: true }
+      )
+    ).toBeVisible()
+    const recalled = chat('Dev: Vagalume').getByRole('article', {
+      name: 'coordination',
+      exact: true
+    })
+    await expect(recalled.getByText('Matched terms: coordination', { exact: true })).toBeVisible()
+    await expect(recalled.getByText('Pinned', { exact: true })).toBeVisible()
+    await expect(recalled).not.toContainText(saved.ceoId)
+    await expect(recalled).not.toContainText(saved.id)
+    await expect(
+      chat('Dev: Vagalume').getByRole('article', { name: 'travel ideas', exact: true })
+    ).toHaveCount(0)
+    await expect(
+      chat('Dev: Vagalume').getByRole('article', { name: 'previous coordination', exact: true })
+    ).toHaveCount(0)
+    await expect(chat('Dev: Vagalume').getByText(/\/ 12,000 note characters/)).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('recalled-memory-context.png') })
+    const summary = chat('Dev: Vagalume').getByRole('article', {
+      name: 'latest summary',
+      exact: true
+    })
+    await summary.scrollIntoViewIfNeeded()
+    await expect(summary.getByText('Summary · vagalume', { exact: true })).toBeVisible()
+    await recalled.scrollIntoViewIfNeeded()
+    await recall.focus()
+    await recall.press('Enter')
+    await expect(recall).toHaveAttribute('aria-expanded', 'false')
+    await recall.press('Space')
+    await expect(recall).toHaveAttribute('aria-expanded', 'true')
+    await page.evaluate(() => window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' }))
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+    await page.screenshot({ path: testInfo.outputPath('recalled-memory-context-dark.png') })
     await chat('Dev: Vagalume')
       .getByRole('button', { name: 'Open bot chat: CEO', exact: true })
       .first()

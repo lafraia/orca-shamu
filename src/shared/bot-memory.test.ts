@@ -37,6 +37,15 @@ describe('bot memory recall', () => {
     )
     expect(selected.entries).toEqual([corrected, task])
     expect(selected.omitted).toBe(1)
+    expect(selected.details).toMatchObject({
+      strategy: 'terms-v1',
+      unmatched: 1,
+      overBudget: 0,
+      matches: [
+        { id: corrected.id, terms: ['proposal', 'deadline'] },
+        { id: task.id, terms: ['the'] }
+      ]
+    })
   })
   it('keeps pinned notes and recent summaries within a hard additional-context budget', () => {
     const entries = Array.from({ length: 40 }, (_, index) =>
@@ -48,6 +57,8 @@ describe('bot memory recall', () => {
     expect(selected.entries[1]).toEqual(entries[39])
     expect(selected.characters).toBeLessThanOrEqual(BOT_MEMORY_CONTEXT_CHARACTERS)
     expect(selected.entries.length + selected.omitted).toBe(41)
+    expect(selected.details.unmatched).toBe(0)
+    expect(selected.details.overBudget).toBe(selected.omitted)
     expect(entries).toHaveLength(40)
   })
   it('keeps facts scoped, handles accents, and rejects conflicting live values without destroying the archive', () => {

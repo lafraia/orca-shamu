@@ -111,4 +111,20 @@ describe('bot commands and creation provenance', () => {
       messages: [{ id: 'user-request', role: 'user' }]
     })
   })
+  it('lists a stable named Markdown reference without sending a turn or changing the bot', async () => {
+    const before = await fixture.channels.read()
+    expect(await commands.invoke({ action: 'list' }, 'agent')).toMatchObject({
+      bots: [
+        {
+          id: 'actor',
+          name: fixture.actor.name,
+          reference: `[@${fixture.actor.name}](#orca-shamu-bot/actor)`
+        }
+      ]
+    })
+    expect(await fixture.channels.read()).toEqual(before)
+    expect(
+      fixture.call.mock.calls.filter(([method]) => method === 'agentSession.send')
+    ).toHaveLength(0)
+  })
 })

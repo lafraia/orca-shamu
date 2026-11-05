@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { botTurnPrompt, readBotTurnPrompt, type BotTurnContext } from './bot-turn-context'
+import { selectBotMemory } from './bot-memory'
 
 const context: BotTurnContext = {
   identity: { id: 'bot', name: 'Coordinator', instructions: 'Track work' },
@@ -25,5 +26,11 @@ describe('bot turn presentation', () => {
     ]) {
       expect(readBotTurnPrompt(message)).toBeNull()
     }
+  })
+  it('captures selection details per message while continuing to read historical contexts', () => {
+    const selected = selectBotMemory({ version: 1, entries: [] }, 'Review the release')
+    const captured = { ...context, selection: selected.details }
+    expect(readBotTurnPrompt(botTurnPrompt(captured, 'Review'))?.context).toEqual(captured)
+    expect(readBotTurnPrompt(botTurnPrompt(context, 'Earlier'))?.context.selection).toBeUndefined()
   })
 })

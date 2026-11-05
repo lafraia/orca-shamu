@@ -3,7 +3,7 @@ import { nativeChatBotByName, type NativeChatBotCatalogue } from './native-chat-
 
 export type BotTextReference = { start: number; text: string; bot?: BotMention }
 
-function inAddress(text: string, from: number, to: number): boolean {
+export function nativeChatReferenceInAddress(text: string, from: number, to: number): boolean {
   let start = from
   let end = to
   while (start > 0 && !/\s/.test(text[start - 1])) {
@@ -31,7 +31,8 @@ export function splitNativeChatBotReferences(
     const bot = nativeChatBotByName(catalogue, match[1])
     if (
       !bot ||
-      (includePlainNames && inAddress(text, match.index, match.index + match[0].length))
+      (includePlainNames &&
+        nativeChatReferenceInAddress(text, match.index, match.index + match[0].length))
     ) {
       continue
     }

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { defaultBotIdentity } from '../../shared/bot-identity'
+import { botReferenceMarkdown } from '../../shared/bot-reference'
 import { botCommandSchema, type BotCreateCommand } from '../../shared/bot-commands'
 import type { ProjectChannel } from '../../shared/project-channels'
 import type { ProjectChannelsStore } from '../project-channels-store'
@@ -52,6 +53,7 @@ export class BotCommandService {
           bots: (await this.channels.read()).channels.map((row) => ({
             id: row.id,
             name: row.name,
+            reference: botReferenceMarkdown(row),
             pinned: row.pinned ?? false,
             section: row.section ?? '',
             identity: { ...(row.identity ?? defaultBotIdentity(row.id)), image: undefined },

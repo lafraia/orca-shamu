@@ -64,6 +64,14 @@ describe('persistent bot memory', () => {
     expect(text).toContain('verify the signed bundle')
     expect(text).toContain('message-7')
     expect(readBotTurnPrompt(text)?.message).toBe('Continue the release')
+    expect(readBotTurnPrompt(text)?.context.selection).toMatchObject({
+      strategy: 'terms-v1',
+      unmatched: 0,
+      overBudget: 0,
+      matches: [{ id: entry().id, terms: ['the', 'release'] }]
+    })
+    expect(readBotTurnPrompt(text)?.context.guidance).toContain('in English where practical')
+    expect(readBotTurnPrompt(text)?.context.guidance).toContain('Markdown reference from bots list')
     expect(await service.prepare('session-coordinator', 'primary', text)).toBe(text)
     expect((await channels.read()).channels[0].members[0].sessionId).toBe('session-coordinator')
     expect(await readFile(join(root, 'bot', 'BOT_MEMORY.md'), 'utf8')).toContain(

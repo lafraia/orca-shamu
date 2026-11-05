@@ -1,5 +1,9 @@
 import type { BotMention } from '../../../../shared/bot-mentions'
 import type { ProjectChannel } from '../../../../shared/project-channels'
+export {
+  botReferenceHref as nativeChatBotHref,
+  botReferenceId as nativeChatBotId
+} from '../../../../shared/bot-reference'
 
 export type NativeChatBotCatalogue = {
   byId: ReadonlyMap<string, BotMention>
@@ -55,18 +59,6 @@ export function nativeChatBotCatalogue(
     previousCatalogue = createNativeChatBotCatalogue(bots)
   }
   return previousCatalogue
-}
-const PREFIX = '#orca-shamu-bot/'
-export const nativeChatBotHref = (id: string): string => `${PREFIX}${encodeURIComponent(id)}`
-export function nativeChatBotId(href: string | undefined): string | null {
-  if (!href?.startsWith(PREFIX)) {
-    return null
-  }
-  try {
-    return decodeURIComponent(href.slice(PREFIX.length))
-  } catch {
-    return null
-  }
 }
 export const nativeChatBotByName = (
   catalogue: NativeChatBotCatalogue,

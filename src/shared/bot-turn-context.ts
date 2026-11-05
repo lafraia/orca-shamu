@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { botMemoryEntrySchema } from './bot-memory'
+import { botMemoryEntrySchema, botMemorySelectionDetailsSchema } from './bot-memory'
 
 const START = '[Orca Shamu bot context v1]\n'
 const END = '\n[/Orca Shamu bot context]\n\n'
@@ -9,7 +9,8 @@ const contextSchema = z.object({
   memoryGuide: z.string(),
   guidance: z.string(),
   entries: z.array(botMemoryEntrySchema),
-  omitted: z.number().int().nonnegative()
+  omitted: z.number().int().nonnegative(),
+  selection: botMemorySelectionDetailsSchema.optional()
 })
 export type BotTurnContext = z.infer<typeof contextSchema>
 
