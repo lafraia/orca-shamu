@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ChevronDown, Pin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,6 +13,8 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { ProjectChannel } from '../../../../shared/project-channels'
+import { botSectionNames } from '../../../../shared/bot-sections'
+import { BotSectionHeader } from './BotSectionHeader'
 import { BotAvatar } from './BotAvatar'
 import { BotUnreadDot } from './BotUnreadDot'
 import { botUnreadDescription, useBotUnread } from './bot-unread-store'
@@ -24,11 +25,13 @@ import { runBotRosterCommand } from './bot-roster-actions'
 export function BotSidebarGroups({
   channels,
   sections,
+  sectionOrder,
   selectedId,
   active
 }: {
   channels: ProjectChannel[]
   sections: string[]
+  sectionOrder: string[]
   selectedId: string | null
   active: boolean
 }): React.JSX.Element {
@@ -46,38 +49,39 @@ export function BotSidebarGroups({
       bots: channels.filter((row) => row.pinned),
       pinned: true
     },
-    ...[...new Set(channels.filter((row) => !row.pinned).map((row) => row.section ?? ''))].map(
-      (section) => ({
-        key: `section:${section}`,
-        name: section || translate('projectChannels.projects', 'Bots'),
-        bots: channels.filter((row) => !row.pinned && (row.section ?? '') === section),
-        pinned: false
-      })
-    )
+    ...botSectionNames(
+      channels.filter((row) => !row.pinned),
+      sectionOrder
+    ).map((section) => ({
+      key: `section:${section}`,
+      name: section || translate('projectChannels.projects', 'Bots'),
+      bots: channels.filter((row) => !row.pinned && (row.section ?? '') === section),
+      pinned: false
+    }))
   ].filter((group) => group.bots.length)
   return (
     <>
       {groups.map((group) => (
         <section key={group.key} className="mb-3" aria-label={group.name}>
-          {groups.length > 1 || group.key !== 'section:' ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              className="mb-1 w-full justify-start"
-              aria-expanded={!collapsed[group.key]}
-              onClick={() => setCollapsed({ ...collapsed, [group.key]: !collapsed[group.key] })}
-            >
-              <ChevronDown
-                className={cn(
-                  'size-3 transition-transform motion-reduce:transition-none',
-                  collapsed[group.key] && '-rotate-90'
-                )}
-              />
-              {group.pinned ? <Pin className="size-3" /> : null}
-              <span className="truncate">{group.name}</span>
-              <span className="ml-auto text-muted-foreground">{group.bots.length}</span>
-            </Button>
-          ) : null}
+          <BotSectionHeader
+            name={group.name}
+            section={group.pinned ? null : group.key.slice('section:'.length)}
+            count={group.bots.length}
+            collapsed={Boolean(collapsed[group.key])}
+            onToggle={() =>
+              setCollapsed((current) => ({ ...current, [group.key]: !current[group.key] }))
+            }
+            canMoveUp={sectionOrder.indexOf(group.key.slice('section:'.length)) > 0}
+            canMoveDown={
+              sectionOrder.indexOf(group.key.slice('section:'.length)) < sectionOrder.length - 1
+            }
+            onRenamed={(name) =>
+              setCollapsed((current) => ({
+                ...current,
+                [`section:${name}`]: Boolean(current[group.key])
+              }))
+            }
+          />
           {!collapsed[group.key]
             ? group.bots.map((channel) => (
                 <BotSidebarActions

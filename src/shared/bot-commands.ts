@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { botMentionRequestSchema } from './bot-mentions'
 import { botRoutineSchema } from './bot-routines'
 import { JournalCursor } from './rpc-contract/structured-agent-session-params'
+import { botSectionNameSchema } from './bot-sections'
 
 const id = z.string().min(1).max(1024)
 export const botRunRequestIdSchema = z.string().regex(/^\d{13}-[0-9a-f]{32}$/)
@@ -25,6 +26,24 @@ export const botCommandSchema = z.discriminatedUnion('action', [
       botId: id,
       pinned: z.boolean().optional(),
       section: z.string().trim().max(80).optional(),
+      actorId: id.optional(),
+      sourceItemId: id.optional()
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('section.rename'),
+      name: botSectionNameSchema,
+      newName: botSectionNameSchema.min(1),
+      actorId: id.optional(),
+      sourceItemId: id.optional()
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('section.move'),
+      name: botSectionNameSchema,
+      direction: z.enum(['up', 'down']),
       actorId: id.optional(),
       sourceItemId: id.optional()
     })

@@ -88,6 +88,18 @@ describe('bot commands and creation provenance', () => {
     await expect(
       commands.invoke({ action: 'organize', botId: 'actor', pinned: false }, 'agent')
     ).rejects.toThrow('sourceItemId')
+    await expect(
+      commands.invoke(
+        { action: 'section.rename', name: 'Operations', newName: 'Development' },
+        'agent'
+      )
+    ).rejects.toThrow('sourceItemId')
+    await expect(
+      commands.invoke({ action: 'section.move', name: 'Operations', direction: 'up' }, 'agent')
+    ).rejects.toThrow('sourceItemId')
+    await commands.invoke({ action: 'section.rename', name: 'Operations', newName: 'Development' })
+    const renamed = (await fixture.channels.read()).channels[0]
+    expect(renamed).toEqual({ ...bot, section: 'Development' })
   })
   it('reads the actor own context with stable source IDs', async () => {
     const context = await commands.invoke(

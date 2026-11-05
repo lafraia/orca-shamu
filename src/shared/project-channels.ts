@@ -2,6 +2,7 @@ import type { BotCommunicationsApi } from './bot-communications'
 import type { BotMentionReceipt, BotMentionRequest } from './bot-mentions'
 import { z } from 'zod'
 import { botIdentitySchema } from './bot-identity'
+import { botSectionNameSchema } from './bot-sections'
 import type { BotMemory, BotMemorySnapshot } from './bot-memory'
 import type { BotCommand } from './bot-commands'
 import type { BotReadMark, BotUnreadSnapshot } from './bot-unread'
@@ -56,7 +57,7 @@ export const projectChannelSchema = z
     instructions: z.string().trim().max(20_000).optional(),
     identity: botIdentitySchema.optional(),
     pinned: z.boolean().optional(),
-    section: z.string().trim().max(80).optional(),
+    section: botSectionNameSchema.optional(),
     creation: z
       .object({ requestId: z.uuid(), fingerprint: z.string(), actorId: id, sourceItemId: id })
       .optional(),
@@ -101,6 +102,11 @@ export const projectChannelsSnapshotSchema = z
   .object({
     version: z.literal(1),
     revision: z.number().int().nonnegative(),
+    sectionOrder: z
+      .array(botSectionNameSchema)
+      .max(100)
+      .refine((names) => new Set(names).size === names.length, 'Group names must be unique.')
+      .optional(),
     channels: z.array(projectChannelSchema).max(100)
   })
   .superRefine(({ channels }, ctx) => {

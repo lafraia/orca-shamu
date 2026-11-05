@@ -25,7 +25,14 @@ export class BotCommandService {
     const command = botCommandSchema.parse(input)
     if (
       caller === 'agent' &&
-      ['routine.save', 'routine.control', 'mention', 'organize'].includes(command.action)
+      [
+        'routine.save',
+        'routine.control',
+        'mention',
+        'organize',
+        'section.rename',
+        'section.move'
+      ].includes(command.action)
     ) {
       if (
         !('actorId' in command) ||
@@ -78,6 +85,16 @@ export class BotCommandService {
         return command.referenceId === 'self'
           ? readBotReferenceContext(this.primary, member.sessionId, command.cursor)
           : this.mentions.context(command.actorId, command.referenceId, command.cursor)
+      }
+      case 'section.rename': {
+        const result = await this.channels.renameSection(command.name, command.newName)
+        this.changed()
+        return { sections: result.sectionOrder ?? [] }
+      }
+      case 'section.move': {
+        const result = await this.channels.moveSection(command.name, command.direction)
+        this.changed()
+        return { sections: result.sectionOrder ?? [] }
       }
       case 'mention': {
         if (caller === 'agent' && command.actorId) {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
 import { BotSidebarGroups } from './BotSidebarGroups'
+import { botSectionNames } from '../../../../shared/bot-sections'
 import {
   openProjectChannelEditor,
   reloadProjectChannels,
@@ -109,13 +110,11 @@ export function ProjectChannelSidebar(): React.JSX.Element {
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
         <BotSidebarGroups
           channels={channels}
-          sections={[
-            ...new Set(
-              snapshot.channels
-                .map((row) => row.section)
-                .filter((section): section is string => Boolean(section))
-            )
-          ]}
+          sections={botSectionNames(snapshot.channels, snapshot.sectionOrder).filter(Boolean)}
+          sectionOrder={botSectionNames(
+            snapshot.channels.filter((row) => !row.pinned),
+            snapshot.sectionOrder
+          )}
           selectedId={selectedId}
           active={activeView === 'project-chat'}
         />

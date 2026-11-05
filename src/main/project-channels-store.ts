@@ -7,6 +7,7 @@ import {
   type ProjectChannelsSnapshot
 } from '../shared/project-channels'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
+import { botSectionNames, botSectionNameSchema } from '../shared/bot-sections'
 
 export class ProjectChannelsStore {
   private readonly file: string
@@ -100,6 +101,72 @@ export class ProjectChannelsStore {
         ...current,
         revision: current.revision + 1,
         channels: [...current.channels, channel]
+      })
+      await writeSidecarSnapshot(this.file, next, 0o600)
+      return next
+    })
+  }
+
+  renameSection(name: string, newName: string): Promise<ProjectChannelsSnapshot> {
+    const previous = botSectionNameSchema.parse(name)
+    const nextName = botSectionNameSchema.min(1).parse(newName)
+    return this.changeSections((current) => {
+      const order = botSectionNames(current.channels, current.sectionOrder)
+      if (!order.includes(previous)) {
+        throw new Error('This group no longer exists. Reload bots before trying again.')
+      }
+      if (previous === nextName) {
+        return current
+      }
+      if (order.includes(nextName)) {
+        throw new Error('A group with this name already exists.')
+      }
+      return {
+        ...current,
+        sectionOrder: order.map((section) => (section === previous ? nextName : section)),
+        channels: current.channels.map((bot) =>
+          (bot.section ?? '') === previous ? { ...bot, section: nextName } : bot
+        )
+      }
+    })
+  }
+
+  moveSection(name: string, direction: 'up' | 'down'): Promise<ProjectChannelsSnapshot> {
+    const section = botSectionNameSchema.parse(name)
+    return this.changeSections((current) => {
+      const order = botSectionNames(current.channels, current.sectionOrder)
+      const visible = botSectionNames(
+        current.channels.filter((bot) => !bot.pinned),
+        order
+      )
+      const position = visible.indexOf(section)
+      if (position === -1) {
+        throw new Error('This group no longer exists. Reload bots before trying again.')
+      }
+      const neighbor = visible[position + (direction === 'up' ? -1 : 1)]
+      if (neighbor === undefined) {
+        return current
+      }
+      const from = order.indexOf(section)
+      const to = order.indexOf(neighbor)
+      order[from] = neighbor
+      order[to] = section
+      return { ...current, sectionOrder: order }
+    })
+  }
+
+  private changeSections(
+    update: (snapshot: ProjectChannelsSnapshot) => ProjectChannelsSnapshot
+  ): Promise<ProjectChannelsSnapshot> {
+    return withSidecarSnapshotQueue(this.file, async () => {
+      const current = await this.read()
+      const updated = update(current)
+      if (updated === current) {
+        return current
+      }
+      const next = projectChannelsSnapshotSchema.parse({
+        ...updated,
+        revision: current.revision + 1
       })
       await writeSidecarSnapshot(this.file, next, 0o600)
       return next
