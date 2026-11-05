@@ -49,6 +49,12 @@ export function NativeChatPickerListbox({
       cleanup()
     }
   }, [anchor, menu])
+  // A background composer's suggestions stay beneath the floating workspace's own suggestions.
+  const layer = anchor?.closest('[data-slot="popover-content"]')
+    ? 'z-[70]'
+    : anchor?.closest('[data-floating-terminal-panel]')
+      ? 'z-50'
+      : 'z-40'
 
   return (
     <>
@@ -61,7 +67,7 @@ export function NativeChatPickerListbox({
             role="listbox"
             data-focus-behavior="composer-suggestions"
             style={{ position: 'fixed', opacity: 0 }}
-            className={`scrollbar-sleek max-h-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-floating ${anchor.closest('[data-slot="popover-content"]') ? 'z-[70]' : 'z-50'}`}
+            className={`scrollbar-sleek max-h-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-floating ${layer}`}
           >
             {children}
           </div>,

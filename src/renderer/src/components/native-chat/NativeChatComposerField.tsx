@@ -1,8 +1,9 @@
 import { NativeChatPromptEditor } from './NativeChatPromptEditor'
 import { notifyNativeChatComposerState } from './native-chat-composer-mount'
 import type { NativeChatComposerInput } from './native-chat-composer-input'
+import { imeComposedSegment } from './native-chat-ime-composed-segment'
 import type { ClipboardEventHandler, KeyboardEventHandler, RefObject } from 'react'
-import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { useImeEnterGestureOwnership } from '@/lib/ime-composition-keyboard-event'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,7 @@ import { useLatestHandler } from '@/lib/use-latest-handler'
 import type { NativeChatFollowUpBehavior } from '../../../../shared/native-chat/input/native-chat-follow-up-behavior'
 
 function noop(): void {}
+const CLOSED_AUTOCOMPLETE: ComposerAutocomplete = { mode: 'none' }
 
 export type NativeChatComposerFieldProps = {
   editSession?: { cancel: () => void }
@@ -117,23 +119,6 @@ export type NativeChatComposerImageAttachment = {
   unavailableName?: string
 }
 
-/** After a clear suppressed by IME, preserve only the composed segment; compare both ends because the caret need not be at the end. */
-function imeComposedSegment(base: string, settled: string): string {
-  const limit = Math.min(base.length, settled.length)
-  let prefix = 0
-  while (prefix < limit && base[prefix] === settled[prefix]) {
-    prefix += 1
-  }
-  let suffix = 0
-  while (
-    suffix < limit - prefix &&
-    base[base.length - 1 - suffix] === settled[settled.length - 1 - suffix]
-  ) {
-    suffix += 1
-  }
-  return settled.slice(prefix, settled.length - suffix)
-}
-
 export function NativeChatComposerField({
   editSession,
   draftScopeKey,
@@ -190,6 +175,8 @@ export function NativeChatComposerField({
   launchPrompt
 }: NativeChatComposerFieldProps): React.JSX.Element {
   const draftNotSaved = useNativeChatComposerDraftUnsaved(draftScopeKey)
+  const [editorFocused, setEditorFocused] = useState(false)
+  const visibleAutocomplete = editorFocused ? autocomplete : CLOSED_AUTOCOMPLETE
   // Value the IME started from, and whether a programmatic clear was dropped on top of it.
   const compositionBaseRef = useRef('')
   const imageRow = useMemo(() => imageAttachments.map(({ id }) => id), [imageAttachments])
@@ -218,7 +205,9 @@ export function NativeChatComposerField({
     }
   })
   const editorKeyUp = useLatestHandler(imeEnterGesture.onKeyUp)
+  const editorFocus = useCallback(() => setEditorFocused(true), [])
   const editorBlur = useLatestHandler(() => {
+    setEditorFocused(false)
     const compositionWasActive = imeEnterGesture.isComposing()
     imeEnterGesture.reset()
     if (compositionWasActive) {
@@ -286,18 +275,19 @@ export function NativeChatComposerField({
           ref={columnRef}
           className={cn('relative w-full', !launch && 'mx-auto max-w-(--chat-content-max-width)')}
         >
-          {autocomplete.mode === 'slash' ? (
+          {visibleAutocomplete.mode === 'slash' ? (
             <NativeChatPickerMenu
-              autocomplete={autocomplete}
+              autocomplete={visibleAutocomplete}
               activeIndex={Math.max(0, activeSuggestion)}
               listboxId={pickerListboxId}
               onChoose={onChoosePickerItem}
               onRetry={onRetrySkills}
             />
           ) : null}
-          {autocomplete.mode === 'mention' ? (
+          {visibleAutocomplete.mode === 'mention' ? (
             <NativeChatMentionMenu
               mention={mentionFiles}
+              query={visibleAutocomplete.query}
               activeIndex={activeSuggestion}
               listboxId={pickerListboxId}
               onChoose={onChooseMentionFile}
@@ -356,13 +346,14 @@ export function NativeChatComposerField({
               onChange={editorChange}
               onKeyDownCapture={editorKeyDownCapture}
               onKeyUp={editorKeyUp}
+              onFocus={editorFocus}
               onBlur={editorBlur}
               onCompositionStart={editorCompositionStart}
               onCompositionEnd={editorCompositionEnd}
               onPasteCapture={editorPaste}
               onSelect={editorSelect}
               {...nativeChatAutocompleteAria(
-                autocomplete,
+                visibleAutocomplete,
                 mentionFiles,
                 activeSuggestion,
                 pickerListboxId

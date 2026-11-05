@@ -219,12 +219,23 @@ describe('NativeChatPickerMenu layering', () => {
     />
   )
 
-  it('keeps an ordinary chat list in its chat container at the chat layer', () => {
+  it('keeps an ordinary chat list below floating workspace panels', () => {
     const { container } = render(<div className="native-chat-appearance">{menu}</div>)
     const listbox = screen.getByRole('listbox')
     expect(listbox.parentElement).toBe(container.querySelector('.native-chat-appearance'))
-    expect(listbox.className).toContain('z-50')
+    expect(listbox.className).toContain('z-40')
     expect(listbox.className).not.toContain('z-[70]')
+  })
+
+  it('keeps the floating workspace own list above its panel', () => {
+    const { container } = render(
+      <div data-floating-terminal-panel className="z-[45]">
+        <div className="native-chat-appearance">{menu}</div>
+      </div>
+    )
+    const listbox = screen.getByRole('listbox')
+    expect(listbox.parentElement).toBe(container.querySelector('.native-chat-appearance'))
+    expect(listbox.className).toContain('z-50')
   })
 
   it('lifts a list opened inside a popover to the menu layer above that popover', () => {

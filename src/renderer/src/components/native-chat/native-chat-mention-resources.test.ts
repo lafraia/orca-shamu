@@ -51,6 +51,20 @@ const state = {
   workItemsCache: {}
 }
 describe('mention resource catalogue', () => {
+  it('omits bot home directories without hiding ordinary workspaces named CEO', () => {
+    const mixed = {
+      ...state,
+      folderWorkspaces: [
+        { ...folder, id: 'bot-ceo', name: 'CEO', folderPath: '/bots/ceo' },
+        { ...folder, id: 'ordinary-ceo', name: 'CEO', folderPath: '/Projects/CEO' }
+      ]
+    }
+    const rows = nativeChatMentionResources(mixed, 'CEO', 'runtime:primary', new Set(['/bots/ceo']))
+    expect(rows.filter((row) => row.kind === 'workspace').map((row) => row.id)).toEqual([
+      'folder:ordinary-ceo'
+    ])
+  })
+
   it('offers worktrees, folder workspaces, projects and linked issues with exact identities', () => {
     const rows = nativeChatMentionResources(state, 'launch', 'runtime:primary')
     expect(rows.filter((row) => row.kind === 'workspace').map((row) => row.id)).toEqual([

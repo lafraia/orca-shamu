@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
+import type { Locator } from '@stablyai/playwright-test'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../src/shared/constants'
 import { test } from './helpers/project-channel-stub'
 import { expect } from './helpers/orca-app'
 import { waitForActiveWorktree, waitForSessionReady } from './helpers/store'
@@ -56,6 +58,7 @@ test('mentions workspaces, projects and issues without preselecting or notifying
     }
   )
   const sessionId = await createChatOnHost(primary, worktreeId)
+  const floatingSessionId = await createChatOnHost(primary, FLOATING_TERMINAL_WORKTREE_ID)
   const offer = await createRuntimeDesktopPairingOffer(primary)
   const client = await launchPairedElectronClient(offer, testInfo, 'Primary', {
     extraEnv: { ORCA_SHAMU_CLIENT: '1' },
@@ -107,6 +110,69 @@ test('mentions workspaces, projects and issues without preselecting or notifying
       { worktreeId, sessionId }
     )
   }
+  const menu = page.locator('[role="listbox"][data-focus-behavior="composer-suggestions"]')
+  const checkFloatingFocus = async (field: Locator, name: string) => {
+    await field.fill('Ask @CE')
+    const ceo = menu.getByRole('option', { name: 'CEO Replies in its own chat', exact: true })
+    await expect(ceo).toHaveAttribute('aria-selected', 'true')
+    await expect(field).toHaveAttribute(
+      'aria-activedescendant',
+      (await ceo.getAttribute('id')) as string
+    )
+    await expect(
+      menu
+        .getByRole('group', { name: 'Workspaces', exact: true })
+        .getByRole('option', { name: /^CEO(?:\s|$)/ })
+    ).toHaveCount(0)
+    await page.evaluate(
+      ({ sessionId, workspaceId }) => {
+        const state = window.__store!.getState()
+        const tab = state.unifiedTabsByWorktree[workspaceId].find(
+          (row) => row.entityId === sessionId
+        )!
+        state.activateTab(tab.id, { worktreeId: workspaceId })
+        if (!state.floatingWorkspacePanelOpen) {
+          window.dispatchEvent(new Event('orca-toggle-floating-terminal'))
+        }
+      },
+      { sessionId: floatingSessionId, workspaceId: FLOATING_TERMINAL_WORKTREE_ID }
+    )
+    const panel = page.locator('[data-floating-terminal-panel][aria-hidden="false"]')
+    const side = panel.locator('[data-native-chat-root="true"]:visible').getByRole('textbox')
+    await side.click()
+    await expect(menu).toHaveCount(0)
+    await expect(field).toHaveAttribute('aria-expanded', 'false')
+    await expect(field).toHaveText('Ask @CE')
+    await field.focus()
+    await field.press('End')
+    await expect(ceo).toHaveAttribute('aria-selected', 'true')
+    const menuBounds = await menu.boundingBox()
+    const panelBounds = await panel.boundingBox()
+    const point = {
+      x: Math.max(menuBounds!.x, panelBounds!.x) + 8,
+      y: Math.max(menuBounds!.y, panelBounds!.y) + 8
+    }
+    expect(point.x).toBeLessThan(
+      Math.min(menuBounds!.x + menuBounds!.width, panelBounds!.x + panelBounds!.width)
+    )
+    expect(point.y).toBeLessThan(
+      Math.min(menuBounds!.y + menuBounds!.height, panelBounds!.y + panelBounds!.height)
+    )
+    expect(
+      await page.evaluate(
+        ({ x, y }) =>
+          Boolean(document.elementFromPoint(x, y)?.closest('[data-floating-terminal-panel]')),
+        point
+      )
+    ).toBe(true)
+    await side.fill('Side @CE')
+    await expect(menu).toHaveCount(1)
+    await expect(ceo).toHaveAttribute('aria-selected', 'true')
+    await page.screenshot({ path: testInfo.outputPath(`${name}-side-chat-suggestions.png`) })
+    await side.fill('')
+    await panel.getByRole('button', { name: 'Minimize floating workspace', exact: true }).click()
+    await field.fill('')
+  }
   try {
     await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.getByRole('button', { name: 'New bot', exact: true }).first().click()
@@ -114,13 +180,18 @@ test('mentions workspaces, projects and issues without preselecting or notifying
     await page.getByRole('dialog').getByRole('button', { name: 'Create bot', exact: true }).click()
     const botChat = page.getByRole('region', { name: 'CEO', exact: true })
     await expect(botChat.getByRole('textbox')).toBeVisible()
+    await page.getByRole('button', { name: 'New bot', exact: true }).first().click()
+    await page.getByRole('dialog').getByLabel('Bot name', { exact: true }).fill('Dev')
+    await page.getByRole('dialog').getByRole('button', { name: 'Create bot', exact: true }).click()
+    const devChat = page.getByRole('region', { name: 'Dev', exact: true })
+    await checkFloatingFocus(devChat.getByRole('textbox'), 'bot')
     await activateWorkspace()
     const chat = page
-      .locator('[data-native-chat-root="true"]')
+      .locator('[data-native-chat-root="true"]:visible')
       .filter({ has: page.getByRole('textbox') })
-      .last()
+      .first()
     const composer = chat.getByRole('textbox')
-    const menu = page.locator('[role="listbox"][data-focus-behavior="composer-suggestions"]')
+    await checkFloatingFocus(composer, 'workspace')
     await composer.fill('Review @')
     await expect(
       menu.getByRole('option', { name: 'CEO Replies in its own chat', exact: true })

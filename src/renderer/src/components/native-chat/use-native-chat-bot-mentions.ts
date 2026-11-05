@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { loadProjectChannels, useProjectChannels } from '../project-channels/project-channel-store'
 import { useShamuClient } from '../shamu/shamu-client-state'
 import type { BotMention } from '../../../../shared/bot-mentions'
+import type { ProjectChannel } from '../../../../shared/project-channels'
 import type { NativeChatResourceReference } from '../../../../shared/native-chat/native-chat-resource-reference'
 import { toRuntimeExecutionHostId } from '../../../../shared/execution-host'
 import { useAppStore } from '@/store'
@@ -19,9 +20,12 @@ export type NativeChatMentionOptions = NativeChatMentionFiles & {
 }
 const NO_BOTS: readonly BotMention[] = []
 
-function useNativeChatBotMentions(query: string | null, sessionId?: string): readonly BotMention[] {
+function useNativeChatBotMentions(
+  query: string | null,
+  sessionId: string | undefined,
+  channels: readonly ProjectChannel[]
+): readonly BotMention[] {
   const enabled = useShamuClient((state) => state.enabled && state.environmentId !== null)
-  const channels = useProjectChannels((state) => state.snapshot.channels)
   useEffect(() => {
     if (enabled && query !== null && sessionId) {
       void loadProjectChannels()
@@ -50,12 +54,27 @@ export function useNativeChatMentions(
   args: Parameters<typeof useNativeChatMentionFiles>[0] & { botSessionId?: string }
 ): NativeChatMentionOptions {
   const files = useNativeChatMentionFiles(args)
-  const bots = useNativeChatBotMentions(args.query, args.botSessionId)
+  const channels = useProjectChannels((state) => state.snapshot.channels)
+  const bots = useNativeChatBotMentions(args.query, args.botSessionId, channels)
   const environmentId = useShamuClient((state) => (state.enabled ? state.environmentId : null))
   const hostId = environmentId ? toRuntimeExecutionHostId(environmentId) : null
+  const botDirectories = useMemo(
+    () =>
+      new Set(
+        channels.flatMap((bot) => {
+          const member = bot.members.find((row) => row.id === bot.home?.memberId)
+          return bot.home &&
+            member?.target.kind === 'environment' &&
+            toRuntimeExecutionHostId(member.target.environmentId) === hostId
+            ? [bot.home.directory]
+            : []
+        })
+      ),
+    [channels, hostId]
+  )
   const select = useMemo(
-    () => createNativeChatMentionResourceSelector(args.query, hostId),
-    [args.query, hostId]
+    () => createNativeChatMentionResourceSelector(args.query, hostId, botDirectories),
+    [args.query, hostId, botDirectories]
   )
   const local = useAppStore(select)
   const issues = useNativeChatMentionIssues(args.query, hostId)

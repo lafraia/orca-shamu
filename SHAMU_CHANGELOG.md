@@ -14,11 +14,13 @@ Upstream commit: `965978bc78bf03a6a43187c1ed28fcffe0e01bb5`
 
 ### Shamu changes
 
+- Highlight the first typed mention match, omit bots' internal workspaces, and keep suggestions owned by the focused composer and beneath floating chats.
+- Show recalled memory as a quiet, collapsed brain row beneath the turn status, separate from the user's message, and link known notification IDs to their original bot communication.
 - Identify the macOS menu bar item as Orca Shamu in its menu heading, open action and activity tooltip, including development instances and menu rebuilds.
 - Present recalled memory as readable notes with sources, selection reasons, exclusions and the additional context budget. Render saved bot links and legacy bot IDs as named chat references, and guide new memory authoring toward English.
 - Link known bot names in durable memory notes, source labels and recalled memory to their permanent chats, closing the memory panel on navigation and preserving the saved text.
 - Add a model picker to each bot chat header, sharing the native session catalog, confirmed options and persisted per-session selection without replacing the conversation.
-- Extend `@` suggestions with host-qualified workspace, project and issue references, persistent clickable pills and task-source issue search; remove automatic bot preselection and unify pointer and keyboard highlighting.
+- Extend `@` suggestions with host-qualified workspace, project and issue references, persistent clickable pills and task-source issue search; leave bare `@` queries unselected and unify pointer and keyboard highlighting.
 - Identify the independent open source fork, its maintainer and canonical repository in Shamu settings, with upstream credit, MIT license links and a qualified warranty and liability notice.
 - Keep the Shamu titlebar, accessible app name and window title branded as `Orca Shamu`, distinct from the primary Orca.
 - Share the primary Orca's live sessions through a paired local frontend, preserving native session identity and independent interface preferences.

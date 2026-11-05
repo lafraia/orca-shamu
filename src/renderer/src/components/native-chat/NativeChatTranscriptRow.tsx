@@ -6,6 +6,9 @@ import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-typ
 import { MessageRow, type NativeChatDeliveryNotice } from './NativeChatMessageRow'
 import { NativeChatResolutionReceipt } from './NativeChatResolutionReceipt'
 import { NativeChatWorkingStatus } from './NativeChatWorkingStatus'
+import { BotMemoryRecall } from '../project-channels/BotMemoryRecall'
+import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
+import { deriveNativeChatRowContent } from '../../../../shared/native-chat/transcript/native-chat-row-content'
 import { NativeChatTurnDiffRollup } from './NativeChatTurnDiffRollup'
 import { NativeChatSubagentSectionHead } from './NativeChatSubagentSectionHead'
 import { NativeChatSubagentEntries } from './NativeChatSubagentRun'
@@ -111,12 +114,28 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
       }
     />
   ) : null
+  const botPrompt =
+    slot.drawsMessage && message.role === 'user' && !message.from
+      ? readBotTurnPrompt(deriveNativeChatRowContent(message.blocks).markdown)
+      : null
+  const memory =
+    botPrompt && (botPrompt.context.entries.length > 0 || botPrompt.context.omitted > 0) ? (
+      <BotMemoryRecall context={botPrompt.context} messageId={message.id} />
+    ) : null
+  const turnHeader = memory ? (
+    <div className="flex min-w-0 flex-col gap-2">
+      {statusRow}
+      {memory}
+    </div>
+  ) : (
+    statusRow
+  )
   return (
     // The negative margin shortens the measured row, which is what moves the next one up.
     <div className={cn('flex flex-col gap-5', slot.continuesTurn && '-mb-3', sectionClassName)}>
       {newRowsMarker?.place === 'above-row' ? marker : null}
       {/* A turn with no user bubble carries its bar above its first row. */}
-      {slot.statusAbove ? statusRow : null}
+      {slot.statusAbove ? turnHeader : null}
       {!slot.drawsMessage ? null : receipt ? (
         <NativeChatResolutionReceipt
           body={receipt}
@@ -160,7 +179,7 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
         />
       )}
       {newRowsMarker?.place === 'above-turn-bar' ? marker : null}
-      {slot.statusAbove ? null : statusRow}
+      {slot.statusAbove ? null : turnHeader}
       {turnDiff ? (
         <NativeChatTurnDiffRollup diff={turnDiff} onReveal={context.onRevealDiff} />
       ) : null}

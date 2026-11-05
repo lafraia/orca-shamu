@@ -1,12 +1,16 @@
 import { botReferenceId } from '../../../../shared/bot-reference'
 import type { NativeChatBotCatalogue } from '../native-chat/native-chat-bot-catalogue'
+import type { BotCommunication } from '../../../../shared/bot-communications'
 import {
   nativeChatReferenceInAddress,
   splitNativeChatBotReferences,
   type BotTextReference
 } from '../native-chat/native-chat-bot-text-references'
 
-export type BotMemoryReference = BotTextReference & { unavailableName?: string }
+export type BotMemoryReference = BotTextReference & {
+  unavailableName?: string
+  communication?: BotCommunication
+}
 
 const REFERENCES =
   /\[((?:\\.|[^\]\\])*)\]\((#orca-shamu-bot\/[^\s)]+)\)|(?<![\p{L}\p{N}_./\\@-])([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})(?![\p{L}\p{N}_/\\@-]|\.[\p{L}\p{N}])/giu
@@ -29,7 +33,8 @@ function legacyNameStart(text: string, idStart: number, idEnd: number, name: str
 
 export function splitBotMemoryReferences(
   text: string,
-  catalogue: NativeChatBotCatalogue
+  catalogue: NativeChatBotCatalogue,
+  communications: readonly BotCommunication[] = []
 ): BotMemoryReference[] {
   const parts: BotMemoryReference[] = []
   let from = 0
@@ -46,11 +51,15 @@ export function splitBotMemoryReferences(
     let end = start + match[0].length
     const id = match[2] ? botReferenceId(match[2]) : match[3].toLowerCase()
     const bot = id ? catalogue.byId.get(id) : undefined
+    const exchanges = !match[2]
+      ? communications.filter((entry) => entry.referenceId.toLowerCase() === id)
+      : []
+    const communication = exchanges.length === 1 ? exchanges[0] : undefined
     if (!match[2]) {
-      if (!bot || nativeChatReferenceInAddress(text, start, end)) {
+      if ((!bot && !communication) || nativeChatReferenceInAddress(text, start, end)) {
         continue
       }
-      const nameStart = legacyNameStart(text, start, end, bot.name)
+      const nameStart = bot ? legacyNameStart(text, start, end, bot.name) : start
       if (nameStart >= from && nameStart < start) {
         start = nameStart
         end++
@@ -60,9 +69,11 @@ export function splitBotMemoryReferences(
     parts.push({
       start,
       text: text.slice(start, end),
-      ...(bot
-        ? { bot }
-        : { unavailableName: match[1].replace(/\\([\\[\]])/g, '$1').replace(/^@/, '') })
+      ...(communication
+        ? { communication }
+        : bot
+          ? { bot }
+          : { unavailableName: match[1].replace(/\\([\\[\]])/g, '$1').replace(/^@/, '') })
     })
     from = end
   }

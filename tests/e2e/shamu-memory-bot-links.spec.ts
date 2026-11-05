@@ -181,10 +181,17 @@ test('opens bot references from saved memory, sources and recalled notes without
     await composer.press('Enter')
     await expect(chat('Dev: Vagalume').getByText('Stub reply.', { exact: true })).toHaveCount(1)
     const recall = chat('Dev: Vagalume').getByRole('button', {
-      name: 'Memory context (3)',
+      name: 'Bot memory read',
       exact: true
     })
     await expect(recall).toHaveAttribute('aria-expanded', 'false')
+    const prompt = chat('Dev: Vagalume').getByText('Review the coordination note', { exact: true })
+    const turnStatus = chat('Dev: Vagalume').locator('[data-native-chat-turn-status]').last()
+    expect((await prompt.boundingBox())!.y).toBeLessThan((await turnStatus.boundingBox())!.y)
+    expect((await turnStatus.boundingBox())!.y).toBeLessThan((await recall.boundingBox())!.y)
+    await expect(prompt.locator('..')).not.toContainText('Bot memory read')
+    await expect(recall.locator('svg.lucide-brain')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('recalled-memory-collapsed.png') })
     await recall.click()
     await expect(recall).toHaveAttribute('aria-expanded', 'true')
     await expect(
@@ -229,6 +236,13 @@ test('opens bot references from saved memory, sources and recalled notes without
     await page.evaluate(() => window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' }))
     await expect(page.locator('html')).toHaveClass(/\bdark\b/)
     await page.screenshot({ path: testInfo.outputPath('recalled-memory-context-dark.png') })
+    await recall.click()
+    await expect(recalled).not.toBeVisible()
+    await page.screenshot({
+      path: testInfo.outputPath('recalled-memory-collapsed-dark.png'),
+      animations: 'disabled'
+    })
+    await recall.click()
     await chat('Dev: Vagalume')
       .getByRole('button', { name: 'Open bot chat: CEO', exact: true })
       .first()

@@ -2,6 +2,7 @@ import { expect, it } from 'vitest'
 import { botReferenceMarkdown } from '../../../../shared/bot-reference'
 import { createNativeChatBotCatalogue } from '../native-chat/native-chat-bot-catalogue'
 import { splitBotMemoryReferences } from './bot-memory-references'
+import type { BotCommunication } from '../../../../shared/bot-communications'
 
 const ceo = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'CEO' }
 const dev = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Dev: Vagalume' }
@@ -66,4 +67,35 @@ it('recognizes ordinary bot names alongside explicit references and handles an e
 it('resolves a legacy UUID written in uppercase without changing the saved value', () => {
   const text = ceo.id.toUpperCase()
   expect(splitBotMemoryReferences(text, catalogue)).toEqual([{ start: 0, text, bot: ceo }])
+})
+
+const communication: BotCommunication = {
+  id: 'notification:dev',
+  referenceId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  environmentId: 'primary',
+  createdAt: 1,
+  source: { botId: ceo.id, sessionId: 'ceo-session', name: ceo.name },
+  recipient: { botId: dev.id, sessionId: 'dev-session', name: dev.name, operationId: 'send' },
+  actor: 'bot',
+  state: 'recorded'
+}
+
+it('links a known notification to its communication without changing the saved text', () => {
+  const text = `CEO, notification ${communication.referenceId}`
+  const parts = splitBotMemoryReferences(text, catalogue, [communication])
+  expect(parts.find((part) => part.communication)?.communication).toBe(communication)
+  expect(parts.map((part) => part.text).join('')).toBe(text)
+})
+
+it('keeps unavailable or ambiguous notifications literal rather than opening another exchange', () => {
+  const text = communication.referenceId
+  expect(splitBotMemoryReferences(text, catalogue)).toEqual([{ start: 0, text }])
+  expect(
+    splitBotMemoryReferences(text, catalogue, [communication, { ...communication, id: 'other' }])
+  ).toEqual([{ start: 0, text }])
+  for (const address of [`https://example.com/${text}`, `/${text}`, `${text}.json`]) {
+    expect(splitBotMemoryReferences(address, catalogue, [communication])).toEqual([
+      { start: 0, text: address }
+    ])
+  }
 })

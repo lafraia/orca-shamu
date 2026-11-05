@@ -28,7 +28,7 @@ export function nativeChatMentionChoices(
   ]
 }
 export const nativeChatSuggestionResetIndex = (text: string, caret: number): number =>
-  useShamuClient.getState().enabled && /(?:^|\s)@\S*$/.test(text.slice(0, caret)) ? -1 : 0
+  useShamuClient.getState().enabled && /(?:^|\s)@$/.test(text.slice(0, caret)) ? -1 : 0
 
 export function completeNativeChatResourceMention(
   input: NativeChatComposerInput | null,

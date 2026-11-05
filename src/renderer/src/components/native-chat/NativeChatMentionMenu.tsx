@@ -18,6 +18,7 @@ import { NATIVE_CHAT_RESOURCE_ICONS } from './native-chat-resource-reference'
 
 export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
   mention,
+  query = '',
   activeIndex,
   listboxId,
   onChoose,
@@ -25,6 +26,7 @@ export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
   onActiveIndexChange
 }: {
   mention: NativeChatMentionOptions
+  query?: string
   activeIndex: number
   listboxId: string
   onChoose: (target: NativeChatMentionTarget) => void
@@ -34,21 +36,23 @@ export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
   useUiLanguageRevision()
   const choices = useMemo(() => nativeChatMentionChoices(mention), [mention])
   const signature = choices.map((row) => row.id).join('\0')
-  const previous = useRef({ signature, ids: choices.map((row) => row.id) })
+  const previous = useRef({ query, signature, ids: choices.map((row) => row.id) })
   const activeItemRef = useRef<HTMLButtonElement | null>(null)
   const selectedIndex =
     activeIndex < 0
-      ? -1
-      : previous.current.signature === signature
+      ? query && choices.length
+        ? 0
+        : -1
+      : previous.current.query !== query || previous.current.signature === signature
         ? Math.min(activeIndex, choices.length - 1)
         : choices.findIndex((row) => row.id === previous.current.ids[activeIndex])
   useLayoutEffect(() => {
-    previous.current = { signature, ids: choices.map((row) => row.id) }
+    previous.current = { query, signature, ids: choices.map((row) => row.id) }
     if (selectedIndex !== activeIndex) {
       onActiveIndexChange?.(selectedIndex)
     }
     activeItemRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [signature, choices, selectedIndex, activeIndex, onActiveIndexChange])
+  }, [query, signature, choices, selectedIndex, activeIndex, onActiveIndexChange])
   const groups = [
     { kind: 'bot', label: translate('shamu.mentions.bots', 'Bots') },
     { kind: 'workspace', label: translate('shamu.mentions.workspaces', 'Workspaces') },

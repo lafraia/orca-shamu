@@ -11,6 +11,7 @@ import { parseWorkspaceReferenceUrl } from '../../../../shared/workspace-referen
 import type { NativeChatResourceReference } from '../../../../shared/native-chat/native-chat-resource-reference'
 
 export const EMPTY_MENTION_RESOURCES: readonly NativeChatResourceReference[] = []
+const NO_BOT_DIRECTORIES: ReadonlySet<string> = new Set()
 const INPUT_KEYS = [
   'repos',
   'projectGroups',
@@ -22,7 +23,8 @@ type ResourceState = Pick<AppState, (typeof INPUT_KEYS)[number]>
 export function nativeChatMentionResources(
   state: ResourceState,
   query: string,
-  hostId: ExecutionHostId
+  hostId: ExecutionHostId,
+  botDirectories: ReadonlySet<string> = NO_BOT_DIRECTORIES
 ): NativeChatResourceReference[] {
   const resources: NativeChatResourceReference[] = []
   const groups = new Map(state.projectGroups.map((group) => [group.id, group]))
@@ -54,6 +56,7 @@ export function nativeChatMentionResources(
   const folders = selectFolderWorkspaces(state).filter(
     (folder) =>
       !folder.isArchived &&
+      !botDirectories.has(folder.folderPath) &&
       getFolderWorkspaceExecutionHostIdForRows({
         folderWorkspace: folder,
         projectGroup: groups.get(folder.projectGroupId),
@@ -65,6 +68,7 @@ export function nativeChatMentionResources(
     .filter(
       (row) =>
         !row.isArchived &&
+        !botDirectories.has(row.path) &&
         (row.hostId === hostId ||
           (row.runtimeOwnerEnvironmentId &&
             hostId === `runtime:${encodeURIComponent(row.runtimeOwnerEnvironmentId)}`))
@@ -137,7 +141,8 @@ export function nativeChatMentionResources(
 }
 export function createNativeChatMentionResourceSelector(
   query: string | null,
-  hostId: ExecutionHostId | null
+  hostId: ExecutionHostId | null,
+  botDirectories: ReadonlySet<string> = NO_BOT_DIRECTORIES
 ) {
   let inputs: unknown[] | null = null
   let resources = EMPTY_MENTION_RESOURCES
@@ -147,7 +152,7 @@ export function createNativeChatMentionResourceSelector(
     }
     if (!inputs || INPUT_KEYS.some((key, index) => state[key] !== inputs?.[index])) {
       inputs = INPUT_KEYS.map((key) => state[key])
-      resources = nativeChatMentionResources(state, query, hostId)
+      resources = nativeChatMentionResources(state, query, hostId, botDirectories)
     }
     return resources
   }

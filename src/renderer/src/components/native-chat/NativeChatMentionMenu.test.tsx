@@ -42,6 +42,7 @@ it('opens with no selected bot or reference and groups every category', () => {
   render(
     <NativeChatMentionMenu
       mention={base}
+      query=""
       activeIndex={-1}
       listboxId="mentions"
       onChoose={choose}
@@ -66,6 +67,7 @@ it('uses one selection for pointer and keyboard instead of leaving CEO highlight
   render(
     <NativeChatMentionMenu
       mention={base}
+      query=""
       activeIndex={4}
       listboxId="mentions"
       onChoose={vi.fn()}
@@ -84,6 +86,7 @@ it('retains the selected file identity when asynchronous issue results are inser
   const view = render(
     <NativeChatMentionMenu
       mention={mention}
+      query=""
       activeIndex={2}
       listboxId="mentions"
       onChoose={vi.fn()}
@@ -93,6 +96,7 @@ it('retains the selected file identity when asynchronous issue results are inser
   view.rerender(
     <NativeChatMentionMenu
       mention={base}
+      query=""
       activeIndex={2}
       listboxId="mentions"
       onChoose={vi.fn()}
@@ -101,4 +105,45 @@ it('retains the selected file identity when asynchronous issue results are inser
   )
   expect(active).toHaveBeenLastCalledWith(4)
   expect(screen.getByRole('option', { selected: true }).textContent).toBe('README.md')
+})
+
+it('highlights the first typed match before pointer or keyboard movement', () => {
+  const active = vi.fn()
+  render(
+    <NativeChatMentionMenu
+      mention={base}
+      query="ceo"
+      activeIndex={-1}
+      listboxId="mentions"
+      onChoose={vi.fn()}
+      onActiveIndexChange={active}
+    />
+  )
+  expect(screen.getByRole('option', { selected: true }).textContent).toContain('CEO')
+  expect(active).toHaveBeenLastCalledWith(0)
+})
+
+it('selects the new query match instead of retaining a previous query identity', () => {
+  const active = vi.fn()
+  const view = render(
+    <NativeChatMentionMenu
+      mention={base}
+      query="readme"
+      activeIndex={4}
+      listboxId="mentions"
+      onChoose={vi.fn()}
+      onActiveIndexChange={active}
+    />
+  )
+  view.rerender(
+    <NativeChatMentionMenu
+      mention={{ ...base, bots: [], files: [], resources: [workspace] }}
+      query="launch"
+      activeIndex={0}
+      listboxId="mentions"
+      onChoose={vi.fn()}
+      onActiveIndexChange={active}
+    />
+  )
+  expect(screen.getByRole('option', { selected: true }).textContent).toContain('Launch workspace')
 })
