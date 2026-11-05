@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bot, Brain, FolderOpen, RotateCcw } from 'lucide-react'
+import { Bot, Brain, CalendarClock, FolderOpen, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import NativeChatView from '../native-chat/NativeChatView'
@@ -9,10 +9,12 @@ import { ensureProjectChannelConversation } from './project-channel-store'
 import { ProjectChannelSettingsButton } from './ProjectChannelSettingsButton'
 import { BotAvatar } from './BotAvatar'
 import { BotMemoryPanel } from './BotMemoryPanel'
+import { BotRoutinesPanel } from './BotRoutinesPanel'
 
 export function BotNativeConversation({ channel }: { channel: ProjectChannel }): React.JSX.Element {
   const [attempt, setAttempt] = useState(0)
   const [memoryOpen, setMemoryOpen] = useState(false)
+  const [routinesOpen, setRoutinesOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const member = channel.members.find((row) => row.id === channel.home?.memberId)
   const ready = channel.home?.ready && member
@@ -59,8 +61,19 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
           <Brain />
           {translate('shamu.memory.button', 'Memory')}
         </Button>
+        <Button variant="ghost" size="sm" disabled={!ready} onClick={() => setRoutinesOpen(true)}>
+          <CalendarClock />
+          {translate('shamu.routines.button', 'Routines')}
+        </Button>
         <ProjectChannelSettingsButton channelId={channel.id} disabled={!ready} />
       </header>
+      {routinesOpen ? (
+        <BotRoutinesPanel
+          botId={channel.id}
+          name={channel.name}
+          onClose={() => setRoutinesOpen(false)}
+        />
+      ) : null}
       {memoryOpen ? (
         <BotMemoryPanel channel={channel} open={memoryOpen} onOpenChange={setMemoryOpen} />
       ) : null}

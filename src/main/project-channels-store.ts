@@ -37,6 +37,9 @@ export class ProjectChannelsStore {
       }
       for (const channel of snapshot.channels) {
         const previous = current.channels.find((row) => row.id === channel.id)
+        if (JSON.stringify(channel.creation) !== JSON.stringify(previous?.creation)) {
+          throw new Error('Bot creation provenance is managed by Shamu.')
+        }
         if (JSON.stringify(channel.home) !== JSON.stringify(previous?.home)) {
           throw new Error('The bot conversation is managed by Orca.')
         }
@@ -77,6 +80,26 @@ export class ProjectChannelsStore {
         ...current,
         revision: current.revision + 1,
         channels: current.channels.map((channel) => (channel.id === id ? update(channel) : channel))
+      })
+      await writeSidecarSnapshot(this.file, next, 0o600)
+      return next
+    })
+  }
+
+  async create(channel: ProjectChannel): Promise<ProjectChannelsSnapshot> {
+    return withSidecarSnapshotQueue(this.file, async () => {
+      const current = await this.read()
+      const existing = current.channels.find((row) => row.id === channel.id)
+      if (existing) {
+        if (existing.creation?.fingerprint !== channel.creation?.fingerprint) {
+          throw new Error('This creation request was already used for another bot.')
+        }
+        return current
+      }
+      const next = projectChannelsSnapshotSchema.parse({
+        ...current,
+        revision: current.revision + 1,
+        channels: [...current.channels, channel]
       })
       await writeSidecarSnapshot(this.file, next, 0o600)
       return next

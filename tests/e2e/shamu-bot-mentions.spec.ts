@@ -100,6 +100,9 @@ test('mentions a bot from a floating chat, keeps its origin, and anchors the pic
     const panel = page.locator('[data-floating-terminal-panel][aria-hidden="false"]')
     const composer = panel.locator('[data-native-chat-root="true"]').getByRole('textbox')
     await expect(composer).toBeVisible()
+    await composer.fill('The project launch is Friday. This is context from before the mention.')
+    await composer.press('Enter')
+    await expect(panel.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
     await panel.getByRole('button', { name: 'Maximize floating workspace', exact: true }).click()
     const minimize = panel.getByRole('button', { name: 'Minimize floating workspace', exact: true })
     const region = await minimize.evaluate((node) => ({
@@ -184,6 +187,13 @@ test('mentions a bot from a floating chat, keeps its origin, and anchors the pic
     })
     expect(delivery.request.source.sessionId).toBe(sourceSession)
     expect(delivery.request.text).toContain('review this plan')
+    expect(JSON.stringify(delivery.context)).toContain('project launch is Friday')
+    const sourceContext = await page.evaluate(
+      ({ actorId, referenceId }) =>
+        window.api.projectChannels!.command({ action: 'context', actorId, referenceId }),
+      { actorId: bot.id, referenceId: delivery.request.id }
+    )
+    expect(JSON.stringify(sourceContext)).toContain('project launch is Friday')
     const sentUuid = claudePromptUuidForSubmission(
       bot.members[0].sessionId,
       agentJournalSubmissionKey(delivery.receipts[0].operationId)

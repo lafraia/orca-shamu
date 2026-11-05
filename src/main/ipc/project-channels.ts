@@ -1,6 +1,9 @@
 import { BotMentionDelivery } from '../bot-mention-delivery'
 import { botMentionRequestSchema } from '../../shared/bot-mentions'
-import { app, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
+import { BotCommandService, installBotCommandService } from '../shamu-bots/bot-command-service'
+import { BotRoutineService } from '../shamu-bots/bot-routine-service'
+import { getBundledLauncherPath } from '../cli/bundled-cli-launcher-path'
 import { z } from 'zod'
 import type { Store } from '../persistence/loading-store/store'
 import { ProjectChannelsStore } from '../project-channels-store'
@@ -28,13 +31,53 @@ export function registerProjectChannelsHandlers(
         channels,
         primary,
         app.getPath('home'),
-        store.getProfileStorageDirectory()
+        store.getProfileStorageDirectory(),
+        {
+          cliExecutable: getBundledLauncherPath(process.platform, process.resourcesPath) ?? 'orca',
+          userDataDirectory: app.getPath('userData')
+        }
       )
     : null
   const mentions =
     primary && bots
       ? new BotMentionDelivery(channels, bots, primary, store.getProfileStorageDirectory(), memory)
       : null
+  const changed = (): void => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (isTrustedUIRenderer(window.webContents)) {
+        window.webContents.send('projectChannels:changed')
+      }
+    }
+  }
+  const commands =
+    primary && bots && memory && mentions
+      ? new BotCommandService(
+          channels,
+          bots,
+          mentions,
+          new BotRoutineService(
+            channels,
+            bots,
+            memory,
+            primary,
+            store.getProfileStorageDirectory()
+          ),
+          primary,
+          changed
+        )
+      : null
+  installBotCommandService(commands)
+  void bots?.refreshGuides().catch(() => {
+    console.warn('[shamu] Could not refresh bot guides. Open the bot to retry.')
+  })
+  ipcMain.removeHandler('projectChannels:command')
+  ipcMain.handle('projectChannels:command', async (event, input: unknown) => {
+    trusted(event)
+    if (!commands) {
+      throw new Error('Bot controls are available in Orca Shamu.')
+    }
+    return commands.invoke(input)
+  })
   const trusted = (event: Electron.IpcMainInvokeEvent): void => {
     if (!isTrustedUIRenderer(event.sender)) {
       throw new Error('Untrusted project conversation request.')

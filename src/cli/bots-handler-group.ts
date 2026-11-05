@@ -1,0 +1,13 @@
+import type { HandlerGroup } from './handler-group-manifest'
+export const BOT_HANDLER_GROUP: HandlerGroup = {
+  name: 'bots',
+  keys: [
+    'bots list',
+    'bots create',
+    'bots organize',
+    'bots mention',
+    'bots context',
+    'bots routines'
+  ],
+  load: async () => (await import('./handlers/bots.js')).BOT_HANDLERS
+}

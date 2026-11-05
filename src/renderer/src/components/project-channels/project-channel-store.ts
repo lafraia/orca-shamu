@@ -242,3 +242,28 @@ export function restoreProjectChannelDraft(
     setProjectChannelDraft(id, text)
   }
 }
+
+let rosterRefresh: Promise<void> | null = null
+let rosterDirty = false
+export function refreshProjectChannelRoster(): Promise<void> {
+  rosterDirty = true
+  if (rosterRefresh) {
+    return rosterRefresh
+  }
+  rosterRefresh = (async () => {
+    await writes
+    do {
+      rosterDirty = false
+      const snapshot = await window.api.projectChannels!.read()
+      if (snapshot.revision >= useProjectChannels.getState().snapshot.revision) {
+        useProjectChannels.setState({ snapshot })
+      }
+    } while (rosterDirty)
+  })().finally(() => {
+    rosterRefresh = null
+    if (rosterDirty) {
+      void refreshProjectChannelRoster().catch(() => {})
+    }
+  })
+  return rosterRefresh
+}

@@ -43,7 +43,22 @@ describe('bot mention delivery', () => {
     }
     call.mockReset().mockImplementation(async (method, input) => {
       if (method === 'agentSession.history') {
-        return { ok: true, page: { fence: 7 } }
+        return {
+          ok: true,
+          page: {
+            sessionId: z.object({ sessionId: z.string() }).parse(input).sessionId,
+            epoch: 'epoch',
+            fence: 7,
+            items: [],
+            submissions: [],
+            window: {
+              oldest: { epoch: 'epoch', sequence: 1 },
+              newest: { epoch: 'epoch', sequence: 1 },
+              nextCursor: { epoch: 'epoch', sequence: 1 }
+            },
+            hasOlder: false
+          }
+        }
       }
       if (method === 'agentSession.send') {
         const params = z
@@ -124,5 +139,24 @@ describe('bot mention delivery', () => {
     })
     expect(receipts[0].state).toBe('self')
     expect(call.mock.calls.some(([method]) => method === 'agentSession.send')).toBe(false)
+  })
+  it('limits a source reference to its recipient and captured or earlier history', async () => {
+    await service().deliver(request)
+    const context = await service().context(channel.id, request.id)
+    expect(context.sessionId).toBe(request.source.sessionId)
+    await expect(service().context('another-bot', request.id)).rejects.toThrow('does not belong')
+    await expect(
+      service().context(channel.id, request.id, { epoch: 'epoch', sequence: 2 })
+    ).rejects.toThrow('earlier-message cursor')
+    call.mockClear()
+    await service().context(channel.id, request.id, context.before!)
+    expect(call).toHaveBeenCalledWith(
+      'agentSession.history',
+      expect.objectContaining({
+        sessionId: 'source-session',
+        direction: 'before',
+        cursor: context.before
+      })
+    )
   })
 })

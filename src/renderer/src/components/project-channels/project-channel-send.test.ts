@@ -43,6 +43,8 @@ describe('shared channel send admission', () => {
       error: null
     })
     api = {
+      command: vi.fn(),
+      onChanged: vi.fn(),
       readMemory: vi.fn(),
       writeMemory: vi.fn(),
       prepareMessage: vi.fn(),

@@ -1,6 +1,7 @@
 /** Commands that act only on this machine: dispatch ignores --environment / --pairing-code for them, and help does not offer them. */
 export function ignoresRemoteSelection(commandPath: readonly string[]): boolean {
   return (
+    commandPath[0] === 'bots' ||
     commandPath[0] === 'account' ||
     commandPath[0] === 'artifacts' ||
     commandPath[0] === 'environment' ||

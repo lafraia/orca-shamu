@@ -23,6 +23,7 @@ import { BotIdentityFields } from './BotIdentityFields'
 import { defaultBotIdentity } from '../../../../shared/bot-identity'
 import {
   loadProjectChannels,
+  refreshProjectChannelRoster,
   checkpointProjectChannelDrafts,
   openProjectChannel,
   saveProjectChannels,
@@ -35,8 +36,14 @@ export function ProjectChannelsHost(): React.JSX.Element | null {
     if (window.api.projectChannels) {
       void loadProjectChannels()
     }
+    const unsubscribe = window.api.projectChannels?.onChanged?.(() => {
+      void refreshProjectChannelRoster().catch(() => {})
+    })
     window.addEventListener('beforeunload', checkpointProjectChannelDrafts)
-    return () => window.removeEventListener('beforeunload', checkpointProjectChannelDrafts)
+    return () => {
+      unsubscribe?.()
+      window.removeEventListener('beforeunload', checkpointProjectChannelDrafts)
+    }
   }, [])
   return editor ? (
     <ProjectChannelDialog key={editor.channelId ?? editor.tabId ?? 'new'} editor={editor} />
@@ -69,6 +76,7 @@ function ProjectChannelDialog({
   const save = async (): Promise<void> => {
     const id = botId
     const validation = projectChannelSchema.safeParse({
+      ...existing,
       id,
       name,
       instructions,
@@ -97,6 +105,9 @@ function ProjectChannelDialog({
         const saved = {
           ...validation.data,
           home: latest?.home ?? validation.data.home,
+          creation: latest?.creation,
+          pinned: latest?.pinned,
+          section: latest?.section,
           messages: latest?.messages ?? validation.data.messages,
           draft: latest?.draft ?? validation.data.draft,
           members: validation.data.members.map((member) => {

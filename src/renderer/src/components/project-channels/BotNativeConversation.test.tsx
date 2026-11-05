@@ -9,6 +9,7 @@ vi.mock('./project-channel-store', () => ({ ensureProjectChannelConversation: en
 vi.mock('../native-chat/NativeChatView', () => ({ default: () => <div>Native chat</div> }))
 vi.mock('./ProjectChannelSettingsButton', () => ({ ProjectChannelSettingsButton: () => null }))
 vi.mock('./BotMemoryPanel', () => ({ BotMemoryPanel: () => null }))
+vi.mock('./BotRoutinesPanel', () => ({ BotRoutinesPanel: () => null }))
 
 describe('bot conversation provisioning', () => {
   beforeEach(() => ensure.mockClear())

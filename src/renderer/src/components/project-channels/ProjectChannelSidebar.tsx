@@ -3,11 +3,9 @@ import { useState } from 'react'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import { BotAvatar } from './BotAvatar'
+import { BotSidebarGroups } from './BotSidebarGroups'
 import {
-  openProjectChannel,
   openProjectChannelEditor,
   reloadProjectChannels,
   useProjectChannels
@@ -109,40 +107,18 @@ export function ProjectChannelSidebar(): React.JSX.Element {
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
-        {channels.map((channel) => (
-          <button
-            key={channel.id}
-            type="button"
-            data-current={activeView === 'project-chat' && channel.id === selectedId}
-            aria-current={
-              activeView === 'project-chat' && channel.id === selectedId ? 'page' : undefined
-            }
-            onClick={() => openProjectChannel(channel.id)}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground hover:bg-worktree-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              activeView === 'project-chat' &&
-                channel.id === selectedId &&
-                'bg-worktree-sidebar-accent'
-            )}
-          >
-            <BotAvatar id={channel.id} identity={channel.identity} className="size-7 rounded-lg" />
-            <span className="min-w-0 flex-1 truncate font-medium">{channel.name}</span>
-            {!channel.home && channel.members.length > 0 ? (
-              <span
-                className="text-xs tabular-nums text-muted-foreground"
-                aria-label={translate(
-                  'projectChannels.linkedCount',
-                  'Linked conversations: {{count}}',
-                  {
-                    count: channel.members.length - (channel.home ? 1 : 0)
-                  }
-                )}
-              >
-                {channel.members.length - (channel.home ? 1 : 0)}
-              </span>
-            ) : null}
-          </button>
-        ))}
+        <BotSidebarGroups
+          channels={channels}
+          sections={[
+            ...new Set(
+              snapshot.channels
+                .map((row) => row.section)
+                .filter((section): section is string => Boolean(section))
+            )
+          ]}
+          selectedId={selectedId}
+          active={activeView === 'project-chat'}
+        />
         {loaded && channels.length === 0 ? (
           <div className="px-2 py-4 text-xs text-muted-foreground">
             {search ? (

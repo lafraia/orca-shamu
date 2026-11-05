@@ -124,6 +124,32 @@ describe('permanent bot conversations', () => {
     expect(folders).toHaveLength(0)
     expect((await service.ensure('ceo')).channels[0]).toEqual(adopted)
   })
+  it('updates tools for existing bots at startup without creating or sending another session', async () => {
+    const original = (await service.ensure('ceo')).channels[0]
+    call.mockClear()
+    const updated = new BotConversationService(
+      channels,
+      { read: async () => ({ environmentId: 'primary' }), call },
+      directory,
+      directory,
+      {
+        cliExecutable: '/Applications/Orca Shamu.app/Contents/Resources/bin/orca',
+        userDataDirectory: '/profile'
+      }
+    )
+    await updated.refreshGuides()
+    expect(await readFile(join(original.home!.directory, 'BOT_TOOLS.md'), 'utf8')).toContain(
+      'bots COMMAND'
+    )
+    expect(
+      JSON.parse(await readFile(join(original.home!.directory, 'bot.json'), 'utf8'))
+    ).toMatchObject({
+      sessionId: original.members[0].sessionId,
+      toolkit: { guide: 'BOT_TOOLS.md' }
+    })
+    expect((await channels.read()).channels[0]).toEqual(original)
+    expect(call).not.toHaveBeenCalled()
+  })
 
   it('persists the canonical create envelope before a lost reply and replays it after restart', async () => {
     loseCreateReply = true

@@ -10,6 +10,7 @@ import type { ProjectChannel, ProjectChannelsSnapshot } from '../shared/project-
 import type { ProjectChannelsStore } from './project-channels-store'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
 import { initializeBotMemory } from './bot-memory-service'
+import { botToolkitGuide, type BotToolkit } from './shamu-bots/bot-toolkit'
 
 type Primary = {
   read: () => Promise<{ environmentId: string | null }>
@@ -40,8 +41,25 @@ export class BotConversationService {
     private readonly channels: ProjectChannelsStore,
     private readonly primary: Primary,
     private readonly homeDirectory: string,
-    private readonly queueDirectory: string
+    private readonly queueDirectory: string,
+    private readonly toolkit?: BotToolkit
   ) {}
+
+  refreshGuides(): Promise<void> {
+    return withSidecarSnapshotQueue(join(this.queueDirectory, 'bot-conversations'), async () => {
+      const { environmentId } = await this.primary.read()
+      for (const channel of (await this.channels.read()).channels) {
+        const member = channel.members.find((row) => row.id === channel.home?.memberId)
+        if (
+          channel.home?.ready &&
+          member?.target.kind === 'environment' &&
+          member.target.environmentId === environmentId
+        ) {
+          await this.writeInstructions(channel, channel.home.directory)
+        }
+      }
+    })
+  }
 
   ensure(channelId: string): Promise<ProjectChannelsSnapshot> {
     // Serialize provisioning across bots so concurrent creation also reuses the workspace group.
@@ -237,6 +255,11 @@ export class BotConversationService {
   private async writeInstructions(channel: ProjectChannel, directory: string): Promise<void> {
     await mkdir(directory, { recursive: true, mode: 0o700 })
     await initializeBotMemory(directory)
+    if (this.toolkit) {
+      await writeFile(join(directory, 'BOT_TOOLS.md'), botToolkitGuide(this.toolkit), {
+        mode: 0o600
+      })
+    }
     for (const [name, content] of [
       ['AGENTS.md', BOT_INSTRUCTIONS],
       ['CLAUDE.md', '@AGENTS.md\n']
@@ -259,7 +282,9 @@ export class BotConversationService {
         identity: channel.identity
           ? { color: channel.identity.color, animated: channel.identity.animated }
           : undefined,
-        memory: { guide: 'BOT_MEMORY.md', file: 'memory.json' }
+        memory: { guide: 'BOT_MEMORY.md', file: 'memory.json' },
+        ...(this.toolkit ? { toolkit: { ...this.toolkit, guide: 'BOT_TOOLS.md' } } : {}),
+        sessionId: channel.members.find((row) => row.id === channel.home?.memberId)?.sessionId
       },
       0o600
     )
