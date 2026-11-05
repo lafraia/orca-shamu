@@ -11,6 +11,12 @@ If selection fans out excessively, use scoped checks and report limits. Use the 
 
 ## Orca Shamu Preview
 
+All commit subjects and bodies for Shamu work must be written in English. Keep upstream history intact. The canonical fork is `lafraia/orca-shamu`, with SSH `origin` pointing to `git@github.com:lafraia/orca-shamu.git` and SSH `upstream` to `git@github.com:stablyai/orca.git`. Preserve GitHub's fork relationship. The protected `main` accepts changes through PRs, including administrator changes; never bypass protection or force push.
+
+Accumulate changes from multiple PRs under **Unreleased** in `SHAMU_CHANGELOG.md`. Do not bump the Shamu revision, create a release tag, or create/publish a GitHub release for a feature, fix, PR merge, local build or upstream import. Only close a distribution release after Daniel explicitly asks to close a version. Read `SHAMU_RELEASES.md` then. Local preview tags 1 through 11 are historical development checkpoints, not published distributions. Keep `package.json.version` equal to the merged upstream release and record its exact tag/commit separately from the Shamu revision. Upstream merges get their own changelog entry and review of `UPSTREAM_PATCHES.md`.
+
+Keep upstream publishing workflows disabled in this fork, including newly introduced publishing workflows after an upstream import. PR validation must not publish. Publishing a distribution and installing/reloading the user's application are separate actions, each following the user's current authorization.
+
 Use `pnpm dev:shamu` for renderer changes; see `PROJECT_CHANNELS.md`. Track the upstream tag and Shamu revision in `config/shamu-release.json`. Keep official release updates disabled. React/CSS changes use the local live server; changes to main, preload or native code still require rebuilding Shamu. Keep the primary Orca process running because it owns the shared sessions. Do not copy profiles or pairing credentials into another application.
 
 Reloading or restarting the user's running Shamu requires an explicit user request. This includes replacing the installed app or enabling live reload. Inspect active turns and pending queues first; if their state cannot be verified, treat it as busy, never as idle. Prepare changes and run isolated hidden tests without interrupting the live app. A completed build does not authorize a reload.
