@@ -6,8 +6,8 @@ import {
   getProjectGroupExecutionHostIdForRows
 } from '../../../../shared/sidebar-list/host-filtering'
 import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
-import { getWorkspaceAttachments } from '../../../../shared/workspace-attachments'
-import { parseWorkspaceReferenceUrl } from '../../../../shared/workspace-reference-identity'
+import { getWorkspaceAttachments } from '../../../../shared/workspace-attachments/workspace-attachments'
+import { parseWorkspaceReferenceUrl } from '../../../../shared/workspace-attachments/workspace-reference-identity'
 import type { NativeChatResourceReference } from '../../../../shared/native-chat/native-chat-resource-reference'
 
 export const EMPTY_MENTION_RESOURCES: readonly NativeChatResourceReference[] = []

@@ -49,6 +49,7 @@ import type {
   NotificationsApi
 } from './api/os-permission-api'
 import type { PetApi } from './api/pet-api'
+import type { BrowserPasswordsApi } from './api/browser-passwords-api'
 import type { PluginsApi } from './api/plugin-host-api'
 import type { PreflightApi } from './api/preflight-api'
 import type { PtyApi } from './api/pty-api'
@@ -130,6 +131,7 @@ export type PreloadApi = {
   skills: SkillsApi
   pet: PetApi
   browser: BrowserApi
+  browserPasswords: BrowserPasswordsApi
   emulator: EmulatorApi
   hooks: HooksApi
   ephemeralVm: EphemeralVmApi
@@ -232,11 +234,7 @@ export type {
   PtyManagementSeveredDaemon,
   PtyManagementSeveredDaemonRestartResult
 } from './api/pty-management-api'
-export type {
-  ShellOpenExternalEditorRequest,
-  ShellOpenExternalEditorResult,
-  ShellOpenLocalPathResult
-} from './api/shell-api'
+
 export type {
   DiagnosticsBundlePayload,
   DiagnosticsStatusPayload,

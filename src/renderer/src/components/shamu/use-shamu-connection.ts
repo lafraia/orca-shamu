@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { runtimeHostContactForEntry } from '../../../../shared/runtime-host-contact'
+import { runtimeHostContactForEntry } from '../../../../shared/remote-runtime/host-status/runtime-host-contact'
 import { useShamuClient } from './shamu-client-state'
 
 export function useShamuConnection() {

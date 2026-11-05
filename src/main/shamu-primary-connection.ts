@@ -2,12 +2,15 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isIP } from 'node:net'
 import { z } from 'zod'
-import { parseHostAccessLink } from '../shared/remote-pairing-address'
+import { parseHostAccessLink } from '../shared/remote-runtime/pairing/remote-pairing-address'
 import {
   addOrUpdateEnvironmentFromPairingCode,
   listEnvironments
-} from '../shared/runtime-environment-store'
-import { getPreferredPairingOffer, redactRuntimeEnvironment } from '../shared/runtime-environments'
+} from '../shared/remote-runtime/host-store/runtime-environment-store'
+import {
+  getPreferredPairingOffer,
+  redactRuntimeEnvironment
+} from '../shared/remote-runtime/host-catalog/runtime-environments'
 import type { ProjectChannelsSnapshot } from '../shared/project-channels'
 import { verifyRuntimeEnvironmentPairingCode } from './ipc/runtime-environments/runtime-environment-pairing-verification'
 import { publishVerifiedPairing } from './ipc/runtime-environments/runtime-environment-verified-pairing-publish'

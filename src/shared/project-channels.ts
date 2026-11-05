@@ -6,7 +6,7 @@ import { botSectionNameSchema } from './bot-sections'
 import type { BotMemory, BotMemorySnapshot } from './bot-memory'
 import type { BotCommand } from './bot-commands'
 import type { BotReadMark, BotUnreadSnapshot } from './bot-unread'
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-status/contracts/agent-status-types'
 import { isStructuredAgentId } from './agent-session/lifecycle/agent-session-provider-handle-encoding'
 
 const id = z.string().min(1).max(1024)

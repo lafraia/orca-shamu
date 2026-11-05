@@ -8,11 +8,11 @@ import {
 } from '../../shared/shamu-live-renderer'
 import { isShamuClientMode } from '../startup/shamu-client-mode'
 import { registerShamuLiveWindow } from './shamu-live-request-guard'
-import { ensureBrowserSessionUserAgentPolicy } from '../browser/browser-session-ua'
+import { ensureBrowserSessionUserAgentPolicy } from '../browser/identity/browser-session-ua'
 import {
   installBrowserSessionHeadersReceived,
   installBrowserSessionRequestLifecycle
-} from '../browser/browser-session-request-decisions'
+} from '../browser/sessions/requests/browser-session-request-decisions'
 
 function liveRenderer() {
   if (!process.env.ORCA_SHAMU_RENDERER_URL && !process.env.ORCA_SHAMU_LIVE_TOKEN) {
