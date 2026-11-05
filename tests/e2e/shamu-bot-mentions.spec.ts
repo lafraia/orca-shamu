@@ -202,9 +202,22 @@ test('mentions a bot from a floating chat, keeps its origin, and anchors the pic
       frames().filter((frame) => frame.type === 'user' && frame.uuid === sentUuid)
     await expect.poll(() => mentionFrames().length).toBe(1)
     await expect(panel.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
-    await page.evaluate(() => window.dispatchEvent(new Event('orca-toggle-floating-terminal')))
-    await page.getByRole('button', { name: 'Bots', exact: true }).click()
-    await page.getByRole('button', { name: 'CEO', exact: true }).click()
+    // The sent reference survives reload, and opens the bot without another provider request.
+    await page.reload()
+    await activateSource()
+    const reference = panel.getByRole('button', { name: 'Open bot chat: CEO', exact: true })
+    await expect(reference).toBeVisible()
+    await expect(reference).toHaveAttribute('data-variant', 'promptPill')
+    const requestsBeforeNavigation = frames().filter((frame) => frame.type === 'user').length
+    await panel.screenshot({ path: testInfo.outputPath('bot-mention-transcript.png') })
+    await page.evaluate(async () =>
+      window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' })
+    )
+    await expect(page.locator('html')).toHaveClass(/dark/)
+    await panel.screenshot({ path: testInfo.outputPath('bot-mention-transcript-dark.png') })
+    await reference.focus()
+    await reference.press('Enter')
+    await expect(panel).toHaveCount(0)
     const botChat = page.getByRole('region', { name: 'CEO', exact: true })
     await expect(botChat.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
     await expect(botChat).toContainText(sourceSession)
@@ -212,6 +225,7 @@ test('mentions a bot from a floating chat, keeps its origin, and anchors the pic
     await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await expect(botChat.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
     expect(mentionFrames()).toHaveLength(1)
+    expect(frames().filter((frame) => frame.type === 'user')).toHaveLength(requestsBeforeNavigation)
     await page.screenshot({ path: testInfo.outputPath('bot-mention-own-chat.png') })
   } finally {
     await client.dispose()

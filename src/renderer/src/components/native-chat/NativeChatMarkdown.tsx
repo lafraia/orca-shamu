@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { withoutPendingNativeChatVisualDirectiveTail } from '../../../../shared/native-chat/native-chat-visual-directive'
 import { NativeChatMarkdownRowKeyContext } from './native-chat-disclosure-store'
 import { useNativeChatVisualMarkdownExtension } from './native-chat-visual-markdown-extension'
+import { useNativeChatBotMarkdown } from './use-native-chat-bot-markdown'
 import { useNativeChatFileLinkExists } from './use-native-chat-file-link-existence'
 import {
   NativeChatMarkdownImage,
@@ -133,13 +134,14 @@ export function NativeChatMarkdown({
 }: NativeChatMarkdownProps): React.JSX.Element {
   const wordFadeArmed = useWordFadeArmed(fadeWords)
   const visualExtension = useNativeChatVisualMarkdownExtension(visualMessageId)
-  const extension = useMemo(
+  const baseExtension = useMemo(
     () =>
       variant === 'document'
         ? createNativeChatImageExtension(visualExtension, onLinkClick)
         : withFileDestinations(visualExtension),
     [onLinkClick, variant, visualExtension]
   )
+  const extension = useNativeChatBotMarkdown(baseExtension, onLinkClick)
   const fileLinkExists = useNativeChatFileLinkExists(linkifyFilePaths, streaming)
   const { githubRepo } = useContext(NativeChatLinkPeekContext)
   return (
