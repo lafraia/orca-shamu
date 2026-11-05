@@ -57,13 +57,39 @@ test('moves Shamu connection to the statusbar and exposes its own searchable set
     await status.click()
     const section = page.locator('[data-settings-section="orca-shamu"]')
     await expect(section.getByRole('heading', { name: 'Orca Shamu', exact: true })).toBeVisible()
+    await expect(section).toContainText('An independent, open source fork of Orca')
+    const project = section.getByRole('region', { name: 'About this fork', exact: true })
+    await expect(project).toContainText('Daniel Lafraia (lafraia)')
+    await expect(project).toContainText('not an official Orca release')
+    await expect(
+      project.getByRole('link', { name: 'lafraia/orca-shamu', exact: true })
+    ).toHaveAttribute('href', 'https://github.com/lafraia/orca-shamu')
+    await expect(project.getByRole('link', { name: 'lafraia', exact: true })).toHaveAttribute(
+      'href',
+      'https://github.com/lafraia'
+    )
+    await expect(
+      project.getByRole('link', { name: 'Original Orca project', exact: true })
+    ).toHaveAttribute('href', 'https://github.com/stablyai/orca')
+    await expect(project.getByRole('link', { name: 'MIT license', exact: true })).toHaveAttribute(
+      'href',
+      'https://github.com/lafraia/orca-shamu/blob/main/LICENSE'
+    )
+    await expect(project).toContainText('as is and as available')
+    await expect(project).toContainText('disclaim liability')
+    await expect(project).toContainText('does not exclude or limit mandatory legal rights')
     await expect(section.getByRole('button', { name: 'Import interface settings' })).toBeEnabled()
     await section.getByRole('button', { name: 'Update access link' }).click()
     await expect(page.getByRole('dialog').getByLabel('Primary Orca access link')).toBeVisible()
     await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(section).toBeVisible()
-    await page.screenshot({ path: testInfo.outputPath('shamu-settings.png') })
+    await page.setViewportSize({ width: 1280, height: 1040 })
+    await project.screenshot({ path: testInfo.outputPath('shamu-project-notice-light.png') })
+    await page.evaluate(async () =>
+      window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' })
+    )
+    await project.screenshot({ path: testInfo.outputPath('shamu-project-notice-dark.png') })
     await page.reload()
     await expect(page).toHaveTitle('Orca Shamu')
     await expect(status).toBeVisible()
@@ -72,7 +98,7 @@ test('moves Shamu connection to the statusbar and exposes its own searchable set
     await page.getByRole('button', { name: 'Back to app', exact: true }).click()
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     const search = page.getByPlaceholder('Search settings', { exact: true })
-    await search.fill('Orca Shamu')
+    await search.fill('garantia')
     await expect(page.getByRole('button', { name: /Orca Shamu/ }).first()).toBeVisible()
     await page
       .getByRole('button', { name: /Orca Shamu/ })

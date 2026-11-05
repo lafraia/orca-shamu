@@ -18,6 +18,7 @@ import { useShamuConnection } from './use-shamu-connection'
 import { useShamuClient } from './shamu-client-state'
 import { ShamuConnectionForm } from './ShamuConnectionForm'
 import { getShamuSettingsSearchEntries } from './shamu-settings-search'
+import { ShamuProjectNotice } from './ShamuProjectNotice'
 
 export function ShamuSettingsSection(): React.JSX.Element | null {
   const enabled = useShamuClient((state) => state.enabled)
@@ -30,7 +31,7 @@ export function ShamuSettingsSection(): React.JSX.Element | null {
       title="Orca Shamu"
       description={translate(
         'shamu.settings.description',
-        'Settings and connection for this Orca Shamu interface.'
+        'An independent, open source fork of Orca maintained by Daniel Lafraia (lafraia).'
       )}
       searchEntries={getShamuSettingsSearchEntries()}
     >
@@ -137,6 +138,7 @@ function ShamuSettingsPane(): React.JSX.Element {
           {notice.text}
         </p>
       ) : null}
+      <ShamuProjectNotice />
       <Dialog open={edit} onOpenChange={setEdit}>
         <DialogContent surface="security" scrollable>
           <DialogHeader>
