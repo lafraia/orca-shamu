@@ -58,26 +58,28 @@ export function BotSidebarActions({
             ? translate('shamu.bots.unpin', 'Unpin bot')
             : translate('shamu.bots.pin', 'Pin bot')}
         </Item>
-        <Sub>
-          <Trigger disabled={busy}>
-            <Folder />
-            {translate('shamu.bots.moveSection', 'Move to section')}
-          </Trigger>
-          <Content>
-            <Item onSelect={() => organize({ section: '' })}>
-              {translate('shamu.bots.noSection', 'Without section')}
-              {!channel.section ? <Check /> : null}
-            </Item>
-            {sections.map((section) => (
-              <Item key={section} onSelect={() => organize({ section })}>
-                {section}
-                {channel.section === section ? <Check /> : null}
+        {!channel.pinned ? (
+          <Sub>
+            <Trigger disabled={busy}>
+              <Folder />
+              {translate('shamu.bots.moveSection', 'Move to section')}
+            </Trigger>
+            <Content>
+              <Item onSelect={() => organize({ section: '' })}>
+                {translate('shamu.bots.noSection', 'Without section')}
+                {!channel.section ? <Check /> : null}
               </Item>
-            ))}
-            <Separator />
-            <Item onSelect={onSection}>{translate('shamu.bots.newSection', 'New section…')}</Item>
-          </Content>
-        </Sub>
+              {sections.map((section) => (
+                <Item key={section} onSelect={() => organize({ section })}>
+                  {section}
+                  {channel.section === section ? <Check /> : null}
+                </Item>
+              ))}
+              <Separator />
+              <Item onSelect={onSection}>{translate('shamu.bots.newSection', 'New section…')}</Item>
+            </Content>
+          </Sub>
+        ) : null}
         <Separator />
         <Item onSelect={() => openProjectChannelEditor({ channelId: channel.id })}>
           <Settings />

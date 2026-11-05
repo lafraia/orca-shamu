@@ -113,12 +113,12 @@ export function BotSidebarGroups({
                     <BotAvatar
                       id={channel.id}
                       identity={channel.identity}
-                      className={group.pinned ? 'size-9' : 'size-7 rounded-lg'}
+                      className={group.pinned ? 'size-12' : 'size-7 rounded-lg'}
                     />
                     <span
                       className={cn(
                         'min-w-0 flex-1 truncate font-medium',
-                        group.pinned && 'font-semibold'
+                        group.pinned && 'text-base font-semibold'
                       )}
                     >
                       {channel.name}

@@ -131,7 +131,27 @@ test('bot commands, pins, sections and routines use permanent paired chats and s
     await page.getByRole('menuitem', { name: 'Pin bot', exact: true }).click()
     const pinned = page.getByRole('region', { name: 'Pinned', exact: true })
     await expect(pinned.getByRole('button', { name: 'Researcher', exact: true })).toBeVisible()
-    await expect(pinned.locator('.bot-avatar')).toHaveClass(/size-9/)
+    await expect(pinned.locator('.bot-avatar')).toHaveCSS('width', '48px')
+    const pinnedFont = await pinned
+      .getByText('Researcher', { exact: true })
+      .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize))
+    const regularFont = await page
+      .getByRole('button', { name: 'Coordinator', exact: true })
+      .getByText('Coordinator', { exact: true })
+      .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize))
+    expect(pinnedFont).toBeGreaterThan(regularFont)
+    await page.getByRole('button', { name: 'Bot actions: Researcher', exact: true }).click()
+    await expect(page.getByRole('menuitem', { name: 'Unpin bot', exact: true })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Move to section', exact: true })).toHaveCount(
+      0
+    )
+    await page.keyboard.press('Escape')
+    await pinned.getByRole('button', { name: 'Researcher', exact: true }).click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Unpin bot', exact: true })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Move to section', exact: true })).toHaveCount(
+      0
+    )
+    await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Bot actions: Coordinator', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Move to section', exact: true }).hover()
     await page.getByRole('menuitem', { name: 'New section…', exact: true }).click()
