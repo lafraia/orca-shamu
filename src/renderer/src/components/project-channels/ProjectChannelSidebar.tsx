@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
+import { BotAvatar } from './BotAvatar'
 import {
   openProjectChannel,
   openProjectChannelEditor,
@@ -124,9 +125,9 @@ export function ProjectChannelSidebar(): React.JSX.Element {
                 'bg-worktree-sidebar-accent'
             )}
           >
-            <Bot className="size-3.5 shrink-0 text-muted-foreground" />
+            <BotAvatar id={channel.id} identity={channel.identity} className="size-7 rounded-lg" />
             <span className="min-w-0 flex-1 truncate font-medium">{channel.name}</span>
-            {channel.members.length > (channel.home ? 1 : 0) ? (
+            {!channel.home && channel.members.length > 0 ? (
               <span
                 className="text-xs tabular-nums text-muted-foreground"
                 aria-label={translate(

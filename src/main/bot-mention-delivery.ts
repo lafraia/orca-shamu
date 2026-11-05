@@ -21,6 +21,7 @@ import type {
 } from '../shared/agent-session/agent-session-wire'
 import type { ProjectChannelsStore } from './project-channels-store'
 import type { BotConversationService } from './bot-conversation-service'
+import type { BotMemoryService } from './bot-memory-service'
 import type { ShamuPrimaryConnection } from './shamu-primary-connection'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
 
@@ -48,7 +49,8 @@ export class BotMentionDelivery {
     private readonly channels: Pick<ProjectChannelsStore, 'read'>,
     private readonly bots: Pick<BotConversationService, 'ensure'>,
     private readonly primary: Pick<ShamuPrimaryConnection, 'read' | 'call'>,
-    private readonly profileDirectory: string
+    private readonly profileDirectory: string,
+    private readonly memory?: Pick<BotMemoryService, 'prepare'> | null
   ) {}
 
   deliver(input: BotMentionRequest): Promise<BotMentionReceipt[]> {
@@ -148,8 +150,11 @@ export class BotMentionDelivery {
           ) {
             throw new Error('This bot conversation changed. Choose the bot again.')
           }
+          const prompt = botMentionPrompt(request, { id: receipt.botId, name: receipt.name })
           const body = structuredAgentSessionSendBody(
-            botMentionPrompt(request, { id: receipt.botId, name: receipt.name }),
+            this.memory
+              ? await this.memory.prepare(receipt.sessionId, environmentId, prompt)
+              : prompt,
             []
           )
           if (structuredAgentSessionBlocksTooLarge(body.blocks)) {

@@ -1,6 +1,7 @@
 import { NativeChatPickerListbox as PickerListbox } from './NativeChatPickerListbox'
 import { memo, useEffect, useRef } from 'react'
-import { Bot, Package, RotateCcw } from 'lucide-react'
+import { Package, RotateCcw } from 'lucide-react'
+import { BotAvatar } from '../project-channels/BotAvatar'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import { cn } from '@/lib/utils'
@@ -341,7 +342,7 @@ export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
           activeItemRef={activeItemRef}
           onChoose={() => onChooseBot?.(bot)}
         >
-          <Bot className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+          <BotAvatar id={bot.id} identity={bot.identity} className="size-7 rounded-lg" />
           <span className="min-w-0 flex-1">
             <span className="block truncate">{bot.name}</span>
             <span className="block text-xs text-muted-foreground">

@@ -18,7 +18,7 @@ export async function dispatchNativeChatStructuredComposerText(
   onPending?: () => void
 ): Promise<Omit<StructuredAgentSessionCommandOutcome, 'handled'> & { revealsTranscript: boolean }> {
   // Number image chips by their attachment order in this message.
-  const prompt = imageReferencesToPromptMarkers(
+  let prompt = imageReferencesToPromptMarkers(
     draftText,
     attachments.map((attachment) => attachment.id)
   )
@@ -26,6 +26,13 @@ export async function dispatchNativeChatStructuredComposerText(
   // Commands already reveal at keypress; messages reveal unless admitted as queued cards.
   if (handled) {
     return { ...command, revealsTranscript: false }
+  }
+  if (window.api.projectChannels?.prepareMessage) {
+    prompt = await window.api.projectChannels.prepareMessage(
+      transport.sessionId,
+      transport.runtimeEnvironmentId,
+      prompt
+    )
   }
   // The composer still owns its draft until admission, so refusal must precede the handoff.
   const body = structuredAgentSessionSendBody(

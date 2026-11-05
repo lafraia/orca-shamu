@@ -1,8 +1,10 @@
 import { z } from 'zod'
+import { botIdentitySchema } from './bot-identity'
 
 export const botMentionSchema = z.object({
   id: z.string().min(1).max(1024),
-  name: z.string().min(1).max(256)
+  name: z.string().min(1).max(256),
+  identity: botIdentitySchema.optional()
 })
 export type BotMention = z.infer<typeof botMentionSchema>
 

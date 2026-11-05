@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Bot, FolderOpen, MessageSquare, RotateCcw } from 'lucide-react'
+import { Bot, Brain, FolderOpen, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import NativeChatView from '../native-chat/NativeChatView'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { openProjectChannelSource } from './project-channel-candidates'
-import { ensureProjectChannelConversation, openProjectChannelEditor } from './project-channel-store'
+import { ensureProjectChannelConversation } from './project-channel-store'
 import { ProjectChannelSettingsButton } from './ProjectChannelSettingsButton'
+import { BotAvatar } from './BotAvatar'
+import { BotMemoryPanel } from './BotMemoryPanel'
 
 export function BotNativeConversation({ channel }: { channel: ProjectChannel }): React.JSX.Element {
   const [attempt, setAttempt] = useState(0)
+  const [memoryOpen, setMemoryOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const member = channel.members.find((row) => row.id === channel.home?.memberId)
   const ready = channel.home?.ready && member
@@ -26,14 +29,22 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
     return () => {
       current = false
     }
-  }, [channel.id, channel.name, channel.instructions, attempt])
+  }, [
+    channel.id,
+    channel.name,
+    channel.instructions,
+    channel.identity?.color,
+    channel.identity?.animated,
+    channel.identity?.image,
+    attempt
+  ])
   return (
     <section
       className="flex min-h-0 flex-1 flex-col bg-background text-foreground"
       aria-label={channel.name}
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
-        <Bot className="size-4 shrink-0 text-muted-foreground" />
+        <BotAvatar id={channel.id} identity={channel.identity} />
         <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{channel.name}</h1>
         <Button
           variant="ghost"
@@ -44,22 +55,15 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
           <FolderOpen />
           {translate('projectChannels.openWorkspace', 'Workspace')}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!ready}
-          onClick={() =>
-            openProjectChannelEditor({ channelId: channel.id, section: 'conversations' })
-          }
-        >
-          <MessageSquare />
-          {translate('projectChannels.conversations', 'Conversations')}
-          <span className="tabular-nums text-muted-foreground">
-            {channel.members.length - (member ? 1 : 0)}
-          </span>
+        <Button variant="ghost" size="sm" disabled={!ready} onClick={() => setMemoryOpen(true)}>
+          <Brain />
+          {translate('shamu.memory.button', 'Memory')}
         </Button>
         <ProjectChannelSettingsButton channelId={channel.id} disabled={!ready} />
       </header>
+      {memoryOpen ? (
+        <BotMemoryPanel channel={channel} open={memoryOpen} onOpenChange={setMemoryOpen} />
+      ) : null}
       {error ? (
         <div
           role="alert"

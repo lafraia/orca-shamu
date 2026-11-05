@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp, Bot, MessageSquare, Plus } from 'lucide-react'
+import { ArrowUp, Bot, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { translate } from '@/i18n/i18n'
@@ -21,7 +21,7 @@ export default function ProjectChannelPage(): React.JSX.Element {
     state.snapshot.channels.find((row) => row.id === selectedId)
   )
   return channel ? (
-    channel.home || (channel.members.length === 0 && channel.messages.length === 0) ? (
+    channel.home || (channel.members.length <= 1 && channel.messages.length === 0) ? (
       <BotNativeConversation key={channel.id} channel={channel} />
     ) : (
       <ProjectChannelConversation key={channel.id} channel={channel} />
@@ -85,17 +85,6 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
       <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
         <Bot className="size-4 shrink-0 text-muted-foreground" />
         <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{channel.name}</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            openProjectChannelEditor({ channelId: channel.id, section: 'conversations' })
-          }
-        >
-          <MessageSquare />
-          {translate('projectChannels.conversations', 'Conversations')}
-          <span className="tabular-nums text-muted-foreground">{channel.members.length}</span>
-        </Button>
         <ProjectChannelSettingsButton channelId={channel.id} />
       </header>
       <div

@@ -61,6 +61,8 @@ describe('permanent bot conversations', () => {
           }
           return { ok: true, value: { sessionId: row.envelope.sessionId, tabId: row.tabId } }
         }
+        case 'agentSession.history':
+          return { ok: true }
         default:
           throw new Error(`Unexpected method: ${method}`)
       }
@@ -105,6 +107,22 @@ describe('permanent bot conversations', () => {
     expect(call.mock.calls.some(([method]) => method === 'agentSession.send')).toBe(false)
     expect(folders).toHaveLength(1)
     expect(groups).toHaveLength(1)
+  })
+
+  it('promotes one existing worktree chat without creating a second session or moving its workspace', async () => {
+    const source = channelFixture().members[0]
+    source.sessionId = 'codex_00000000_0000_4000_8000_000000000001'
+    source.target = { kind: 'environment', environmentId: 'primary' }
+    await channels.write({
+      ...(await channels.read()),
+      channels: [{ ...bot(), members: [source], mainMemberId: source.id }]
+    })
+    const adopted = (await service.ensure('ceo')).channels[0]
+    expect(adopted.members).toEqual([source])
+    expect(adopted.home).toMatchObject({ ready: true, memberId: source.id })
+    expect(call.mock.calls.filter(([method]) => method === 'agentSession.create')).toHaveLength(0)
+    expect(folders).toHaveLength(0)
+    expect((await service.ensure('ceo')).channels[0]).toEqual(adopted)
   })
 
   it('persists the canonical create envelope before a lost reply and replays it after restart', async () => {

@@ -11,7 +11,7 @@ type ProjectChannelState = {
   snapshot: ProjectChannelsSnapshot
   selectedId: string | null
   mode: 'projects' | 'workspaces'
-  editor: { channelId?: string; tabId?: string; section?: 'conversations' } | null
+  editor: { channelId?: string; tabId?: string } | null
   loaded: boolean
   error: string | null
   drafts: Record<string, string>
@@ -169,7 +169,7 @@ export function openProjectChannelEditor(editor: NonNullable<ProjectChannelState
         )
       : null
     useProjectChannels.setState({
-      editor: linked ? { channelId: linked.id, section: 'conversations' } : editor
+      editor: linked ? { channelId: linked.id } : editor
     })
   })
 }

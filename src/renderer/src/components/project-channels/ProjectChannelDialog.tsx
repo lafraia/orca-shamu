@@ -16,11 +16,11 @@ import { translate } from '@/i18n/i18n'
 import { createBrowserUuid } from '@/lib/browser-uuid'
 import {
   projectChannelSchema,
-  projectChannelSessionKey,
   type ProjectChannelMember
 } from '../../../../shared/project-channels'
 import { projectChannelCandidates } from './project-channel-candidates'
-import { ProjectChannelConversations } from './ProjectChannelConversations'
+import { BotIdentityFields } from './BotIdentityFields'
+import { defaultBotIdentity } from '../../../../shared/bot-identity'
 import {
   loadProjectChannels,
   checkpointProjectChannelDrafts,
@@ -46,7 +46,7 @@ export function ProjectChannelsHost(): React.JSX.Element | null {
 function ProjectChannelDialog({
   editor
 }: {
-  editor: { channelId?: string; tabId?: string; section?: 'conversations' }
+  editor: { channelId?: string; tabId?: string }
 }): React.JSX.Element {
   const channels = useProjectChannels((state) => state.snapshot.channels)
   const loaded = useProjectChannels((state) => state.loaded)
@@ -56,35 +56,23 @@ function ProjectChannelDialog({
   const source = candidates.find((candidate) => candidate.tabId === editor.tabId)
   const [name, setName] = useState(existing?.name ?? source?.name ?? '')
   const [instructions, setInstructions] = useState(existing?.instructions ?? '')
-  const showConversations = editor.section === 'conversations' || Boolean(editor.tabId)
-  const [members, setMembers] = useState<ProjectChannelMember[]>(
+  const [botId] = useState(existing?.id ?? createBrowserUuid())
+  const [identity, setIdentity] = useState(existing?.identity ?? defaultBotIdentity(botId))
+  const [members] = useState<ProjectChannelMember[]>(
     existing?.members ?? (source ? [{ ...source, importHistory: true }] : [])
   )
-  const [mainId, setMainId] = useState<string | null>(existing?.mainMemberId ?? source?.id ?? null)
+  const mainId = existing?.mainMemberId ?? source?.id ?? null
   const [busy, setBusy] = useState(false)
+  const [identityBusy, setIdentityBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const close = (): void => useProjectChannels.setState({ editor: null })
-  const available = candidates.filter(
-    (candidate) =>
-      !channels.some(
-        (channel) =>
-          channel.id !== existing?.id &&
-          channel.members.some(
-            (member) => projectChannelSessionKey(member) === projectChannelSessionKey(candidate)
-          )
-      ) &&
-      !members.some(
-        (member) =>
-          member.sessionId === candidate.sessionId &&
-          JSON.stringify(member.target) === JSON.stringify(candidate.target)
-      )
-  )
   const save = async (): Promise<void> => {
-    const id = existing?.id ?? createBrowserUuid()
+    const id = botId
     const validation = projectChannelSchema.safeParse({
       id,
       name,
       instructions,
+      identity,
       home: existing?.home,
       mainMemberId: mainId,
       members,
@@ -152,16 +140,14 @@ function ProjectChannelDialog({
         <DialogHeader>
           <DialogTitle>
             {existing
-              ? showConversations
-                ? translate('projectChannels.linkedConversations', 'Linked conversations')
-                : translate('projectChannels.edit', 'Bot settings')
+              ? translate('projectChannels.edit', 'Bot settings')
               : translate('projectChannels.new', 'New bot')}
           </DialogTitle>
           <DialogDescription>
-            {existing || showConversations
+            {existing
               ? translate(
                   'projectChannels.projectDescription',
-                  'Give your bot a name and instructions. You can link conversations later.'
+                  'Give your bot an identity and instructions. Its permanent conversation stays with it.'
                 )
               : translate(
                   'projectChannels.createDescription',
@@ -174,11 +160,17 @@ function ProjectChannelDialog({
           className="min-h-0 space-y-5 overflow-y-auto p-1 scrollbar-sleek"
           onSubmit={(event) => {
             event.preventDefault()
-            if (!busy && loaded) {
+            if (!busy && !identityBusy && loaded) {
               void save()
             }
           }}
         >
+          <BotIdentityFields
+            id={botId}
+            value={identity}
+            onChange={setIdentity}
+            onBusyChange={setIdentityBusy}
+          />
           <div className="space-y-2">
             <Label htmlFor="project-channel-name">
               {translate('projectChannels.name', 'Bot name')}
@@ -207,7 +199,7 @@ function ProjectChannelDialog({
               )}
             />
           </div>
-          {existing?.home && !showConversations ? (
+          {existing?.home ? (
             <div className="space-y-2">
               <Label htmlFor="project-channel-folder">
                 {translate('projectChannels.folder', 'Bot folder')}
@@ -227,18 +219,6 @@ function ProjectChannelDialog({
               </p>
             </div>
           ) : null}
-          {showConversations ? (
-            <ProjectChannelConversations
-              members={members}
-              mainId={mainId}
-              permanentMemberId={existing?.home?.memberId}
-              available={available}
-              onChange={(next, main) => {
-                setMembers(next)
-                setMainId(main)
-              }}
-            />
-          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -252,7 +232,7 @@ function ProjectChannelDialog({
           <Button
             type="submit"
             form="project-channel-form"
-            disabled={busy || !loaded || !name.trim()}
+            disabled={busy || identityBusy || !loaded || !name.trim()}
           >
             {busy
               ? translate('projectChannels.saving', 'Saving…')

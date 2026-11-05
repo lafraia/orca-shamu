@@ -1,5 +1,7 @@
 import type { BotMentionReceipt, BotMentionRequest } from './bot-mentions'
 import { z } from 'zod'
+import { botIdentitySchema } from './bot-identity'
+import type { BotMemory, BotMemorySnapshot } from './bot-memory'
 import type { AgentType } from './agent-status-types'
 import { isStructuredAgentId } from './agent-session/lifecycle/agent-session-provider-handle-encoding'
 
@@ -49,6 +51,7 @@ export const projectChannelSchema = z
     id,
     name: z.string().trim().min(1).max(80),
     instructions: z.string().trim().max(20_000).optional(),
+    identity: botIdentitySchema.optional(),
     home: z
       .object({
         directory: id,
@@ -121,6 +124,13 @@ export function projectChannelSessionKey(
 }
 
 export type ProjectChannelsApi = {
+  readMemory: (channelId: string) => Promise<BotMemorySnapshot>
+  writeMemory: (
+    channelId: string,
+    memory: BotMemory,
+    fingerprint: string
+  ) => Promise<BotMemorySnapshot>
+  prepareMessage: (sessionId: string, environmentId: string | null, text: string) => Promise<string>
   notifyBots: (request: BotMentionRequest) => Promise<BotMentionReceipt[]>
   read: () => Promise<ProjectChannelsSnapshot>
   write: (snapshot: ProjectChannelsSnapshot) => Promise<ProjectChannelsSnapshot>

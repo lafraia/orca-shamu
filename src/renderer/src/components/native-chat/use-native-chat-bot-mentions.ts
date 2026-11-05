@@ -33,7 +33,7 @@ function useNativeChatBotMentions(query: string | null, sessionId?: string): rea
           bot.name.normalize('NFKD').toLocaleLowerCase().includes(needle)
       )
       .slice(0, 20)
-      .map(({ id, name }) => ({ id, name }))
+      .map(({ id, name, identity }) => ({ id, name, identity }))
   }, [channels, enabled, query, sessionId])
 }
 

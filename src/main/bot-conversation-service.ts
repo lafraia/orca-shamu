@@ -9,6 +9,7 @@ import {
 import type { ProjectChannel, ProjectChannelsSnapshot } from '../shared/project-channels'
 import type { ProjectChannelsStore } from './project-channels-store'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
+import { initializeBotMemory } from './bot-memory-service'
 
 type Primary = {
   read: () => Promise<{ environmentId: string | null }>
@@ -50,7 +51,7 @@ export class BotConversationService {
       if (!channel) {
         throw new Error('This bot no longer exists.')
       }
-      if (!channel.home && (channel.members.length > 0 || channel.messages.length > 0)) {
+      if (!channel.home && (channel.members.length > 1 || channel.messages.length > 0)) {
         return snapshot
       }
       const { environmentId } = await this.primary.read()
@@ -104,13 +105,16 @@ export class BotConversationService {
   }
 
   private async provision(channel: ProjectChannel, environmentId: string): Promise<ProjectChannel> {
-    const { settings } = settingsReply.parse(await this.primary.call('settings.get', {}))
     const root = join(this.homeDirectory, 'orca', 'bots')
     const directory = join(
       root,
       `bot-${createHash('sha256').update(channel.id).digest('hex').slice(0, 24)}`
     )
     await this.writeInstructions(channel, directory)
+    if (channel.members.length === 1) {
+      return this.adopt(channel, directory, environmentId)
+    }
+    const { settings } = settingsReply.parse(await this.primary.call('settings.get', {}))
     const groups = z
       .object({ groups: z.array(group) })
       .parse(await this.primary.call('projectGroup.list', {})).groups
@@ -181,8 +185,58 @@ export class BotConversationService {
     return saved.channels.find((row) => row.id === channel.id)!
   }
 
+  private async adopt(
+    channel: ProjectChannel,
+    directory: string,
+    environmentId: string
+  ): Promise<ProjectChannel> {
+    const member = channel.members[0]
+    if (member.target.kind !== 'environment' || member.target.environmentId !== environmentId) {
+      throw new Error('This conversation belongs to a different Orca server.')
+    }
+    const history = z.object({ ok: z.boolean() }).parse(
+      await this.primary.call('agentSession.history', {
+        sessionId: member.sessionId,
+        direction: 'tail',
+        limit: 1
+      })
+    )
+    if (!history.ok) {
+      throw new Error('The original bot conversation is unavailable.')
+    }
+    const create = structuredAgentSessionCreateParams({
+      sessionId: member.sessionId,
+      worktree: `id:${member.worktreeId}`,
+      agent: member.agent,
+      tabId: member.tabId,
+      randomUuid: randomUUID
+    })
+    const saved = await this.channels.update(channel.id, (current) => {
+      if (
+        current.home ||
+        current.messages.length ||
+        current.members.length !== 1 ||
+        current.members[0].sessionId !== member.sessionId
+      ) {
+        throw new Error('This bot changed while its conversation was being prepared.')
+      }
+      return {
+        ...current,
+        home: {
+          directory,
+          memberId: member.id,
+          createOperationId: create.envelope.clientOperationId,
+          createFingerprint: create.envelope.payloadFingerprint,
+          ready: true
+        }
+      }
+    })
+    return saved.channels.find((row) => row.id === channel.id)!
+  }
+
   private async writeInstructions(channel: ProjectChannel, directory: string): Promise<void> {
     await mkdir(directory, { recursive: true, mode: 0o700 })
+    await initializeBotMemory(directory)
     for (const [name, content] of [
       ['AGENTS.md', BOT_INSTRUCTIONS],
       ['CLAUDE.md', '@AGENTS.md\n']
@@ -201,7 +255,11 @@ export class BotConversationService {
         version: 1,
         id: channel.id,
         name: channel.name,
-        instructions: channel.instructions ?? ''
+        instructions: channel.instructions ?? '',
+        identity: channel.identity
+          ? { color: channel.identity.color, animated: channel.identity.animated }
+          : undefined,
+        memory: { guide: 'BOT_MEMORY.md', file: 'memory.json' }
       },
       0o600
     )

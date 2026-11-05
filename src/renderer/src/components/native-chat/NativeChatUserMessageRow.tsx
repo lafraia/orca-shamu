@@ -1,4 +1,6 @@
 import { NativeChatTextAttachments } from './NativeChatTextAttachments'
+import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
+import { BotMemoryRecall } from '../project-channels/BotMemoryRecall'
 import { Goal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -88,6 +90,8 @@ export function NativeChatUserMessageRow({
   deliveryNotice?: NativeChatDeliveryNotice
 }): React.JSX.Element {
   // Agent-authored input belongs to the turn but uses a left-aligned sender row instead of the person’s bubble.
+  const botPrompt = readBotTurnPrompt(markdown)
+  markdown = botPrompt?.message ?? markdown
   const from = message.from
   const sending = deliveryNotice?.sending === true
   return (
@@ -110,6 +114,7 @@ export function NativeChatUserMessageRow({
         />
       ) : (
         <div className="max-w-[80%] rounded-xl border border-chat-user-border bg-chat-user-surface px-3.5 py-2.5 text-sm text-chat-foreground-strong">
+          {botPrompt ? <BotMemoryRecall context={botPrompt.context} /> : null}
           {markdown ? (
             <>
               <NativeChatImageAttachments

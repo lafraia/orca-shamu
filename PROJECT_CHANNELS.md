@@ -6,8 +6,8 @@ Based on the upstream `v1.4.248` release. Shamu is a separate desktop interface 
 
 1. Keep the installed Orca open. In **Settings → Remote Orca Servers**, create a **New Link** for **This computer**.
 2. Open **Orca Shamu.app**, paste that access link into **Primary Orca access link** and connect.
-3. Shamu loads the primary Orca's repositories, worktrees, folder workspaces and native Chat tabs, including side chats in the floating workspace. A connection bar provides reconnect and link renewal when contact is lost.
-4. Choose **Import interface settings** in that bar to import the primary's fonts, sizes, theme, chat appearance and side panel preferences. The primary settings are read only; Shamu saves the selected appearance fields through its own settings service. Accounts, permissions, trusted directories and environment selection are excluded. Run it again after changing the primary's appearance.
+3. Shamu loads the primary Orca's repositories, worktrees, folder workspaces and native Chat tabs, including side chats in the floating workspace. The statusbar shows the primary connection and opens the Shamu settings.
+4. Choose **Import interface settings** under **Settings → Orca Shamu** to import the primary's fonts, sizes, theme, chat appearance and side panel preferences. The primary settings are read only; Shamu saves the selected appearance fields through its own settings service. Accounts, permissions, trusted directories and environment selection are excluded. Run it again after changing the primary's appearance.
 
 The link must target loopback. The native access-link flow authorizes the client without exposing a LAN service. Credentials stay in Orca's existing runtime environment registry; `shamu-primary.json` contains only the environment ID and pinned public host key. Renewed links must belong to that same primary host. Never paste an access link into logs, issues or source files.
 
@@ -17,10 +17,10 @@ Shamu uses its own bundle ID, Keychain service and application profile. No produ
 
 The top navigation uses **Bots** with a bot icon. Bots have a saved name and optional instructions, independent of any existing conversation. Workspaces retain Orca's existing project terminology.
 
-1. Choose **New bot**, enter a name and optional instructions, then **Create bot**. The bot opens its own native Chat immediately, with the standard model, permissions, attachments and history controls. No existing conversation is required. Opening an existing empty bot provisions its chat the same way.
+1. Choose **New bot**, enter a name and optional instructions, choose a color or upload an image, then **Create bot**. The bot opens its own native Chat immediately, with the standard model, permissions, attachments and history controls. No existing conversation is required. Opening an existing empty bot provisions its chat the same way.
 2. Each bot gets a permanent folder workspace in **Bots** on the primary Orca, stored at `~/orca/bots/bot-<stable-id>`. **Workspace** opens its original tab. Returning to a bot reuses the same session, history and native draft.
 3. Use the gear on the right to open **Bot settings**, edit its identity and view its **Bot folder**. The folder's `bot.json` records its name and instructions. Generated `AGENTS.md` and `CLAUDE.md` direct the provider to read that configuration. Existing instruction files are never overwritten. The bot inherits the primary's Claude default or uses Codex and retains normal session permission controls.
-4. **Conversations** keeps optional links for future bot control. The bot's own chat stays fixed. To retain the existing shared conversation workflow, right-click a native Chat tab and choose **Create bot from chat…**. This preserves its original directory, session and prior history instead of allocating a new chat.
+4. Each bot exposes one permanent native conversation. **Memory** replaces the old Conversations action. Right-click a native Chat tab and choose **Create bot from chat…** to promote that same session, retaining its original workspace and prior history. Its bot folder holds identity and memory without moving the source workspace or creating a second session. Existing shared conversations with several participants retain their stored history; the bot editor no longer adds participants.
 
 Autonomous control of other conversations and routines are future capabilities. Bot creation opens an idle native session without sending a prompt or starting a paid turn.
 
@@ -40,7 +40,19 @@ Draft edits are kept in memory and saved outside the keystroke path. A renderer-
 
 The desktop owns the project list. Existing native sessions on supported paired runtimes retain their stamped host; this preview does not add channel sharing or a channel interface to mobile/web clients. Those clients fall back to their workspace view. Permanent bot chats reuse the full native composer; promoted shared conversations retain their simpler text composer.
 
-## Memory
+## Bot identity and durable memory
+
+**Bot settings** offers seven stable identity colors, a PNG/JPEG/WebP/GIF image upload and an animated bot icon toggle. Uploads are center-cropped and resized to a 160 px PNG, with a 5 MB input limit and a 180000 character stored-image limit. Animated uploads use the first frame. Identity appears in the sidebar, bot header and the global `@` suggestions. The built-in icon greets on entry and hover; it has no idle timer or permanent animation loop, and system reduced motion disables it.
+
+Each permanent bot folder contains `memory.json` and `BOT_MEMORY.md`. Memory entries distinguish facts, task state and summaries, and include a stable topic/scope, timestamps and source references. Corrections archive previous entries with a replacement reference; retrieval excludes archived values. **Memory** lets the user add, edit, archive and inspect earlier versions. Stale writes fail with a reload action instead of replacing notes written by the agent. Invalid files are preserved and reported.
+
+On explicit native messages and bot mention deliveries in Shamu, the main process recalls matching notes, pinned facts, task state and recent summaries within 12000 additional characters. This is a bounded textual retrieval budget, not a provider token limit. The normal native provider owns the recent context, original journal and compaction. Relevant memory is sent as a separate marked context block, shown in the chat through a **Recalled memory** disclosure; the person's message remains readable and copyable on its own. Other bot memories and unrelated sessions are excluded. Previously wrapped messages are unwrapped before recall to avoid nested context on resubmission.
+
+The provider reads the memory guide and maintains grounded notes after meaningful work and before compaction through its normal filesystem tools and existing permissions. **Review with bot** prepares a request in the same native composer, preserving any current draft; the user sends it normally. Shamu does not fabricate a summary, run a second summarizer model, reset a conversation or automatically resubmit a turn. Agent-authored memory still needs factual review. Earlier details remain available through Orca's existing conversation search and source references; no new database table or embedding service is introduced.
+
+This follows the previously discussed separation of persistent history, task state, summaries and durable memory. References: [Grok Bot identity and memory](https://docs.x.ai/grok-bot/bots), [OpenBot persistent agents](https://github.com/nightly-labs/openbot), [OpenClaw memory](https://docs.openclaw.ai/concepts/memory), [OpenClaw compaction](https://docs.openclaw.ai/concepts/compaction). This is an independent implementation within Orca's existing providers.
+
+## Runtime memory
 
 Normal use opens the packaged Shamu without Vite. Use live reload only while editing the interface. Its server loads source modules on demand instead of prebuilding all desktop and web entries.
 
@@ -54,7 +66,7 @@ Both Electron apps still have independent main, renderer and GPU processes. Thei
 
 Close Shamu, keep the primary Orca running, then run `pnpm dev:shamu` from this checkout. The launcher starts Vite on literal loopback and opens the same installed Shamu executable, profile and saved primary connection. Its statusbar shows **Live reload**. Saving React or CSS files updates that interface without packaging another release. Some module changes can reload the document; saved drafts and native sessions remain in their existing owners.
 
-Quit Shamu to stop this development server. Opening the installed app normally uses its bundled interface again. Changes to main, preload or the native executable still require rebuilding and restarting Shamu. This mode keeps version `1.4.248-shamu.3` and the existing update block. It adds a local Vite process while active.
+Quit Shamu to stop this development server. Opening the installed app normally uses its bundled interface again. Changes to main, preload or the native executable still require rebuilding and restarting Shamu. This mode keeps version `1.4.248-shamu.4` and the existing update block. It adds a local Vite process while active.
 
 The live server proves a private per-launch token before its document is loaded. The token stays in process memory/environment, never in the URL or `out/shamu-live.json`; that file records only the launcher PID, local URL and checkout. The usual window IDs, navigation containment, preload, sandbox and context isolation remain in force. The launcher accepts `--app /path/to/Shamu/executable` for another installed bundle location.
 
@@ -68,7 +80,7 @@ node config/scripts/build-project-channels-mac.mjs
 
 The app is generated under `dist/project-channels/mac-arm64/Orca Shamu.app` on Apple Silicon. Nothing is installed over `/Applications/Orca.app`. Its bundle ID is `com.lafraia.orca-shamu` and its default profile is `~/Library/Application Support/Orca Shamu`. The internal executable remains `Orca` for compatibility with the bundled CLI launcher. The launcher uses local ad hoc signing rather than an installed distribution certificate; macOS permissions remain subject to that different signature.
 
-The packaged version is `<upstream>-shamu.<revision>`, currently `1.4.248-shamu.3`. `config/shamu-release.json` records the exact upstream tag and commit, plus the independent Shamu revision. Keep `package.json.version` equal to upstream. After merging an upstream tag, run `pnpm shamu:version sync` to reset the revision to 1. For another Shamu release on the same base, run `pnpm shamu:version bump`. Inspect it with `pnpm shamu:version`. Shamu release tags use `shamu/v<upstream>-shamu.<revision>`. The builder validates this metadata and embeds it in the app. About shows the upstream version and Shamu revision separately, for example `Version 1.4.248 (Shamu 3)`, while the package and release tag retain `1.4.248-shamu.3`. Official automatic and manual updates remain blocked; publishing an independent signed update feed is separate from creating local versioned builds. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
+The packaged version is `<upstream>-shamu.<revision>`, currently `1.4.248-shamu.4`. `config/shamu-release.json` records the exact upstream tag and commit, plus the independent Shamu revision. Keep `package.json.version` equal to upstream. After merging an upstream tag, run `pnpm shamu:version sync` to reset the revision to 1. For another Shamu release on the same base, run `pnpm shamu:version bump`. Inspect it with `pnpm shamu:version`. Shamu release tags use `shamu/v<upstream>-shamu.<revision>`. The builder validates this metadata and embeds it in the app. About shows the upstream version and Shamu revision separately, for example `Version 1.4.248 (Shamu 4)`, while the package and release tag retain `1.4.248-shamu.4`. Official automatic and manual updates remain blocked; publishing an independent signed update feed is separate from creating local versioned builds. This local preview is not a notarized public installer. Like upstream local builds, it omits the multi-platform `orcad-template` used to deploy new remote runtimes. The connection to the existing primary desktop uses upstream's paired control transport.
 
 ## Updating the fork
 

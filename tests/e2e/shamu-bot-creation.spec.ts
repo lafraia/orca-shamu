@@ -59,6 +59,16 @@ test('creates and reopens permanent native bot chats, including existing empty b
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByLabel('Choose chat tab', { exact: true })).toHaveCount(0)
     await dialog.getByLabel('Bot name', { exact: true }).fill('Coordinator')
+    await dialog.getByRole('button', { name: 'violet', exact: true }).click()
+    await dialog.getByLabel('Bot image', { exact: true }).setInputFiles({
+      name: 'avatar.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64'
+      )
+    })
+    await expect(dialog.locator('.bot-avatar img')).toBeVisible()
     await dialog
       .getByLabel('Instructions (optional)', { exact: true })
       .fill('Organize work and report progress.')
@@ -67,12 +77,56 @@ test('creates and reopens permanent native bot chats, including existing empty b
     const bot = page.getByRole('region', { name: 'Coordinator', exact: true })
     const composer = bot.locator('[data-native-chat-root="true"]').getByRole('textbox')
     await expect(composer).toBeVisible()
-    await composer.fill('Hello from my permanent bot chat')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(bot.locator('.bot-avatar')).toHaveCount(1)
+    await page.evaluate(async () =>
+      window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' })
+    )
+    await expect(page.locator('html')).toHaveClass(/dark/)
+    await bot.getByRole('button', { name: 'Bot settings', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Use bot icon', exact: true }).click()
+    await expect(dialog.locator('.bot-avatar-face')).toHaveCSS('animation-name', 'none')
+    await page.screenshot({ path: testInfo.outputPath('bot-identity-settings-dark.png') })
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.evaluate(async () =>
+      window.__store!.getState().updateSettingsOrThrow({ theme: 'light' })
+    )
+    await expect(bot.getByRole('button', { name: /^Conversations/ })).toHaveCount(0)
+    await bot.getByRole('button', { name: 'Memory', exact: true }).click()
+    const memory = page.getByRole('dialog', { name: 'Coordinator memory', exact: true })
+    await expect(memory.getByText('No saved notes yet', { exact: true })).toBeVisible()
+    await memory.getByRole('button', { name: 'Add memory', exact: true }).click()
+    await memory.getByLabel('Topic', { exact: true }).fill('Proposal deadline')
+    await memory.getByLabel('Project or scope', { exact: true }).fill('Vagalume')
+    await memory.getByLabel('Note', { exact: true }).fill('The proposal is due Tuesday.')
+    await memory.getByRole('button', { name: 'Save memory', exact: true }).click()
+    await expect(memory.getByText('The proposal is due Tuesday.', { exact: true })).toBeVisible()
+    await memory
+      .getByRole('button', { name: 'Edit memory: Proposal deadline', exact: true })
+      .click()
+    await memory.getByLabel('Note', { exact: true }).fill('Correction: the proposal is due Friday.')
+    await memory.getByRole('button', { name: 'Save memory', exact: true }).click()
+    await expect(
+      memory.getByText('Correction: the proposal is due Friday.', { exact: true })
+    ).toBeVisible()
+    await memory.getByRole('button', { name: 'Previous versions', exact: true }).click()
+    await expect(memory.getByText('The proposal is due Tuesday.', { exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('bot-memory-previous-version.png') })
+    await memory.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(memory).toHaveCount(0)
+    await composer.fill('Hello from my permanent bot chat. What is the proposal deadline?')
     await composer.press('Enter')
     await expect(bot.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
+    await expect(bot.getByText('Recalled memory: 1', { exact: true })).toBeVisible()
+    await expect(bot).not.toContainText('[Orca Shamu bot context v1]')
     const snapshot = await page.evaluate(() => window.api.projectChannels!.read())
     const channel = snapshot.channels[0]
     expect(channel.home?.ready).toBe(true)
+    expect(channel.identity).toMatchObject({
+      color: 'violet',
+      image: expect.stringMatching(/^data:image\/png;base64,/)
+    })
     expect(channel.members).toHaveLength(1)
     expect(channel.members[0].target).toEqual({
       kind: 'environment',
@@ -117,10 +171,26 @@ test('creates and reopens permanent native bot chats, including existing empty b
             .instructions
       )
       .toBe('Track milestones and report progress.')
-    await bot.getByRole('button', { name: /^Conversations(?: \d+)?$/ }).click()
-    await expect(dialog.getByRole('button', { name: /^Unlink conversation:/ })).toHaveCount(0)
-    await dialog.getByRole('button', { name: 'Save bot', exact: true }).click()
-    await expect(dialog).toHaveCount(0)
+    await expect(bot.getByRole('button', { name: /^Conversations/ })).toHaveCount(0)
+    const recalled = await page.evaluate(
+      async (member) =>
+        window.api.projectChannels!.prepareMessage(
+          member.sessionId,
+          member.target.kind === 'environment' ? member.target.environmentId : null,
+          'What is the proposal deadline?'
+        ),
+      channel.members[0]
+    )
+    expect(recalled).toContain('due Friday')
+    expect(recalled).not.toContain('due Tuesday')
+    await bot.getByRole('button', { name: 'Memory', exact: true }).click()
+    await expect(
+      memory.getByText('Correction: the proposal is due Friday.', { exact: true })
+    ).toBeVisible()
+    await memory.getByRole('button', { name: 'Review with bot', exact: true }).click()
+    await expect(composer).toContainText('A draft to resume later')
+    await expect(composer).toContainText('Organize your durable memory now.')
+    await composer.fill('A draft to resume later')
     await page.evaluate(async () => {
       const snapshot = await window.api.projectChannels!.read()
       await window.api.projectChannels!.write({
@@ -185,6 +255,14 @@ test('creates and reopens permanent native bot chats, including existing empty b
         (row) => row.members
       )
     ).toEqual(migrated.channels.map((row) => row.members))
+    const recoveredMemory = await client.page.evaluate(
+      (id) => window.api.projectChannels!.readMemory(id),
+      channel.id
+    )
+    expect(recoveredMemory.memory.entries).toHaveLength(2)
+    expect(recoveredMemory.memory.entries.find((entry) => !entry.archived)?.text).toContain(
+      'due Friday'
+    )
     expect(
       readFileSync(`${claudeStub.launchLog}.requests.jsonl`, 'utf8')
         .trim()
