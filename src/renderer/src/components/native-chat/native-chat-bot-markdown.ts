@@ -1,8 +1,5 @@
-import {
-  nativeChatBotByName,
-  nativeChatBotHref,
-  type NativeChatBotCatalogue
-} from './native-chat-bot-catalogue'
+import { splitNativeChatBotReferences } from './native-chat-bot-text-references'
+import { nativeChatBotHref, type NativeChatBotCatalogue } from './native-chat-bot-catalogue'
 
 type MarkdownNode = { type: string; value?: string; url?: string; children?: MarkdownNode[] }
 const SKIP = new Set([
@@ -18,33 +15,16 @@ const SKIP = new Set([
 export function remarkNativeChatBotMentions(
   catalogue: NativeChatBotCatalogue
 ): (tree: MarkdownNode) => void {
-  const split = (value: string): MarkdownNode[] => {
-    if (!catalogue.pattern) {
-      return [{ type: 'text', value }]
-    }
-    const nodes: MarkdownNode[] = []
-    let from = 0
-    for (const match of value.matchAll(catalogue.pattern)) {
-      const bot = nativeChatBotByName(catalogue, match[1])
-      if (!bot) {
-        continue
-      }
-      const at = match.index
-      if (at > from) {
-        nodes.push({ type: 'text', value: value.slice(from, at) })
-      }
-      nodes.push({
-        type: 'link',
-        url: nativeChatBotHref(bot.id),
-        children: [{ type: 'text', value: match[0] }]
-      })
-      from = at + match[0].length
-    }
-    if (from < value.length) {
-      nodes.push({ type: 'text', value: value.slice(from) })
-    }
-    return nodes
-  }
+  const split = (value: string): MarkdownNode[] =>
+    splitNativeChatBotReferences(value, catalogue).map(({ text, bot }) =>
+      bot
+        ? {
+            type: 'link',
+            url: nativeChatBotHref(bot.id),
+            children: [{ type: 'text', value: text }]
+          }
+        : { type: 'text', value: text }
+    )
   const visit = (node: MarkdownNode): void => {
     if (SKIP.has(node.type) || !node.children) {
       return

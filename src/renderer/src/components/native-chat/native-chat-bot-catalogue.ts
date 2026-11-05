@@ -5,6 +5,7 @@ export type NativeChatBotCatalogue = {
   byId: ReadonlyMap<string, BotMention>
   byName: ReadonlyMap<string, BotMention>
   pattern: RegExp | null
+  plainPattern: RegExp | null
 }
 const keyFor = (name: string): string => name.toLocaleLowerCase()
 export function createNativeChatBotCatalogue(bots: readonly BotMention[]): NativeChatBotCatalogue {
@@ -18,13 +19,19 @@ export function createNativeChatBotCatalogue(bots: readonly BotMention[]): Nativ
     byName.set(key, bot)
   }
   ambiguous.forEach((key) => byName.delete(key))
-  const names = [...byName.values()].map((bot) => bot.name).toSorted((a, b) => b.length - a.length)
+  const names = [...new Set(bots.map((bot) => bot.name))].toSorted((a, b) => b.length - a.length)
   const alternatives = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
   return {
     byId: new Map(bots.map((bot) => [bot.id, bot])),
     byName,
     pattern: names.length
       ? new RegExp(String.raw`(?<![\p{L}\p{N}_./\\@-])@(${alternatives})(?![\p{L}\p{N}_-])`, 'giu')
+      : null,
+    plainPattern: names.length
+      ? new RegExp(
+          String.raw`(?<![\p{L}\p{N}_./\\@-])@?(${alternatives})(?![\p{L}\p{N}_/\\@-]|\.[\p{L}\p{N}])`,
+          'giu'
+        )
       : null
   }
 }

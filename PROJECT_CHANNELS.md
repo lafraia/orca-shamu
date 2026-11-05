@@ -102,6 +102,10 @@ The two-instance journeys connect through the Shamu UI using a real loopback acc
 
 Delivery checks also cover a host rejecting a submission after transport acknowledgement, an unknown dispatch result, a late acknowledgement arriving after the journal's refusal and an orphaned send expiring while the reader stays unchanged after reload. The journal remains authoritative; none of these transitions automatically resends the message.
 
+## Memory references
+
+Known bot names in memory notes and source labels use the same reference pills as chat mentions, including names written without `@`. Clicking a name opens that bot's permanent chat and closes the memory sheet or internal conversation overlay. The saved memory text stays literal. Ambiguous and unknown names, emails, paths and identifiers remain plain. Memory editors and in-flight writes hold these navigation controls until Save or Cancel, preserving unfinished edits. Recalled notes expose the same references.
+
 ## Bot model selection
 
 Each permanent bot chat exposes its native model picker in the header as well as the composer. Both controls use the same host session, model catalogue and option writer. A selection changes that conversation's model without replacing its session, history, bot identity or composer draft. Reopening the bot reads the recorded session options from the owning Orca. Loading, unavailable models, pending writes and refusals use the existing native picker behavior. This control offers models of the bot's current agent.

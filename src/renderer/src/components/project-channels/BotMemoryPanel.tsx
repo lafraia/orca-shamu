@@ -1,3 +1,5 @@
+import { BotReferenceText } from './BotReferenceText'
+import { useNativeChatBotCatalogue } from '../native-chat/use-native-chat-bot-catalogue'
 import { useEffect, useState } from 'react'
 import { Archive, Brain, Pencil, Pin, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,6 +29,7 @@ export function BotMemoryPanel({
   open: boolean
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
+  const catalogue = useNativeChatBotCatalogue(open)
   const [snapshot, setSnapshot] = useState<BotMemorySnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -263,11 +266,24 @@ export function BotMemoryPanel({
                   </>
                 ) : null}
               </div>
-              <p className="whitespace-pre-wrap break-words text-sm">{entry.text}</p>
+              <p className="whitespace-pre-wrap break-words text-sm">
+                <BotReferenceText
+                  text={entry.text}
+                  catalogue={catalogue}
+                  disabled={busy || editing !== null}
+                  onOpen={() => onOpenChange(false)}
+                />
+              </p>
               <div className="space-y-1 text-xs text-muted-foreground">
                 {entry.sources.map((source) => (
                   <p key={`${source.sessionId}:${source.messageId ?? ''}:${source.label}`}>
-                    {translate('shamu.memory.source', 'Source: {{label}}', { label: source.label })}
+                    {translate('shamu.memory.sourceLabel', 'Source:')}{' '}
+                    <BotReferenceText
+                      text={source.label}
+                      catalogue={catalogue}
+                      disabled={busy || editing !== null}
+                      onOpen={() => onOpenChange(false)}
+                    />
                   </p>
                 ))}
               </div>

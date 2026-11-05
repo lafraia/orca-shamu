@@ -7,15 +7,9 @@ import type {
 } from '@/components/sidebar/CommentMarkdown'
 import { createCompactCommentMarkdownComponents } from '@/components/sidebar/comment-markdown-element-renderers'
 import { translate } from '@/i18n/i18n'
-import { useAppStore } from '@/store'
-import { persistFloatingTerminalPanelOpen } from '../floating-terminal/floating-terminal-panel-view-state'
-import { useShamuClient } from '../shamu/shamu-client-state'
-import { openProjectChannel, useProjectChannels } from '../project-channels/project-channel-store'
-import {
-  EMPTY_BOT_CATALOGUE,
-  nativeChatBotCatalogue,
-  nativeChatBotId
-} from './native-chat-bot-catalogue'
+import { nativeChatBotId } from './native-chat-bot-catalogue'
+import { useNativeChatBotCatalogue } from './use-native-chat-bot-catalogue'
+import { openNativeChatBot } from './open-native-chat-bot'
 import { remarkNativeChatBotMentions } from './native-chat-bot-markdown'
 import { NativeChatPromptPill } from './NativeChatPromptPill'
 
@@ -25,10 +19,7 @@ export function useNativeChatBotMarkdown(
 ): CommentMarkdownExtension {
   const communication = useContext(BotCommunicationContext)
   const closeCommunication = communication?.close
-  const enabled = useShamuClient((state) => state.enabled && state.environmentId !== null)
-  const catalogue = useProjectChannels((state) =>
-    enabled ? nativeChatBotCatalogue(state.snapshot.channels) : EMPTY_BOT_CATALOGUE
-  )
+  const catalogue = useNativeChatBotCatalogue()
   const fallbackAnchor = useMemo(
     () => createCompactCommentMarkdownComponents(onLinkClick).a,
     [onLinkClick]
@@ -64,18 +55,7 @@ export function useNativeChatBotMarkdown(
               onClick={(event) => {
                 event.preventDefault()
                 event.stopPropagation()
-                if (
-                  !useProjectChannels.getState().snapshot.channels.some((row) => row.id === bot.id)
-                ) {
-                  return
-                }
-                closeCommunication?.()
-                const state = useAppStore.getState()
-                if (state.floatingWorkspacePanelOpen) {
-                  state.setFloatingWorkspacePanelOpen(false)
-                  persistFloatingTerminalPanelOpen(false)
-                }
-                openProjectChannel(bot.id)
+                openNativeChatBot(bot.id, closeCommunication)
               }}
             />
           )
