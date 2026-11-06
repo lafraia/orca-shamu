@@ -4,8 +4,7 @@ export async function installIsolatedVaultProtection(client: PairedElectronClien
   await client.app.evaluate(({ clipboard, dialog }) => {
     const { randomBytes, createCipheriv, createDecipheriv } = process.getBuiltinModule('crypto')
     const key = Buffer.alloc(32, 0x37)
-    const slots = globalThis as unknown as Record<symbol, unknown>
-    slots[Symbol.for('orca.host.secretStore')] = {
+    Reflect.set(globalThis, Symbol.for('orca.host.secretStore'), {
       isEncryptionAvailable: () => true,
       describeProtectionGap: () => null,
       encryptString: (text: string) => {
@@ -21,7 +20,7 @@ export async function installIsolatedVaultProtection(client: PairedElectronClien
           'utf8'
         )
       }
-    }
+    })
     let copied = ''
     clipboard.writeText = (value: string) => {
       copied = value

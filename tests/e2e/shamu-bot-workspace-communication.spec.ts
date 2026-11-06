@@ -54,7 +54,11 @@ test('separates native bot/workspace messages, keeps bot identity and links both
   })
   const page = client.page
   const send = async (from: string, to: string, body: string) => {
-    const env = { ...process.env, ORCA_USER_DATA_PATH: profile, ORCA_AGENT_SESSION_ID: from }
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      ORCA_USER_DATA_PATH: profile,
+      ORCA_AGENT_SESSION_ID: from
+    }
     delete env.ORCA_PAIRING_CODE
     delete env.ORCA_REMOTE_PAIRING
     delete env.ORCA_ENVIRONMENT

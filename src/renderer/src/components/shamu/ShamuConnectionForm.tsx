@@ -57,7 +57,7 @@ export function ShamuConnectionForm({
       >
         <div className="space-y-3" hidden={embedded}>
           <Link2 className="size-7 text-muted-foreground" />
-          <h1 className="text-xl font-semibold">Orca Shamu</h1>
+          <h1 className="text-xl font-semibold">{translate('shamu.title', 'Orca Shamu')}</h1>
           <p className="text-sm text-muted-foreground">
             {translate(
               'shamu.description',

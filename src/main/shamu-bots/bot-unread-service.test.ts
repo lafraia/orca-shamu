@@ -1,6 +1,6 @@
 import { readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import type { AgentJournalRenderItem } from '../../shared/agent-session/journal/agent-session-journal-types'
 import { botControlFixture } from './bot-control.test-fixture'
@@ -11,6 +11,8 @@ describe('durable bot unread message counts', () => {
   let items: AgentJournalRenderItem[]
   let service: BotUnreadService
   beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(2_000_000)
     fixture = await botControlFixture()
     items = [fixture.user]
     service = new BotUnreadService(fixture.channels, fixture.primary, fixture.directory)
@@ -48,6 +50,7 @@ describe('durable bot unread message counts', () => {
     })
   })
   afterEach(async () => {
+    vi.useRealTimers()
     await rm(fixture.directory, { recursive: true, force: true })
   })
   const message = (
@@ -112,7 +115,7 @@ describe('durable bot unread message counts', () => {
     expect(await readFile(file, 'utf8')).toBe('{broken')
   })
   it('baselines only preexisting bots and counts the first response of a newly created bot', async () => {
-    await fixture.channels.update('actor', (row) => ({ ...row, createdAt: Date.now() - 60_000 }))
+    await fixture.channels.update('actor', (row) => ({ ...row, createdAt: 1_940_000 }))
     items = [message(1)]
     expect((await service.read()).counts.actor).toBe(0)
     const member = {
@@ -124,7 +127,7 @@ describe('durable bot unread message counts', () => {
     await fixture.channels.create({
       ...fixture.actor,
       id: 'new-bot',
-      createdAt: Date.now() + 1,
+      createdAt: 2_000_001,
       members: [member],
       mainMemberId: member.id,
       home: { ...fixture.actor.home!, memberId: member.id }

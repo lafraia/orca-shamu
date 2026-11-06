@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ProjectChannel } from '../../shared/project-channels'
 import type { VaultRunCommand } from '../../shared/shamu-vault'
+import { channelFixture } from '../../shared/project-channels.test-fixture'
 import { VaultCommandBroker } from './vault-command-broker'
 import { vaultFixture, vaultAccess, TEST_ENTRY, TEST_PASSWORD } from './vault-fixture.test-support'
 
@@ -20,10 +21,17 @@ describe('Vault command approvals', () => {
   const prepare = async () => {
     const created = await fixture.store.create('alpha', TEST_PASSWORD)
     const saved = fixture.store.save(vaultAccess(created), TEST_ENTRY)
-    const bot = {
+    const bot: ProjectChannel = {
+      ...channelFixture(),
       id: 'alpha',
-      home: { ready: true, directory: fixture.directory }
-    } as ProjectChannel
+      home: {
+        ready: true,
+        directory: fixture.directory,
+        memberId: 'coordinator',
+        createOperationId: 'alpha',
+        createFingerprint: 'alpha'
+      }
+    }
     const receipt = join(fixture.directory, 'approved-command-receipt')
     const command: VaultRunCommand = {
       action: 'vault.run',

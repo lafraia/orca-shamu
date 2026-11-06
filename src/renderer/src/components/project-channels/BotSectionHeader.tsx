@@ -104,7 +104,7 @@ export function BotSectionHeader({
         </Button>
         {section !== null ? (
           <DropdownMenu>
-            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot-section:opacity-100 group-has-[:focus-visible]/bot-section:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
+            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot-section:opacity-100 [[class~='group/bot-section']:has(:focus-visible)_&]:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"

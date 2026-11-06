@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import { useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,16 +25,23 @@ export function VaultLockedView({
       </div>
       {state === 'locked' && automatic && !manual ? (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium">Unlock with this device’s keychain</h3>
+          <h3 className="text-sm font-medium">
+            {translate('shamu.vault.deviceUnlock', 'Unlock with this device’s keychain')}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Vault unlocks automatically when the Shamu window opens.
+            {translate(
+              'shamu.vault.automaticUnlockHelp',
+              'Vault unlocks automatically when the Shamu window opens.'
+            )}
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" disabled={busy} onClick={() => setManual(true)}>
-              Use master password
+              {translate('shamu.vault.usePassword', 'Use master password')}
             </Button>
             <Button disabled={busy} onClick={onResume}>
-              {busy ? 'Unlocking…' : 'Unlock Vault'}
+              {busy
+                ? translate('shamu.vault.unlocking', 'Unlocking…')
+                : translate('shamu.vault.unlock', 'Unlock Vault')}
             </Button>
           </div>
         </div>
@@ -46,10 +54,15 @@ export function VaultLockedView({
       )}
       {state === 'locked' && !automatic ? (
         <p className="text-sm text-muted-foreground">
-          Unlock once with the master password to enable automatic opening on this device.
+          {translate(
+            'shamu.vault.enableAutomaticUnlockHelp',
+            'Unlock once with the master password to enable automatic opening on this device.'
+          )}
         </p>
       ) : null}
-      <p className="text-xs text-muted-foreground">AES-256-GCM · OS keychain</p>
+      <p className="text-xs text-muted-foreground">
+        {translate('shamu.vault.protection', 'AES-256-GCM · OS keychain')}
+      </p>
     </>
   )
 }

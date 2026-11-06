@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import { Copy, KeyRound, Pencil, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,13 +29,12 @@ export function VaultEntries({
   return (
     <>
       {entries.length ? (
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
           <Input
-            aria-label="Search credentials"
+            aria-label={translate('shamu.vault.search', 'Search credentials')}
             value={query}
             onChange={(event) => onQuery(event.target.value)}
-            className="pl-9"
           />
         </div>
       ) : null}
@@ -42,11 +42,13 @@ export function VaultEntries({
         <div className="space-y-2 py-8 text-center">
           <KeyRound className="mx-auto size-6 text-muted-foreground" />
           <h3 className="text-sm font-medium">
-            {query ? 'No matching credentials' : 'No credentials for this bot'}
+            {query
+              ? translate('shamu.vault.noMatches', 'No matching credentials')
+              : translate('shamu.vault.empty', 'No credentials for this bot')}
           </h3>
           {!query ? (
             <Button variant="link" onClick={onNew}>
-              Add a credential
+              {translate('shamu.vault.add', 'Add a credential')}
             </Button>
           ) : null}
         </div>
@@ -64,14 +66,18 @@ export function VaultEntries({
                   <p className="break-all text-xs text-muted-foreground">{entry.website}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
-                  {entry.allowAgent ? 'Bot may request use' : 'Only you'}
+                  {entry.allowAgent
+                    ? translate('shamu.vault.agentAllowed', 'Bot may request use')
+                    : translate('shamu.vault.ownerOnly', 'Only you')}
                 </p>
               </div>
               <div className="flex gap-1">
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Copy password: ${entry.name}`}
+                  aria-label={translate('shamu.vault.copyNamed', 'Copy password: {{name}}', {
+                    name: entry.name
+                  })}
                   disabled={busy}
                   onClick={() => onCopy(entry)}
                 >
@@ -80,7 +86,9 @@ export function VaultEntries({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Edit credential: ${entry.name}`}
+                  aria-label={translate('shamu.vault.editNamed', 'Edit credential: {{name}}', {
+                    name: entry.name
+                  })}
                   disabled={busy}
                   onClick={() => onEdit(entry)}
                 >
@@ -89,7 +97,9 @@ export function VaultEntries({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Delete credential: ${entry.name}`}
+                  aria-label={translate('shamu.vault.deleteNamed', 'Delete credential: {{name}}', {
+                    name: entry.name
+                  })}
                   disabled={busy}
                   onClick={() => onRemove(entry)}
                 >

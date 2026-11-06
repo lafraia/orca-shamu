@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,17 +29,21 @@ export function VaultDeleteDialog({
     >
       <DialogContent surface="security" role="alertdialog">
         <DialogHeader>
-          <DialogTitle>Delete credential?</DialogTitle>
+          <DialogTitle>{translate('shamu.vault.deleteTitle', 'Delete credential?')}</DialogTitle>
           <DialogDescription>
-            “{name}” will be removed from this Vault. This cannot be undone.
+            {translate(
+              'shamu.vault.deleteDescription',
+              '“{{name}}” will be removed from this Vault. This cannot be undone.',
+              { name }
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="ghost" autoFocus onClick={onCancel}>
-            Cancel
+            {translate('shamu.vault.cancel', 'Cancel')}
           </Button>
           <Button variant="destructive" onClick={onDelete}>
-            Delete credential
+            {translate('shamu.vault.delete', 'Delete credential')}
           </Button>
         </DialogFooter>
       </DialogContent>

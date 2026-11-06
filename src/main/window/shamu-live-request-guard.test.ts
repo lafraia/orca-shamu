@@ -16,7 +16,7 @@ const live = { url: 'http://127.0.0.1:41234/', token: 'a'.repeat(64) }
 const documentRequest = { id: 1, url: live.url, webContentsId: 10, resourceType: 'mainFrame' }
 
 it('authenticates each native reload response and refuses replay from a replacement server', () => {
-  const session = {}
+  const session = { getUserAgent: () => 'Shamu live renderer' }
   registerShamuLiveWindow(session, 10, live)
   const initial = shamuLiveRequestHeaders(session, documentRequest, {})
   const proof = shamuLiveProof(live.token, initial[SHAMU_LIVE_CHALLENGE_HEADER])
@@ -42,7 +42,7 @@ it('authenticates each native reload response and refuses replay from a replacem
 })
 
 it('protects lazy modules and HMR scripts as well as the main document', () => {
-  const session = {}
+  const session = { getUserAgent: () => 'Shamu live renderer' }
   registerShamuLiveWindow(session, 10, live)
   const request = { ...documentRequest, resourceType: 'script', url: `${live.url}src/main.tsx` }
   const headers = shamuLiveRequestHeaders(session, request, { existing: 'kept' })
@@ -54,7 +54,7 @@ it('protects lazy modules and HMR scripts as well as the main document', () => {
 })
 
 it('blocks cross-origin document redirects without changing ordinary guests or external images', () => {
-  const session = {}
+  const session = { getUserAgent: () => 'Shamu live renderer' }
   registerShamuLiveWindow(session, 10, live)
   expect(
     shamuLiveResponseDecision(session, { ...documentRequest, url: 'https://example.com' })
@@ -80,7 +80,7 @@ it('blocks cross-origin document redirects without changing ordinary guests or e
 })
 
 it('releases failed-request and window state without trusting a reused window id', () => {
-  const session = {}
+  const session = { getUserAgent: () => 'Shamu live renderer' }
   const unregister = registerShamuLiveWindow(session, 10, live)
   const headers = shamuLiveRequestHeaders(session, documentRequest, {})
   finishShamuLiveRequest(session, documentRequest.id)

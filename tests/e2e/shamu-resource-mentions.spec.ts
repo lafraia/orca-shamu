@@ -115,10 +115,9 @@ test('mentions workspaces, projects and issues without preselecting or notifying
     await field.fill('Ask @CE')
     const ceo = menu.getByRole('option', { name: 'CEO Replies in its own chat', exact: true })
     await expect(ceo).toHaveAttribute('aria-selected', 'true')
-    await expect(field).toHaveAttribute(
-      'aria-activedescendant',
-      (await ceo.getAttribute('id')) as string
-    )
+    const optionId = await ceo.getAttribute('id')
+    expect(optionId).toBeTruthy()
+    await expect(field).toHaveAttribute('aria-activedescendant', optionId!)
     await expect(
       menu
         .getByRole('group', { name: 'Workspaces', exact: true })

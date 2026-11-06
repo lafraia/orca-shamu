@@ -40,6 +40,12 @@ export function restrictWindowsFile(filePath: string): Promise<boolean> {
   return security ? restrictAsync(security, filePath, false) : Promise.resolve(false)
 }
 
+/** Check without rewriting so synchronous readers never propagate directory ACLs. */
+export function isWindowsPathRestricted(targetPath: string, isDirectory: boolean): boolean {
+  const security = securityFor(targetPath)
+  return security !== null && violationOf(security, targetPath, isDirectory) === null
+}
+
 /** Verifies and, only when that fails, rewrites the DACL on the calling thread. */
 export function restrictWindowsPathSync(targetPath: string, isDirectory: boolean): boolean {
   const security = securityFor(targetPath)

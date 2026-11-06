@@ -11,7 +11,6 @@ import {
 } from '../../shared/shamu-vault'
 import type { VaultFile } from './vault-file'
 import {
-  openVaultBytes,
   requireVaultProtection,
   sealVaultBytes,
   wrapVaultKey,
@@ -24,6 +23,7 @@ import {
   openDeviceVaultSession,
   verifyVaultSessionPassword,
   sealVaultIndex,
+  consumeVaultEntrySecret,
   type VaultIndex,
   type VaultSession as Session
 } from './vault-session'
@@ -58,6 +58,10 @@ export class VaultStore {
     return this.session !== null
   }
 
+  prepare(): Promise<void> {
+    return this.file.prepare()
+  }
+
   lock(): void {
     this.generation++
     this.session?.key.fill(0)
@@ -89,6 +93,9 @@ export class VaultStore {
   }
 
   async unlockDevice(): Promise<void> {
+    const admitted = this.admit()
+    await this.prepare()
+    admitted()
     if (this.session) {
       this.assertSession(this.session.id)
       return
@@ -195,16 +202,7 @@ export class VaultStore {
   useSecret<T>(access: VaultAccess, id: string, consume: (secret: Buffer) => T, agent = false): T {
     const current = this.access(access)
     const entry = this.entry(access, id, agent)
-    const bytes = openVaultBytes(
-      current.key,
-      this.entryBinding(current, entry),
-      current.envelope.secrets[id]
-    )
-    try {
-      return consume(bytes)
-    } finally {
-      bytes.fill(0)
-    }
+    return consumeVaultEntrySecret(current, this.entryBinding(current, entry), id, consume)
   }
 
   async verify(access: VaultAccess, input: string): Promise<void> {
@@ -290,6 +288,8 @@ export class VaultStore {
     this.authenticating = true
     const generation = this.generation
     try {
+      await this.prepare()
+      this.assertGeneration(generation)
       return await operation(generation)
     } finally {
       this.authenticating = false

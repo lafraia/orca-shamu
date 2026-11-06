@@ -16,10 +16,11 @@ type Guard = {
   windows: Map<number, ShamuLiveRenderer>
   requests: Map<number, { webContentsId: number; challenge: string }>
 }
-const guards = new WeakMap<object, Guard>()
+type LiveSession = Pick<Electron.Session, 'getUserAgent'>
+const guards = new WeakMap<LiveSession, Guard>()
 
 export function registerShamuLiveWindow(
-  session: object,
+  session: LiveSession,
   webContentsId: number,
   live: ShamuLiveRenderer
 ): () => void {
@@ -46,11 +47,11 @@ export function registerShamuLiveWindow(
   }
 }
 
-export function hasShamuLiveWindows(session: object): boolean {
+export function hasShamuLiveWindows(session: LiveSession): boolean {
   return Boolean(guards.get(session)?.windows.size)
 }
 
-function requestOwner(session: object, details: RequestIdentity) {
+function requestOwner(session: LiveSession, details: RequestIdentity) {
   const guard = guards.get(session)
   const live =
     details.webContentsId === undefined ? undefined : guard?.windows.get(details.webContentsId)
@@ -66,7 +67,7 @@ function isLiveOrigin(details: RequestIdentity, live: ShamuLiveRenderer): boolea
 }
 
 export function shamuLiveRequestHeaders(
-  session: object,
+  session: LiveSession,
   details: RequestIdentity,
   headers: Record<string, string>
 ): Record<string, string> {
@@ -84,7 +85,7 @@ export function shamuLiveRequestHeaders(
 }
 
 export function shamuLiveResponseDecision(
-  session: object,
+  session: LiveSession,
   details: RequestIdentity & { responseHeaders?: Record<string, string[]> }
 ): Electron.HeadersReceivedResponse | null {
   const owner = requestOwner(session, details)
@@ -115,6 +116,6 @@ export function shamuLiveResponseDecision(
   return verified ? null : { cancel: true }
 }
 
-export function finishShamuLiveRequest(session: object, requestId: number): void {
+export function finishShamuLiveRequest(session: LiveSession, requestId: number): void {
   guards.get(session)?.requests.delete(requestId)
 }

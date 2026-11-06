@@ -35,7 +35,9 @@ export function ShamuStatusSegment({
       <span role="status" className={iconOnly ? 'sr-only' : undefined}>
         {label}
       </span>
-      {import.meta.env.DEV && !iconOnly ? <span>Live reload</span> : null}
+      {import.meta.env.DEV && !iconOnly ? (
+        <span>{translate('shamu.liveReload', 'Live reload')}</span>
+      ) : null}
     </button>
   )
   return iconOnly ? (

@@ -19,6 +19,7 @@ import {
 import { syncProjectChannelMessages } from './project-channel-transcript'
 import type { ProjectChannelControllers } from './project-channel-send'
 import { translate } from '@/i18n/i18n'
+import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 
 export const ProjectChannelAgent = memo(function ProjectChannelAgent({
   channelId,
@@ -29,6 +30,7 @@ export const ProjectChannelAgent = memo(function ProjectChannelAgent({
   member: ProjectChannelMember
   controllers: ProjectChannelControllers
 }): React.JSX.Element {
+  useUiLanguageRevision()
   const available = useAppStore((state) => availableProjectChannelMember(state, member))
   const controller = useStructuredAgentSession({
     sessionId: member.sessionId,

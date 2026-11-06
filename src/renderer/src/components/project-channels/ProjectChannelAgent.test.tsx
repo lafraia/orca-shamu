@@ -10,7 +10,7 @@ let channel = channelFixture()
 let submissions: AgentJournalSubmission[] = []
 
 vi.mock('@/store', () => ({
-  useAppStore: (selector: (state: object) => boolean) => selector({})
+  useAppStore: () => true
 }))
 vi.mock('./project-channel-candidates', () => ({
   availableProjectChannelMember: () => true,

@@ -134,9 +134,9 @@ export function buildSetupSettingsSections({
       ? [
           {
             id: 'orca-shamu',
-            title: 'Orca Shamu',
+            title: translate('shamu.title', 'Orca Shamu'),
             description: translate(
-              'shamu.settings.description',
+              'shamu.settings.navigationDescription',
               'Settings and connection for this Orca Shamu interface.'
             ),
             icon: OrcaLogoSettingsIcon,

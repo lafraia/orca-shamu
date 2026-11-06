@@ -12,7 +12,10 @@ import {
 import { join } from 'node:path'
 import { isSafeOwnedDirectory } from '../../shared/owned-private-directory'
 import { writeSecureFile } from '../../shared/secure-file'
-import { restrictWindowsPathSync } from '../../shared/secure-path-windows-acl'
+import {
+  isWindowsPathRestricted,
+  restrictWindowsDirectory
+} from '../../shared/secure-path-windows-acl'
 import { vaultEnvelopeSchema, type VaultEnvelope } from './vault-crypto'
 
 const MAX_VAULT_BYTES = 8 * 1024 * 1024
@@ -29,6 +32,24 @@ export class VaultFile {
     this.binding = `orca-shamu-vault:1:${createHash('sha256').update(profile).digest('hex')}`
   }
 
+  async prepare(): Promise<void> {
+    if (process.platform !== 'win32') {
+      return
+    }
+    try {
+      mkdirSync(this.directory, { recursive: true, mode: 0o700 })
+      if (
+        !isSafeOwnedDirectory(lstatSync(this.directory)) ||
+        !(await restrictWindowsDirectory(this.directory))
+      ) {
+        throw new Error('unsafe directory permissions')
+      }
+    } catch {
+      throw new Error('Vault directory could not be opened safely.')
+    }
+    this.validateDirectory()
+  }
+
   private validateDirectory(create = false): boolean {
     if (create) {
       mkdirSync(this.directory, { mode: 0o700 })
@@ -37,7 +58,7 @@ export class VaultFile {
       if (!isSafeOwnedDirectory(lstatSync(this.directory))) {
         throw new Error('unsafe directory')
       }
-      if (process.platform === 'win32' && !restrictWindowsPathSync(this.directory, true)) {
+      if (process.platform === 'win32' && !isWindowsPathRestricted(this.directory, true)) {
         throw new Error('unsafe directory permissions')
       }
       return true
@@ -59,7 +80,7 @@ export class VaultFile {
         if (!stat.isFile() || stat.nlink !== 1) {
           throw new Error('unsafe file')
         }
-        if (!restrictWindowsPathSync(this.file, false)) {
+        if (!isWindowsPathRestricted(this.file, false)) {
           throw new Error('unsafe file permissions')
         }
       } catch (error) {

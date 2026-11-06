@@ -10,8 +10,11 @@ import {
 export function ShamuProjectNotice(): React.JSX.Element {
   const title = translate('shamu.project.title', 'About this fork')
   const links = [
-    { href: SHAMU_REPOSITORY_URL, label: 'lafraia/orca-shamu' },
-    { href: 'https://github.com/lafraia', label: 'lafraia' },
+    {
+      href: SHAMU_REPOSITORY_URL,
+      label: translate('shamu.project.repository', 'lafraia/orca-shamu')
+    },
+    { href: 'https://github.com/lafraia', label: translate('shamu.project.maintainer', 'lafraia') },
     {
       href: SHAMU_UPSTREAM_URL,
       label: translate('shamu.project.upstream', 'Original Orca project')

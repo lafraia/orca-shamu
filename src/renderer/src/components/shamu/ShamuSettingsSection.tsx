@@ -28,7 +28,7 @@ export function ShamuSettingsSection(): React.JSX.Element | null {
   return (
     <SettingsSection
       id="orca-shamu"
-      title="Orca Shamu"
+      title={translate('shamu.title', 'Orca Shamu')}
       description={translate(
         'shamu.settings.description',
         'An independent, open source fork of Orca maintained by Daniel Lafraia (lafraia).'

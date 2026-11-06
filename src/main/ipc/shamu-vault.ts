@@ -26,7 +26,7 @@ let disposeCurrent: (() => void) | null = null
 
 export function registerShamuVaultHandlers(
   profile: string,
-  channels: ProjectChannelsStore
+  channels: Pick<ProjectChannelsStore, 'read'>
 ): VaultService {
   disposeCurrent?.()
   let lifetime: VaultWindowSession | null = null
@@ -111,6 +111,13 @@ export function registerShamuVaultHandlers(
     ipcMain.removeHandler(channel)
     ipcMain.handle(channel, (event, ...args: unknown[]) => {
       trust(event)
+      if (process.platform === 'win32' && name !== 'lock') {
+        const admitted = store.admit()
+        return store.prepare().then(() => {
+          admitted()
+          return handler(admitted, ...args)
+        })
+      }
       return handler(store.admit(), ...args)
     })
     disposers.push(() => ipcMain.removeHandler(channel))

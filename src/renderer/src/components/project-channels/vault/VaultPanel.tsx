@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LockKeyhole, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,7 +22,7 @@ import { VaultRequests } from './VaultRequests'
 import { VaultDeleteDialog } from './VaultDeleteDialog'
 import { VaultLockedView } from './VaultLockedView'
 import { VaultEntries } from './VaultEntries'
-import { SECURITY_SURFACE_CLASS } from '@/components/ui/security-surface'
+import { SecuritySurface } from '@/components/ui/security-surface'
 
 const CLIPBOARD_TOAST = 'shamu-vault-clipboard'
 
@@ -165,196 +166,215 @@ export function VaultPanel({
         onOpenChange(next)
       }}
     >
-      <SheetContent motion="theme" className={`w-full sm:max-w-xl ${SECURITY_SURFACE_CLASS}`}>
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <LockKeyhole className="size-4" />
-            Vault
-          </SheetTitle>
-          <SheetDescription>
-            {name} · {unlocked ? 'Unlocked' : 'Locked'}
-          </SheetDescription>
-        </SheetHeader>
-        {unlocked ? (
-          <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                clearForms()
-                setEditing('new')
-              }}
-            >
-              <Plus />
-              New credential
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                clearForms()
-                setSnapshot(null)
-                void act(() => api!.lock())
-              }}
-            >
-              <LockKeyhole />
-              Lock Vault
-            </Button>
-          </div>
-        ) : null}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 scrollbar-sleek">
-          {error ? (
-            <div role="alert" className="space-y-3 text-sm text-destructive">
-              <p>{error}</p>
-              {!snapshot ? (
+      <SecuritySurface>
+        <SheetContent motion="theme" className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>
+              <span className="flex items-center gap-2">
+                <LockKeyhole className="size-4" />
+                {translate('shamu.vault.title', 'Vault')}
+              </span>
+            </SheetTitle>
+            <SheetDescription>
+              {name} ·{' '}
+              {unlocked
+                ? translate('shamu.vault.unlocked', 'Unlocked')
+                : translate('shamu.vault.locked', 'Locked')}
+            </SheetDescription>
+          </SheetHeader>
+          {unlocked ? (
+            <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  clearForms()
+                  setEditing('new')
+                }}
+              >
+                <Plus />
+                {translate('shamu.vault.new', 'New credential')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearForms()
+                  setSnapshot(null)
+                  void act(() => api!.lock())
+                }}
+              >
+                <LockKeyhole />
+                {translate('shamu.vault.lock', 'Lock Vault')}
+              </Button>
+            </div>
+          ) : null}
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 scrollbar-sleek">
+            {error ? (
+              <div role="alert" className="space-y-3 text-sm text-destructive">
+                <p>{error}</p>
+                {!snapshot ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setError(null)
+                      void refresh()
+                    }}
+                  >
+                    <RefreshCw />
+                    {translate('shamu.vault.retry', 'Retry')}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            {!snapshot && !error ? (
+              <div
+                aria-busy="true"
+                aria-label={translate('shamu.vault.loading', 'Loading Vault')}
+                className="space-y-4"
+              >
+                <div className="h-5 w-32 rounded bg-muted" />
+                <div className="h-10 rounded bg-muted" />
+                <div className="h-10 rounded bg-muted" />
+              </div>
+            ) : null}
+            {snapshot?.state === 'unavailable' ? (
+              <div className="space-y-3 py-8">
+                <LockKeyhole className="size-6 text-muted-foreground" />
+                <h3 className="text-sm font-medium">
+                  {translate('shamu.vault.keychainUnavailable', 'OS keychain unavailable')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {translate(
+                    'shamu.vault.keychainUnavailableHelp',
+                    'Unlock your system keychain to use Vault. Credentials cannot be saved with plaintext or Linux’s basic_text backend.'
+                  )}
+                </p>
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => {
-                    setError(null)
                     void refresh()
                   }}
                 >
                   <RefreshCw />
-                  Retry
+                  {translate('shamu.vault.retry', 'Retry')}
                 </Button>
-              ) : null}
-            </div>
-          ) : null}
-          {!snapshot && !error ? (
-            <div aria-busy="true" aria-label="Loading Vault" className="space-y-4">
-              <div className="h-5 w-32 rounded bg-muted" />
-              <div className="h-10 rounded bg-muted" />
-              <div className="h-10 rounded bg-muted" />
-            </div>
-          ) : null}
-          {snapshot?.state === 'unavailable' ? (
-            <div className="space-y-3 py-8">
-              <LockKeyhole className="size-6 text-muted-foreground" />
-              <h3 className="text-sm font-medium">OS keychain unavailable</h3>
-              <p className="text-sm text-muted-foreground">
-                Unlock your system keychain to use Vault. Credentials cannot be saved with plaintext
-                or Linux’s basic_text backend.
+              </div>
+            ) : null}
+            {snapshot?.state === 'missing' || snapshot?.state === 'locked' ? (
+              <VaultLockedView
+                key={snapshot.state}
+                state={snapshot.state}
+                automatic={snapshot.automaticUnlock}
+                busy={busy}
+                onResume={() => {
+                  void act(() => api!.resume(botId))
+                }}
+                onAuthenticate={(password) =>
+                  act(() =>
+                    snapshot.state === 'missing'
+                      ? api!.create(botId, password)
+                      : api!.unlock(botId, password)
+                  )
+                }
+              />
+            ) : null}
+            {unlocked && editing ? (
+              <VaultEntryEditor
+                key={editing === 'new' ? 'new' : editing.id}
+                entry={editing === 'new' ? null : editing}
+                busy={busy}
+                onSave={(input) => act(() => api!.save(access(), input), clearForms)}
+                onCancel={clearForms}
+              />
+            ) : null}
+            {unlocked && copying ? (
+              <VaultPasswordForm
+                key={`copy-${copying.id}`}
+                mode="copy"
+                busy={busy}
+                onCancel={clearForms}
+                onSubmit={(password) =>
+                  act(
+                    () => api!.copy(access(), copying.id, password),
+                    () => {
+                      clearForms()
+                      toast.success(
+                        translate('shamu.vault.copied', 'Password copied for 30 seconds.'),
+                        { id: CLIPBOARD_TOAST }
+                      )
+                    }
+                  )
+                }
+              />
+            ) : null}
+            {unlocked && changingPassword ? (
+              <VaultPasswordForm
+                mode="change"
+                busy={busy}
+                onCancel={clearForms}
+                onSubmit={(password, next) =>
+                  act(() => api!.changePassphrase(access(), password, next!), clearForms)
+                }
+              />
+            ) : null}
+            {unlocked && !editing && !copying && !changingPassword ? (
+              <>
+                <VaultRequests
+                  requests={snapshot.requests}
+                  entries={snapshot.entries}
+                  busy={busy}
+                  onDecide={(id, approve) => {
+                    void act(() => api!.decide(access(), id, approve))
+                  }}
+                />
+                <VaultEntries
+                  entries={snapshot.entries}
+                  query={query}
+                  busy={busy}
+                  onQuery={setQuery}
+                  onNew={() => setEditing('new')}
+                  onCopy={setCopying}
+                  onEdit={setEditing}
+                  onRemove={setRemoving}
+                />
+              </>
+            ) : null}
+          </div>
+          {unlocked ? (
+            <div className="space-y-2 border-t border-border p-5">
+              <p className="text-xs text-muted-foreground">
+                {translate(
+                  'shamu.vault.lifetimeHelp',
+                  'Vault stays unlocked while the Shamu window is open. Closing or hiding the window, locking this computer or sleep locks it. Reopening Shamu unlocks it through the OS keychain.'
+                )}
               </p>
               <Button
-                variant="outline"
+                size="sm"
+                variant="ghost"
+                disabled={busy}
                 onClick={() => {
-                  void refresh()
+                  clearForms()
+                  setChangingPassword(true)
                 }}
               >
-                <RefreshCw />
-                Retry
+                {translate('shamu.vault.changePassword', 'Change master password')}
               </Button>
             </div>
           ) : null}
-          {snapshot?.state === 'missing' || snapshot?.state === 'locked' ? (
-            <VaultLockedView
-              key={snapshot.state}
-              state={snapshot.state}
-              automatic={snapshot.automaticUnlock}
-              busy={busy}
-              onResume={() => {
-                void act(() => api!.resume(botId))
-              }}
-              onAuthenticate={(password) =>
-                act(() =>
-                  snapshot.state === 'missing'
-                    ? api!.create(botId, password)
-                    : api!.unlock(botId, password)
-                )
+          <VaultDeleteDialog
+            name={removing?.name ?? null}
+            onCancel={() => setRemoving(null)}
+            onDelete={() => {
+              if (removing) {
+                void act(() => api!.remove(access(), removing.id), clearForms)
               }
-            />
-          ) : null}
-          {unlocked && editing ? (
-            <VaultEntryEditor
-              key={editing === 'new' ? 'new' : editing.id}
-              entry={editing === 'new' ? null : editing}
-              busy={busy}
-              onSave={(input) => act(() => api!.save(access(), input), clearForms)}
-              onCancel={clearForms}
-            />
-          ) : null}
-          {unlocked && copying ? (
-            <VaultPasswordForm
-              key={`copy-${copying.id}`}
-              mode="copy"
-              busy={busy}
-              onCancel={clearForms}
-              onSubmit={(password) =>
-                act(
-                  () => api!.copy(access(), copying.id, password),
-                  () => {
-                    clearForms()
-                    toast.success('Password copied for 30 seconds.', { id: CLIPBOARD_TOAST })
-                  }
-                )
-              }
-            />
-          ) : null}
-          {unlocked && changingPassword ? (
-            <VaultPasswordForm
-              mode="change"
-              busy={busy}
-              onCancel={clearForms}
-              onSubmit={(password, next) =>
-                act(() => api!.changePassphrase(access(), password, next!), clearForms)
-              }
-            />
-          ) : null}
-          {unlocked && !editing && !copying && !changingPassword ? (
-            <>
-              <VaultRequests
-                requests={snapshot.requests}
-                entries={snapshot.entries}
-                busy={busy}
-                onDecide={(id, approve) => {
-                  void act(() => api!.decide(access(), id, approve))
-                }}
-              />
-              <VaultEntries
-                entries={snapshot.entries}
-                query={query}
-                busy={busy}
-                onQuery={setQuery}
-                onNew={() => setEditing('new')}
-                onCopy={setCopying}
-                onEdit={setEditing}
-                onRemove={setRemoving}
-              />
-            </>
-          ) : null}
-        </div>
-        {unlocked ? (
-          <div className="space-y-2 border-t border-border p-5">
-            <p className="text-xs text-muted-foreground">
-              Vault stays unlocked while the Shamu window is open. Closing or hiding the window,
-              locking this computer or sleep locks it. Reopening Shamu unlocks it through the OS
-              keychain.
-            </p>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                clearForms()
-                setChangingPassword(true)
-              }}
-            >
-              Change master password
-            </Button>
-          </div>
-        ) : null}
-        <VaultDeleteDialog
-          name={removing?.name ?? null}
-          onCancel={() => setRemoving(null)}
-          onDelete={() => {
-            if (removing) {
-              void act(() => api!.remove(access(), removing.id), clearForms)
-            }
-          }}
-        />
-      </SheetContent>
+            }}
+          />
+        </SheetContent>
+      </SecuritySurface>
     </Sheet>
   )
 }

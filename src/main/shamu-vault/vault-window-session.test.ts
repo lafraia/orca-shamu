@@ -13,7 +13,7 @@ describe('Vault window ownership', () => {
   beforeEach(() => {
     visible = true
     fixture = vaultFixture(() => lifetime?.isOpen() ?? false)
-    window = Object.assign(new EventEmitter(), {
+    const fixtureWindow = Object.assign(new EventEmitter(), {
       isDestroyed: () => false,
       isVisible: () => visible,
       isMinimized: () => false,
@@ -21,7 +21,9 @@ describe('Vault window ownership', () => {
         isLoadingMainFrame: () => false,
         isDestroyed: () => false
       })
-    }) as unknown as BrowserWindow
+    })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the Electron fixture implements every window and webContents operation used by VaultWindowSession.
+    window = fixtureWindow as unknown as BrowserWindow
     current = window
     lifetime = new VaultWindowSession(fixture.store, {
       getWindow: () => current,

@@ -160,7 +160,10 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
                               : undefined
                           }
                         >
-                          @{channel.members.find((row) => row.id === id)?.handle ?? 'agent'}:{' '}
+                          @
+                          {channel.members.find((row) => row.id === id)?.handle ??
+                            translate('projectChannels.unknownAgent', 'agent')}
+                          :{' '}
                           {status === 'sending'
                             ? translate('projectChannels.sending', 'Sending…')
                             : status === 'recorded'
@@ -236,7 +239,7 @@ function ProjectChannelConversation({ channel }: { channel: ProjectChannel }): R
               ))}
               {channel.members.length > 1 ? (
                 <Button type="button" variant="ghost" size="xs" onClick={() => mention('all')}>
-                  @all
+                  {translate('projectChannels.mentionAll', '@all')}
                 </Button>
               ) : null}
               <Button

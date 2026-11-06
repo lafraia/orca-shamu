@@ -176,6 +176,22 @@
           "identitySha256": "66d4c60a3ead54eb063a57341278cccaf28e016c2847a6f1808a0d4d2d163606"
         }
       ]
+    },
+    {
+      "name": "shamu-consultation-reply",
+      "sourcePath": "skills/shamu-consultation-reply",
+      "packageDigest": "34af263e4d564151e60ab1dda7ee4bd9d6f23193aeb86592eac8851b4bfbf08a",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "size": 3347,
+          "executable": false,
+          "classification": "text",
+          "exactSha256": "6c9d6070aa548cf7d1d6b0e66b017569926fcba2de90a244892a15e28cdff4ba",
+          "textNormalizedSha256": "6c9d6070aa548cf7d1d6b0e66b017569926fcba2de90a244892a15e28cdff4ba",
+          "identitySha256": "6c9d6070aa548cf7d1d6b0e66b017569926fcba2de90a244892a15e28cdff4ba"
+        }
+      ]
     }
   ]
 }

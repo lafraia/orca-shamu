@@ -110,7 +110,14 @@ export function BotMemoryPanel({
       id: createBrowserUuid(),
       updatedAt: Date.now(),
       archived: false,
-      sources: [{ sessionId: member.sessionId, label: `${channel.name}: user-curated memory` }],
+      sources: [
+        {
+          sessionId: member.sessionId,
+          label: translate('shamu.memory.userCuratedSource', '{{name}}: user-curated memory', {
+            name: channel.name
+          })
+        }
+      ],
       ...(previous ? { supersedes: previous.id } : {})
     }
     void persist({

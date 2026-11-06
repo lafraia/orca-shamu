@@ -28,6 +28,20 @@ export type VaultSession = {
   index: VaultIndex
 }
 
+export function consumeVaultEntrySecret<T>(
+  session: VaultSession,
+  binding: string,
+  entryId: string,
+  consume: (secret: Buffer) => T
+): T {
+  const bytes = openVaultBytes(session.key, binding, session.envelope.secrets[entryId])
+  try {
+    return consume(bytes)
+  } finally {
+    bytes.fill(0)
+  }
+}
+
 export async function verifyVaultSessionPassword(
   session: VaultSession,
   password: string,

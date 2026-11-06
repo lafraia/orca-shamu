@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import { create } from 'zustand'
 import { useAppStore } from '@/store'
 import { checkpointProjectDrafts, recoverProjectDrafts } from './project-channel-draft-checkpoint'
@@ -93,7 +94,10 @@ export function saveProjectChannels(
       checkpointProjectDrafts(next, useProjectChannels.getState().drafts)
     } catch {
       useProjectChannels.setState({
-        error: 'Could not save this change. Reload bots before trying again.'
+        error: translate(
+          'projectChannels.changeSaveError',
+          'Could not save this change. Reload bots before trying again.'
+        )
       })
       throw new Error('Could not save the bot.')
     }

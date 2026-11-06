@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Adapt Shamu to the upstream validation rules: declare the bot and Vault interface copy in the English and Portuguese catalogs, regenerate the bundled skill catalog, preserve typed bot references and prevent synchronous Windows Vault permission rewrites while retaining fail-closed access checks.
 - Clarify the bot-pair conversation with a fixed participant capsule, named message bubbles and avatars beside each message, while preserving chronology, attachments and original-chat navigation.
 - Integrate consulted chats into the originating answer with grouped bot avatars, clickable exchanges and native reply, queue and human-input status, without marking those peer chats as read.
 - Keep successful bot mentions quiet by removing their sending and confirmation toasts, while retaining delivery warnings and retryable errors.

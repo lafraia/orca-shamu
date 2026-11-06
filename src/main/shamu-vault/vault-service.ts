@@ -32,7 +32,10 @@ export class VaultService {
     this.clipboardTimer.unref()
   }
 
-  invoke(command: VaultAgentCommand, bot: ProjectChannel): unknown {
+  async invoke(command: VaultAgentCommand, bot: ProjectChannel): Promise<unknown> {
+    const admitted = this.store.admit()
+    await this.store.prepare()
+    admitted()
     switch (command.action) {
       case 'vault.list': {
         const snapshot = this.store.status(bot.id)

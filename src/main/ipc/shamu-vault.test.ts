@@ -1,15 +1,22 @@
 import { EventEmitter } from 'node:events'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { setSecretStore, _resetSecretStoreForTests } from '../../shared/secret-store'
 import type { ProjectChannelsStore } from '../project-channels-store'
 import { vaultFixture, TEST_PASSWORD } from '../shamu-vault/vault-fixture.test-support'
 import { SHAMU_BOT_METHODS } from '../runtime/rpc/methods/shamu-bots'
 import { registerShamuVaultHandlers } from './shamu-vault'
+import { emptyProjectChannels } from '../../shared/project-channels'
+import { channelFixture } from '../../shared/project-channels.test-fixture'
 
-const mocks = vi.hoisted(() => ({
+type VaultMocks = {
+  handlers: Map<string, (...args: unknown[]) => unknown>
+  trusted: Mock<() => boolean>
+  window: unknown
+}
+const mocks = vi.hoisted((): VaultMocks => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
   trusted: vi.fn(() => true),
-  window: null as unknown
+  window: undefined
 }))
 vi.mock('./ui', () => ({
   isTrustedUIRenderer: mocks.trusted,
@@ -52,11 +59,25 @@ describe('Vault transport admission', () => {
     fixture.dispose()
     _resetSecretStoreForTests()
   })
-  const channels = () =>
-    ({
-      read: async () => ({ channels: [{ id: 'alpha', home: { ready: true } }] })
-    }) as ProjectChannelsStore
-  const invoke = (name: string, frame: object, ...args: unknown[]) =>
+  const channels = (): Pick<ProjectChannelsStore, 'read'> => ({
+    read: async () => ({
+      ...emptyProjectChannels(),
+      channels: [
+        {
+          ...channelFixture(),
+          id: 'alpha',
+          home: {
+            directory: fixture.directory,
+            memberId: 'coordinator',
+            createOperationId: 'alpha',
+            createFingerprint: 'alpha',
+            ready: true
+          }
+        }
+      ]
+    })
+  })
+  const invoke = (name: string, frame: unknown, ...args: unknown[]) =>
     mocks.handlers.get(`shamuVault:${name}`)!({ sender, senderFrame: frame }, ...args)
 
   it('rejects a trusted window subframe and an untrusted renderer before vault access', async () => {
@@ -78,12 +99,12 @@ describe('Vault transport admission', () => {
 
   it('invalidates a request admitted before a lock while its bot lookup was pending', async () => {
     let release!: (value: Awaited<ReturnType<ProjectChannelsStore['read']>>) => void
-    const pendingChannels = {
+    const pendingChannels: Pick<ProjectChannelsStore, 'read'> = {
       read: () =>
         new Promise<Awaited<ReturnType<ProjectChannelsStore['read']>>>((resolve) => {
           release = resolve
         })
-    } as ProjectChannelsStore
+    }
     const service = registerShamuVaultHandlers(fixture.directory, pendingChannels)
     try {
       const creation = invoke('create', sender.mainFrame, 'alpha', TEST_PASSWORD)
@@ -98,9 +119,12 @@ describe('Vault transport admission', () => {
 
   it('rejects paired devices at the runtime RPC boundary', () => {
     const method = SHAMU_BOT_METHODS[0]
-    const context = {
-      caller: { kind: 'paired-device', deviceId: 'synthetic-device' }
-    } as Parameters<typeof method.handler>[1]
+    const context: Parameters<typeof method.handler>[1] = {
+      caller: { kind: 'paired-device', deviceId: 'synthetic-device' },
+      get runtime(): never {
+        throw new Error('A paired device must be rejected before runtime access.')
+      }
+    }
     expect(() => method.handler({ action: 'vault.list', actorId: 'alpha' }, context)).toThrow(
       'local authenticated CLI'
     )

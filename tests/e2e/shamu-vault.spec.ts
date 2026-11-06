@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { z } from 'zod'
 import { runProcess } from '@orca/process-host'
 import { test } from './helpers/project-channel-stub'
 import { expect } from './helpers/orca-app'
@@ -11,7 +12,6 @@ import {
   createRuntimeDesktopPairingOffer,
   launchPairedElectronClient
 } from './helpers/paired-electron-client'
-import type { BotReferenceContext } from '../../src/main/shamu-bots/bot-journal-reader'
 import type { VaultAgentCommand } from '../../src/shared/shamu-vault'
 import {
   installIsolatedVaultProtection,
@@ -135,15 +135,19 @@ test('manages encrypted bot credentials through desktop IPC and guards agent use
       state: 'unlocked',
       entries: [{ name: 'Synthetic service' }]
     })
-    const context = (await page.evaluate(
-      async (id) =>
-        window.api.projectChannels!.command({
-          action: 'context',
-          actorId: id,
-          referenceId: 'self'
-        }),
-      bot.id
-    )) as BotReferenceContext
+    const context = z
+      .object({ messages: z.array(z.object({ id: z.string(), role: z.string() })) })
+      .parse(
+        await page.evaluate(
+          async (id) =>
+            window.api.projectChannels!.command({
+              action: 'context',
+              actorId: id,
+              referenceId: 'self'
+            }),
+          bot.id
+        )
+      )
     const source = context.messages.find((message) => message.role === 'user')!
     const requestId = randomUUID()
     await vaultCommand({

@@ -1,3 +1,4 @@
+import { translate } from '@/i18n/i18n'
 import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,7 +30,10 @@ export function VaultEntryEditor({
           return
         }
         const data = new FormData(form)
-        const password = form.elements.namedItem('secret') as HTMLInputElement
+        const password = form.elements.namedItem('secret')
+        if (!(password instanceof HTMLInputElement)) {
+          return
+        }
         const secret = password.value
         password.value = ''
         void onSave({
@@ -43,9 +47,13 @@ export function VaultEntryEditor({
         })
       }}
     >
-      <h3 className="text-sm font-medium">{entry ? 'Edit credential' : 'New credential'}</h3>
+      <h3 className="text-sm font-medium">
+        {entry
+          ? translate('shamu.vault.edit', 'Edit credential')
+          : translate('shamu.vault.new', 'New credential')}
+      </h3>
       <div className="space-y-2">
-        <Label htmlFor={`${id}-name`}>Name</Label>
+        <Label htmlFor={`${id}-name`}>{translate('shamu.vault.name', 'Name')}</Label>
         <Input
           id={`${id}-name`}
           name="name"
@@ -57,7 +65,7 @@ export function VaultEntryEditor({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${id}-username`}>Username</Label>
+        <Label htmlFor={`${id}-username`}>{translate('shamu.vault.username', 'Username')}</Label>
         <Input
           id={`${id}-username`}
           name="username"
@@ -68,7 +76,7 @@ export function VaultEntryEditor({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${id}-website`}>Website</Label>
+        <Label htmlFor={`${id}-website`}>{translate('shamu.vault.website', 'Website')}</Label>
         <Input
           id={`${id}-website`}
           name="website"
@@ -76,12 +84,14 @@ export function VaultEntryEditor({
           defaultValue={entry?.website}
           maxLength={2048}
           disabled={busy}
-          placeholder="https://example.com"
+          placeholder={translate('shamu.vault.websitePlaceholder', 'https://example.com')}
         />
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${id}-secret`}>
-          {entry ? 'Replace password or token' : 'Password or token'}
+          {entry
+            ? translate('shamu.vault.replaceSecret', 'Replace password or token')
+            : translate('shamu.vault.secret', 'Password or token')}
         </Label>
         <div className="flex gap-2">
           <Input
@@ -99,10 +109,8 @@ export function VaultEntryEditor({
             variant="outline"
             disabled={busy}
             onClick={(event) => {
-              const field = event.currentTarget.form?.elements.namedItem(
-                'secret'
-              ) as HTMLInputElement | null
-              if (field) {
+              const field = event.currentTarget.form?.elements.namedItem('secret')
+              if (field instanceof HTMLInputElement) {
                 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'
                 field.value = Array.from(
                   crypto.getRandomValues(new Uint8Array(32)),
@@ -111,7 +119,7 @@ export function VaultEntryEditor({
               }
             }}
           >
-            Generate
+            {translate('shamu.vault.generate', 'Generate')}
           </Button>
         </div>
       </div>
@@ -123,14 +131,21 @@ export function VaultEntryEditor({
             onCheckedChange={(value) => setAllowAgent(value === true)}
             disabled={busy}
           />
-          <Label htmlFor={`${id}-agent`}>Allow this bot to request use</Label>
+          <Label htmlFor={`${id}-agent`}>
+            {translate('shamu.vault.allowAgent', 'Allow this bot to request use')}
+          </Label>
         </div>
         <p className="text-xs text-muted-foreground">
-          Each command needs your approval. The agent receives a reference and an exit code.
+          {translate(
+            'shamu.vault.agentHelp',
+            'Each command needs your approval. The agent receives a reference and an exit code.'
+          )}
         </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${id}-variable`}>Environment variable</Label>
+        <Label htmlFor={`${id}-variable`}>
+          {translate('shamu.vault.environmentVariable', 'Environment variable')}
+        </Label>
         <Input
           id={`${id}-variable`}
           name="environmentVariable"
@@ -140,15 +155,17 @@ export function VaultEntryEditor({
           maxLength={64}
           disabled={busy}
           spellCheck={false}
-          className="font-mono"
+          variant="code"
         />
       </div>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>
-          Cancel
+          {translate('shamu.vault.cancel', 'Cancel')}
         </Button>
         <Button type="submit" disabled={busy}>
-          {busy ? 'Saving…' : 'Save credential'}
+          {busy
+            ? translate('shamu.vault.saving', 'Saving…')
+            : translate('shamu.vault.save', 'Save credential')}
         </Button>
       </div>
     </form>

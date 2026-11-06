@@ -53,7 +53,11 @@ export function BotConversationHeader({
           size="sm"
           disabled={!ready}
           onClick={onVault}
-          title={vaultState.unlocked ? 'Vault unlocked' : 'Vault locked'}
+          title={
+            vaultState.unlocked
+              ? translate('shamu.vault.unlockedTitle', 'Vault unlocked')
+              : translate('shamu.vault.lockedTitle', 'Vault locked')
+          }
         >
           {vaultState.unlocked ? <LockOpen /> : <LockKeyhole />}
           {translate('shamu.vault.button', 'Vault')}

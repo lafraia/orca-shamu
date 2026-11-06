@@ -39,7 +39,7 @@ test('hot reloads Bots without restarting its window, losing its draft or duplic
     return { pairingUrl: offer.pairingUrl }
   })
 
-  const scratch = mkdtempSync(resolve('src/renderer/src/shamu-hmr-fixture-'))
+  const scratch = mkdtempSync(resolve('src', 'renderer', 'src', 'shamu-hmr-fixture-'))
   const probeFile = join(scratch, 'probe.ts')
   const probeCache = resolve('.cache/vite', basename(scratch))
   const sidebar = resolve('src/renderer/src/components/project-channels/ProjectChannelSidebar.tsx')
@@ -133,8 +133,8 @@ test('hot reloads Bots without restarting its window, losing its draft or duplic
     live.server.watcher.add(probeFile)
     await expect
       .poll(() =>
-        Object.values(live.server.watcher.getWatched()).some((files) =>
-          files.includes(basename(probeFile))
+        Object.values(live.server.watcher.getWatched()).some(
+          (files) => Array.isArray(files) && files.includes(basename(probeFile))
         )
       )
       .toBe(true)
