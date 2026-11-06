@@ -4,10 +4,12 @@ Shamu changes are tracked separately from [upstream Orca releases](https://githu
 
 ## Unreleased
 
-Upstream: `1.4.250`
-Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
+Upstream: `1.4.251`
+Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Upstream integrations
+
+- Merged upstream [v1.4.251](https://github.com/stablyai/orca/releases/tag/v1.4.251) at `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7` in merge `4d41b43d6ee`, adapting Shamu to the reorganized scripts and native chat link context while preserving bot consultations and navigation. See [the upstream comparison](https://github.com/stablyai/orca/compare/v1.4.250...v1.4.251). The new base starts at Shamu revision 1 and remains Unreleased.
 
 - Merged upstream [v1.4.250](https://github.com/stablyai/orca/releases/tag/v1.4.250) at `b98a0fba16561fadc06868fe3e8710781d705efd` in local merge `29e4a5b9c34`, adapting Shamu imports to the reorganized modules. See [the upstream comparison](https://github.com/stablyai/orca/compare/v1.4.248...v1.4.250). The new base starts at Shamu revision 1 and remains Unreleased.
 
