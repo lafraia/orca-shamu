@@ -11,6 +11,8 @@ If selection fans out excessively, use scoped checks and report limits. Use the 
 
 ## Orca Shamu Preview
 
+Shamu is a side project. Its PRs are exempt from company tracking repositories and Projects.
+
 All commit subjects and bodies for Shamu work must be written in English. Keep upstream history intact. The canonical fork is `lafraia/orca-shamu`, with SSH `origin` pointing to `git@github.com:lafraia/orca-shamu.git` and SSH `upstream` to `git@github.com:stablyai/orca.git`. Preserve GitHub's fork relationship. The protected `main` accepts changes through PRs, including administrator changes; never bypass protection or force push.
 
 Accumulate changes from multiple PRs under **Unreleased** in `SHAMU_CHANGELOG.md`. Do not bump the Shamu revision, create a release tag, or create/publish a GitHub release for a feature, fix, PR merge, local build or upstream import. Only close a distribution release after Daniel explicitly asks to close a version. Read `SHAMU_RELEASES.md` then. Local preview tags 1 through 11 are historical development checkpoints, not published distributions. Keep `package.json.version` equal to the merged upstream release and record its exact tag/commit separately from the Shamu revision. Upstream merges get their own changelog entry and review of `UPSTREAM_PATCHES.md`.
