@@ -6,6 +6,8 @@ On `v1.4.251`, PR validation omits the dangling job-timeout check: the release w
 
 Fork bootstrap adaptations keep the test LoC reporter restricted to default-branch scripts and report unavailable comparisons when the old fork base predates a benchmark. They do not run PR code with a write token or substitute current code for an absent benchmark baseline.
 
+The flaky-test gate uses the same 64 MiB Git output budget as the changed-code quality gate. Node's default buffer could not hold the first sync's file list. File selection and the ratchet's findings remain unchanged.
+
 The native chat autocomplete positioning workaround for [report #38234](https://github.com/stablyai/orca/issues/38234) was retired when importing `v1.4.250`. `NativeChatPickerListbox.tsx` now shares the upstream positioning implementation from [#38322](https://github.com/stablyai/orca/pull/38322) and the launch submenu support from [#38328](https://github.com/stablyai/orca/pull/38328). The module extraction and Shamu's foreground/background menu layers remain fork features.
 
 The autocomplete unit tests and hidden `shamu-bot-mentions.spec.ts` and `shamu-resource-mentions.spec.ts` journeys passed after the replacement, covering movement, resize, appearance, typed selection and focus changes between bot, workspace and floating chats.
