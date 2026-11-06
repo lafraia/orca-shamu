@@ -4,8 +4,27 @@ import { resolveChatAutomationRun } from '../automations/automation-chat-run-obs
 import { readBotJournal, type BotPrimary } from './bot-journal-reader'
 
 export async function readBotCliResult(primary: BotPrimary, receipt: BotCliReceipt) {
+  return readBotPromptResult(primary, {
+    ...receipt,
+    requestId: receipt.request.requestId
+  })
+}
+
+export async function readBotPromptResult(
+  primary: BotPrimary,
+  receipt: {
+    requestId: string
+    botId: string
+    botName: string
+    sessionId: string
+    operationId: string
+    messageId?: string
+    state: string
+    error?: string
+  }
+) {
   const base = {
-    requestId: receipt.request.requestId,
+    requestId: receipt.requestId,
     botId: receipt.botId,
     name: receipt.botName,
     sessionId: receipt.sessionId,
@@ -15,7 +34,7 @@ export async function readBotCliResult(primary: BotPrimary, receipt: BotCliRecei
     error: receipt.error,
     response: null
   }
-  if (receipt.state === 'prepared' || receipt.state === 'refused') {
+  if (['prepared', 'ready', 'refused', 'self'].includes(receipt.state)) {
     return base
   }
   let page = await readBotJournal(primary, receipt.sessionId)

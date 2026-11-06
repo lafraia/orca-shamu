@@ -6,7 +6,8 @@ import { translate } from '@/i18n/i18n'
 import type { BotMentionRequest } from '../../../../shared/bot-mentions'
 import {
   openProjectChannel,
-  reloadProjectChannels
+  reloadProjectChannels,
+  useProjectChannels
 } from '../project-channels/project-channel-store'
 import { selectedNativeChatBots } from './native-chat-bot-mentions'
 import type { NativeChatStructuredComposerTransport } from './native-chat-composer-types'
@@ -16,6 +17,20 @@ export function prepareNativeChatBotNotification(
   text: string,
   document?: JSONContent
 ): (() => Promise<void>) | null {
+  const sourceBot = useProjectChannels
+    .getState()
+    .snapshot.channels.find((bot) =>
+      bot.members.some(
+        (member) =>
+          member.id === bot.home?.memberId &&
+          member.sessionId === transport.sessionId &&
+          member.target.kind === 'environment' &&
+          member.target.environmentId === transport.runtimeEnvironmentId
+      )
+    )
+  if (sourceBot) {
+    return null
+  }
   const bots = selectedNativeChatBots(text, document)
   if (bots.length === 0) {
     return null

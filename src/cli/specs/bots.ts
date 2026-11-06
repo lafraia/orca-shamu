@@ -5,6 +5,8 @@ export const BOT_COMMAND_SPECS: CommandSpec[] = [
   'list',
   'send',
   'result',
+  'ask',
+  'ask-result',
   'create',
   'organize',
   'mention',
@@ -33,6 +35,7 @@ export const BOT_COMMAND_SPECS: CommandSpec[] = [
   ],
   notes: [
     'Runs only against the selected local Shamu profile. Never copies pairing credentials.',
+    'ask lets an authorized bot formulate its own peer question; ask-result reads only that consultation reply, optionally waiting up to 30 seconds without sending another prompt.',
     'send accepts external prompts in the bot permanent chat; result reads only that request response. Keep the same UUID when retrying. Sender labels are display metadata, not verified identities.',
     'Use BOT_TOOLS.md in the bot folder for the command schemas. Bot management mutations require actorId and the user sourceItemId; external send requests use their own stable UUID.',
     'Reuse creation and run request identifiers after an interrupted call. Native run IDs contain 13 epoch millisecond digits, a hyphen, and 32 lowercase UUID hex digits.'

@@ -196,7 +196,20 @@ export function registerProjectChannelsHandlers(
     if (!mentions) {
       throw new Error('Bot mentions are available in Orca Shamu.')
     }
-    return mentions.deliver(botMentionRequestSchema.parse(input))
+    const request = botMentionRequestSchema.parse(input)
+    const sourceBot = (await channels.read()).channels.some((bot) =>
+      bot.members.some(
+        (member) =>
+          member.id === bot.home?.memberId &&
+          member.sessionId === request.source.sessionId &&
+          member.target.kind === 'environment' &&
+          member.target.environmentId === request.source.environmentId
+      )
+    )
+    if (sourceBot) {
+      throw new Error('The source bot must formulate its own consultation with bots ask.')
+    }
+    return mentions.deliver(request)
   })
   ipcMain.handle('projectChannels:read', (event) => {
     trusted(event)

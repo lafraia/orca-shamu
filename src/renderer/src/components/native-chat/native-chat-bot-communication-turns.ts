@@ -20,11 +20,13 @@ function notificationReference(message: NativeChatMessage): string | null {
     .map((block) => block.text)
     .join('\n')
   const visible = readBotTurnPrompt(text)?.message ?? text
-  const reference = visible.startsWith('The user mentioned you (@')
-    ? (visible.match(
-        /\n\nNotification reference: ([0-9a-f-]{36})\. Use the Shamu bot context command/
-      )?.[1] ?? null)
-    : null
+  const reference =
+    visible.startsWith('The user mentioned you (@') ||
+    visible.startsWith('Bot-to-bot consultation: ')
+      ? (visible.match(
+          /\n\nNotification reference: ([0-9a-f-]{36})\. Use the Shamu bot context command/
+        )?.[1] ?? null)
+      : null
   references.set(message, reference)
   return reference
 }

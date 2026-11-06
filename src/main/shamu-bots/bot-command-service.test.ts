@@ -12,7 +12,7 @@ describe('bot commands and creation provenance', () => {
     commands = new BotCommandService(
       fixture.channels,
       fixture.bots,
-      { deliver: vi.fn(), context: vi.fn() },
+      { deliver: vi.fn(), context: vi.fn(), result: vi.fn() },
       fixture.service(),
       fixture.primary,
       vi.fn()

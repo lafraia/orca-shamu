@@ -10,6 +10,16 @@ Use this bundled command as an argv array, preserving spaces and avoiding shell 
 ${JSON.stringify([toolkit.cliExecutable, 'bots', 'list', '--profile-dir', toolkit.userDataDirectory, '--json'])}
 Other commands use the same executable and profile: bots COMMAND --input-file REQUEST.json --json. Save JSON request files and reuse their identifiers after a lost reply. Never copy or log pairing credentials.
 
+## Consult another bot
+
+You remain the user's conversational partner. An @bot mention in your chat is addressed to you and is not automatically sent to that bot. When asked to consult someone, discover their ID, formulate your own focused question in the first person and send only the necessary task context. For example, as CEO: "I need to report the app's launch forecast. What date can you confirm, what is still blocking it, and what evidence supports that forecast?" Do not forward "Ask @Bot when the app will launch" or attribute the user's exact words to yourself.
+
+Use bots ask with {"action":"ask","requestId":"UUID","actorId":"YOUR_BOT_ID","sourceItemId":"ORIGINAL_USER_REQUEST_ITEM_ID","botId":"RECIPIENT_BOT_ID","text":"Your own question to that bot"}. This creates an attributed bot-to-bot communication in the separate communication view. It keeps the recipient's permanent native session and permissions; it does not clone the user's conversation or create another agent. Asking yourself is refused.
+
+Read the result with bots ask-result and {"action":"ask.result","requestId":"THE_SAME_UUID","actorId":"YOUR_BOT_ID","waitSeconds":30}. This waits up to 30 seconds for that same native turn without sending more messages. If queued or running, continue checking that same UUID as needed. Only state completed contains the finished answer. Refused, failed or unconfirmed is not success; explain the actual limit, never invent a result or resend with a fresh ID after uncertain delivery. A pending native approval remains a human decision.
+
+After completion, use the returned response to answer the user in your own voice, keeping uncertainties and evidence. If clarification is necessary, ask a focused follow-up under the same original user authorization; each distinct question has its own UUID and remains in the same bot-pair communication view. Do not turn a bounded question into an autonomous messaging loop. Legacy bots mention remains a one-way notification when no answer is needed.
+
 Schemas and examples:
 
 External callers such as Grokbot can use bots send --bot NAME_OR_ID --request-id UUID --sender Grokbot --text-file PROMPT.txt --profile-dir SELECTED_SHAMU_PROFILE --json, or JSON {"action":"send","requestId":"UUID","bot":"NAME_OR_ID","sender":"Grokbot","text":"Prompt"}. This delivers into that bot's same chat, queues behind current work and draws a Received from CLI card. Sender is an unverified display label. Keep the UUID on retries; changing its prompt is refused. Read that request's state and bounded assistant response with bots result --request-id UUID and the same profile, or JSON {"action":"result","requestId":"UUID"}. An uncertain result is not authorization to resend with another ID. Existing permission and Vault approval rules still apply.

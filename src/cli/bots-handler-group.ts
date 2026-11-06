@@ -5,6 +5,8 @@ export const BOT_HANDLER_GROUP: HandlerGroup = {
     'bots list',
     'bots send',
     'bots result',
+    'bots ask',
+    'bots ask-result',
     'bots create',
     'bots organize',
     'bots mention',

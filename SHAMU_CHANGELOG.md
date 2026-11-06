@@ -16,6 +16,7 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Keep bot-chat mentions with the coordinator, add attributed first-person peer consultations through `bots ask` and `bots ask-result`, and read the requested native turn's result without forwarding the user's message or copying source history into the peer prompt.
 - Place unread dots on the lower-right corner of bot avatars, including pinned bots, and define their blue theme color. Remove idle/completed status dots so only new unread content lights the dot. Keep working, waiting and outcome glyphs distinct.
 - Accept external prompts through `bots send` and read their own replies through `bots result`, with stable request IDs, explicit profile selection, native queueing and persistent Received from CLI cards that retain the original prompt.
 - Replace the robot icon and tinted tile with a Bloub-inspired colored SVG avatar, shape and expression settings, motion tied to live bot activity, and circular photo uploads. Ship the adapted geometry's MIT attribution with the app.

@@ -168,6 +168,8 @@ See `UPSTREAM_PATCHES.md` for upstream fix reviews, retired workarounds and regr
 
 ## External CLI prompts
 
+Bot-to-bot questions use the coordinator's own voice and the separate `bots ask` / `bots ask-result` workflow. Selecting another bot in a bot chat no longer forwards the user's message automatically. See [Bot consultations](SHAMU_BOT_CONSULTATIONS.md) for the researched pattern, commands, attribution and delivery boundaries.
+
 Grokbot and other local integrations can address a bot's permanent native chat with the CLI bundled in the updated Shamu build. Select Shamu's local user-data directory explicitly; its authenticated connection forwards the prompt to the primary Orca. Use a unique name or the stable bot ID returned by `bots list`.
 
 ```bash

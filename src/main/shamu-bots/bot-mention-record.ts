@@ -14,6 +14,7 @@ export const botMentionReceiptSchema = z.object({
   state: z.enum(['ready', 'issued', 'recorded', 'refused', 'unconfirmed', 'self']),
   operationId: z.string().regex(/^\d{13}-[0-9a-f]{32}$/),
   sessionId: z.string(),
+  messageId: z.string().optional(),
   message: z.string().optional()
 })
 

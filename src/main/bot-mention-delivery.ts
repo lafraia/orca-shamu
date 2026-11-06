@@ -23,6 +23,7 @@ import {
 } from './shamu-bots/bot-mention-record'
 import { dispatchBotPrompt } from './shamu-bots/bot-prompt-dispatch'
 import type { AgentJournalCursor } from '../shared/agent-session/journal/agent-session-journal-identity'
+import { readBotPromptResult } from './shamu-bots/bot-cli-result'
 
 export class BotMentionDelivery {
   constructor(
@@ -48,6 +49,12 @@ export class BotMentionDelivery {
         saved = savedSchema.parse(JSON.parse(await readFile(file, 'utf8')))
         if (saved.fingerprint !== fingerprint) {
           throw new Error('This mention identifier was already used for another message.')
+        }
+        if (
+          saved.origin?.actorId !== origin?.actorId ||
+          saved.origin?.sourceItemId !== origin?.sourceItemId
+        ) {
+          throw new Error('This communication belongs to another originating request.')
         }
       } catch (error) {
         if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
@@ -109,9 +116,8 @@ export class BotMentionDelivery {
         }
         let issued = false
         try {
-          const current = (await this.channels.read()).channels.find(
-            (bot) => bot.id === receipt.botId
-          )
+          const channels = (await this.channels.read()).channels
+          const current = channels.find((bot) => bot.id === receipt.botId)
           if (
             !current?.home ||
             !current.members.some(
@@ -124,7 +130,8 @@ export class BotMentionDelivery {
           const prompt = botMentionPrompt(
             request,
             { id: receipt.botId, name: receipt.name },
-            saved.context
+            saved.context,
+            saved.origin ? channels.find((bot) => bot.id === saved.origin?.actorId) : undefined
           )
           const prepared = this.memory
             ? await this.memory.prepare(receipt.sessionId, environmentId, prompt)
@@ -146,6 +153,9 @@ export class BotMentionDelivery {
               : evidence.kind === 'not-recorded'
                 ? 'refused'
                 : 'unconfirmed'
+          if (result.ok) {
+            receipt.messageId = result.value.clientMessageId
+          }
           if (receipt.state === 'refused' && !result.ok) {
             receipt.message = result.refusal.message
           }
@@ -168,6 +178,42 @@ export class BotMentionDelivery {
   private async persist(file: string, saved: BotMentionRecord): Promise<void> {
     await writeSidecarSnapshot(file, saved, 0o600)
     this.changed?.()
+  }
+
+  async result(actorId: string, referenceId: string) {
+    const saved = savedSchema.parse(
+      JSON.parse(
+        await readFile(
+          join(this.profileDirectory, 'bot-mentions', `${z.uuid().parse(referenceId)}.json`),
+          'utf8'
+        )
+      )
+    )
+    const { environmentId } = await this.primary.read()
+    const actor = (await this.channels.read()).channels.find((bot) => bot.id === actorId)
+    const owner = actor?.members.find((member) => member.id === actor.home?.memberId)
+    if (
+      saved.origin?.actorId !== actorId ||
+      !owner ||
+      owner.sessionId !== saved.request.source.sessionId ||
+      environmentId !== saved.request.source.environmentId ||
+      owner.target.kind !== 'environment' ||
+      owner.target.environmentId !== environmentId ||
+      saved.receipts.length !== 1
+    ) {
+      throw new Error('This consultation does not belong to this bot and primary Orca.')
+    }
+    const receipt = saved.receipts[0]
+    return readBotPromptResult(this.primary, {
+      requestId: referenceId,
+      botId: receipt.botId,
+      botName: receipt.name,
+      sessionId: receipt.sessionId,
+      operationId: receipt.operationId,
+      messageId: receipt.messageId,
+      state: receipt.state,
+      error: receipt.message
+    })
   }
 
   async context(botId: string, referenceId: string, cursor?: AgentJournalCursor) {

@@ -8,6 +8,7 @@ import { RuntimeClient } from '../runtime-client'
 
 function commandHandler(action: string): CommandHandler {
   return async ({ flags, json }) => {
+    const commandAction = action === 'ask-result' ? 'ask.result' : action
     const profile = resolve(getRequiredStringFlag(flags, 'profile-dir'))
     const file = getOptionalStringFlag(flags, 'input-file')
     const inline = getOptionalStringFlag(flags, 'input')
@@ -55,7 +56,7 @@ function commandHandler(action: string): CommandHandler {
         ? !command.action.startsWith('routine.')
         : action === 'vault'
           ? !command.action.startsWith('vault.')
-          : command.action !== action
+          : command.action !== commandAction
     ) {
       throw new Error('The request action must match the bots command.')
     }
@@ -65,7 +66,17 @@ function commandHandler(action: string): CommandHandler {
   }
 }
 export const BOT_HANDLERS: Record<string, CommandHandler> = Object.fromEntries(
-  ['list', 'send', 'result', 'create', 'organize', 'mention', 'context', 'routines', 'vault'].map(
-    (action) => [`bots ${action}`, commandHandler(action)]
-  )
+  [
+    'list',
+    'send',
+    'result',
+    'ask',
+    'ask-result',
+    'create',
+    'organize',
+    'mention',
+    'context',
+    'routines',
+    'vault'
+  ].map((action) => [`bots ${action}`, commandHandler(action)])
 )
