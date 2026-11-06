@@ -54,7 +54,6 @@ export function prepareNativeChatBotNotification(
     }
   }
   const notify = async (): Promise<void> => {
-    const notification = toast.loading(translate('shamu.mentions.sending', 'Notifying bots…'))
     try {
       const api = window.api.projectChannels
       if (!api || !request.source.environmentId) {
@@ -85,7 +84,7 @@ export function prepareNativeChatBotNotification(
             names: failed.map((receipt) => receipt.name).join(', ')
           }),
           {
-            id: notification,
+            id: request.id,
             description: failed
               .map((receipt) =>
                 receipt.state === 'unconfirmed'
@@ -103,16 +102,11 @@ export function prepareNativeChatBotNotification(
         )
       } else if (delivered.length === 0) {
         toast.info(translate('shamu.mentions.self', 'This is already the bot’s own chat.'), {
-          id: notification,
+          id: request.id,
           action
         })
       } else {
-        toast.success(
-          translate('shamu.mentions.delivered', 'Mention saved in the bot chat: {{names}}', {
-            names: delivered.map((receipt) => receipt.name).join(', ')
-          }),
-          { id: notification, action }
-        )
+        toast.dismiss(request.id)
       }
     } catch (error) {
       toast.error(
@@ -121,7 +115,7 @@ export function prepareNativeChatBotNotification(
           'Your message was sent, but the bots could not be notified.'
         ),
         {
-          id: notification,
+          id: request.id,
           description: error instanceof Error ? error.message : undefined,
           action: {
             label: translate('shamu.mentions.retry', 'Retry notification'),

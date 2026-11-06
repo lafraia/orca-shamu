@@ -16,6 +16,7 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Keep successful bot mentions quiet by removing their sending and confirmation toasts, while retaining delivery warnings and retryable errors.
 - Return the responding bot's canonical name and chat reference with consultation results, and bundle an on-demand reply skill for concise source attribution, evidence and qualified estimates across configured providers.
 - Keep bot-chat mentions with the coordinator, add attributed first-person peer consultations through `bots ask` and `bots ask-result`, and read the requested native turn's result without forwarding the user's message or copying source history into the peer prompt.
 - Place unread dots on the lower-right corner of bot avatars, including pinned bots, and define their blue theme color. Remove idle/completed status dots so only new unread content lights the dot. Keep working, waiting and outcome glyphs distinct.
