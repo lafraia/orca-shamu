@@ -5,6 +5,7 @@ import { JournalCursor } from './rpc-contract/structured-agent-session-params'
 import { botSectionNameSchema } from './bot-sections'
 import { vaultAgentCommandSchema } from './shamu-vault'
 import { botRosterMoveSchema } from './bot-roster-move'
+import { botCliResultSchema, botCliSendSchema } from './bot-cli-prompts'
 
 const id = z.string().min(1).max(1024)
 export const botRunRequestIdSchema = z.string().regex(/^\d{13}-[0-9a-f]{32}$/)
@@ -21,6 +22,8 @@ export const botCreateCommandSchema = z
   .strict()
 export const botCommandSchema = z.discriminatedUnion('action', [
   vaultAgentCommandSchema,
+  botCliSendSchema,
+  botCliResultSchema,
   z.object({ action: z.literal('list') }).strict(),
   botCreateCommandSchema,
   z

@@ -1,6 +1,16 @@
 export async function readBotAvatar(file: File): Promise<string> {
+  const mime =
+    file.type ||
+    {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp',
+      gif: 'image/gif'
+    }[file.name.split('.').at(-1)?.toLowerCase() ?? '']
   if (
-    !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) ||
+    !mime ||
+    !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(mime) ||
     file.size > 5 * 1024 * 1024
   ) {
     throw new Error('Choose a PNG, JPEG, WebP or GIF image smaller than 5 MB.')

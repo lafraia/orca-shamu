@@ -2,6 +2,7 @@ import { useContext, useMemo } from 'react'
 import { BotCommunicationContext } from '../project-channels/bot-communication-context'
 import { useProjectChannels } from '../project-channels/project-channel-store'
 import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
+import { botCliPromptText } from '../../../../shared/bot-cli-prompts'
 import type { QueuedMessageCard } from '../../../../shared/agent-session/view/structured-agent-session-queued-cards'
 import { nativeBotCommunication } from './native-bot-communications'
 
@@ -19,7 +20,9 @@ export function useQueuedBotCommunication(card: QueuedMessageCard) {
     const mention = entries.find(
       (entry) =>
         entry.recipient.operationId === card.messageId &&
-        text.includes(`Notification reference: ${entry.referenceId}.`)
+        (entry.cli
+          ? text === botCliPromptText({ ...entry.cli, requestId: entry.referenceId })
+          : text.includes(`Notification reference: ${entry.referenceId}.`))
     )
     return (
       mention ??

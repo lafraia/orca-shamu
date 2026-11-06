@@ -54,7 +54,7 @@ function communicationSlot(
     turnDiff: undefined,
     subagentRoster: undefined,
     depth: 0,
-    estimatedHeight: 40
+    estimatedHeight: entry.cli ? 120 : 40
   }
 }
 
@@ -115,7 +115,7 @@ export function nativeChatBotCommunicationSlots(
   for (const slot of slots) {
     const incoming = slot.kind === 'message' ? prompts.get(slot.message.id) : undefined
     const turn = slot.turnKey ? turns.get(slot.turnKey) : undefined
-    if (incoming || (turn && !mixed.has(slot.turnKey!))) {
+    if (incoming || (turn && !turn.cli && !mixed.has(slot.turnKey!))) {
       append(incoming ?? turn!, 'incoming', slot.turnKey)
       if (slot.kind === 'message' && actionablePromptIds?.includes(slot.message.id)) {
         output.push(slot)
@@ -160,7 +160,10 @@ export function nativeChatBotCommunicationSlots(
   }
   rows.messages.forEach((message, index) => {
     const key = rows.turnKeys[index]
-    if (prompts.has(message.id) || (key && turns.has(key) && !mixed.has(key))) {
+    if (
+      prompts.has(message.id) ||
+      (key && turns.has(key) && !turns.get(key)?.cli && !mixed.has(key))
+    ) {
       hiddenMessageIds.add(message.id)
       if (message.role === 'user') {
         hiddenPromptIds.add(message.id)
@@ -168,7 +171,10 @@ export function nativeChatBotCommunicationSlots(
     }
   })
   const hiddenLiveTurn =
-    rows.liveTurnKey !== undefined && turns.has(rows.liveTurnKey) && !mixed.has(rows.liveTurnKey)
+    rows.liveTurnKey !== undefined &&
+    turns.has(rows.liveTurnKey) &&
+    !turns.get(rows.liveTurnKey)?.cli &&
+    !mixed.has(rows.liveTurnKey)
   return { slots: output, headers, hiddenLiveTurn, hiddenMessageIds, hiddenPromptIds }
 }
 

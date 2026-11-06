@@ -1,5 +1,6 @@
 import type { BotCommunication } from '../../../../shared/bot-communications'
 import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
+import { botCliPromptText } from '../../../../shared/bot-cli-prompts'
 import { agentJournalSubmissionKey } from '../../../../shared/agent-session/journal/agent-session-journal-item-key'
 import type {
   AgentJournalRenderItem,
@@ -70,11 +71,20 @@ export function nativeChatBotCommunicationTurns(
       continue
     }
     const entry = aliases.get(message.id)
-    const matches = entry?.native
-      ? message.from?.senders.length === 1 &&
-        message.from.senders[0].party.orcaSessionId === entry.source.sessionId &&
-        !message.from.senders[0].party.address.startsWith('dispatch:')
-      : entry && notificationReference(message) === entry.referenceId
+    const text = entry?.cli
+      ? message.blocks
+          .filter((block) => block.type === 'text')
+          .map((block) => block.text)
+          .join('\n')
+      : ''
+    const matches = entry?.cli
+      ? (readBotTurnPrompt(text)?.message ?? text) ===
+        botCliPromptText({ ...entry.cli, requestId: entry.referenceId })
+      : entry?.native
+        ? message.from?.senders.length === 1 &&
+          message.from.senders[0].party.orcaSessionId === entry.source.sessionId &&
+          !message.from.senders[0].party.address.startsWith('dispatch:')
+        : entry && notificationReference(message) === entry.referenceId
     if (!entry || !matches) {
       continue
     }

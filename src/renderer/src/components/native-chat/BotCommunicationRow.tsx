@@ -7,6 +7,7 @@ import { useProjectChannels } from '../project-channels/project-channel-store'
 import { BotCommunicationContext } from '../project-channels/bot-communication-context'
 import type { BotCommunicationRow as Row } from './native-chat-bot-communication-slots'
 import { StatusDot } from './NativeChatSubagentRun'
+import { BotCliPromptCard } from './BotCliPromptCard'
 
 export const BotCommunicationRowsContext = createContext<ReadonlyMap<string, Row>>(new Map())
 
@@ -70,6 +71,16 @@ export function BotCommunicationRow({ row }: { row: Row }): React.JSX.Element {
     queued: translate('shamu.communication.queued', 'Queued'),
     refused: translate('shamu.communication.refused', 'Not delivered'),
     unconfirmed: translate('shamu.communication.unconfirmed', 'Check delivery')
+  }
+  if (row.entry.cli) {
+    return (
+      <BotCliPromptCard
+        requestId={row.entry.referenceId}
+        text={row.entry.cli.text}
+        sender={row.entry.cli.sender}
+        status={states[row.state]}
+      />
+    )
   }
   return (
     <button

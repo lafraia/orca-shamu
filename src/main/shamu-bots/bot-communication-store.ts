@@ -9,6 +9,7 @@ import type {
 import type { ProjectChannelsStore } from '../project-channels-store'
 import type { BotPrimary } from './bot-journal-reader'
 import { botMentionRecordSchema, type BotMentionRecord } from './bot-mention-record'
+import type { BotCliService } from './bot-cli-service'
 
 type CachedRecord = { stamp: string; entries: BotCommunication[] }
 
@@ -18,7 +19,8 @@ export class BotCommunicationStore {
   constructor(
     profileDirectory: string,
     private readonly channels: Pick<ProjectChannelsStore, 'read'>,
-    private readonly primary: Pick<BotPrimary, 'read'>
+    private readonly primary: Pick<BotPrimary, 'read'>,
+    private readonly cli?: Pick<BotCliService, 'communications' | 'text'> | null
   ) {
     this.directory = join(profileDirectory, 'bot-mentions')
   }
@@ -40,9 +42,10 @@ export class BotCommunicationStore {
         .map((entry) => entry.name)
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-        return { entries: [], incomplete: false }
+        files = []
+      } else {
+        throw error
       }
-      throw error
     }
     const present = new Set(files)
     for (const file of this.cache.keys()) {
@@ -51,7 +54,9 @@ export class BotCommunicationStore {
       }
     }
     let incomplete = false
-    const entries: BotCommunication[] = []
+    const cli = await this.cli?.communications(sessionId)
+    const entries: BotCommunication[] = cli?.entries ?? []
+    incomplete ||= cli?.incomplete ?? false
     for (const file of files) {
       try {
         const path = join(this.directory, file)
@@ -104,6 +109,11 @@ export class BotCommunicationStore {
     const messages: BotCommunicationText[] = []
     for (const id of new Set(ids)) {
       const referenceId = z.uuid().parse(id)
+      const cli = await this.cli?.text(referenceId)
+      if (cli) {
+        messages.push(cli)
+        continue
+      }
       const saved = botMentionRecordSchema.parse(
         JSON.parse(await readFile(join(this.directory, `${referenceId}.json`), 'utf8'))
       )

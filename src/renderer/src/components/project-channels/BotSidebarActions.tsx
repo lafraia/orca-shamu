@@ -100,7 +100,7 @@ export function BotSidebarActions({
             />
           ) : null}
           <DropdownMenu>
-            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot:opacity-100 group-focus-within/bot:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
+            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot:opacity-100 group-has-[:focus-visible]/bot:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"

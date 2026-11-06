@@ -13,7 +13,8 @@ export type BotCommunication = {
   createdAt: number
   source: BotCommunicationParticipant & { itemId?: string }
   recipient: BotCommunicationParticipant & { operationId: string }
-  actor: 'user' | 'bot' | 'workspace' | 'unknown'
+  actor: 'user' | 'bot' | 'workspace' | 'cli' | 'unknown'
+  cli?: { text: string; sender: string }
   state: 'ready' | 'issued' | 'recorded' | 'refused' | 'unconfirmed'
   native?: { itemId: string; blocks: NativeChatBlock[] }
 }

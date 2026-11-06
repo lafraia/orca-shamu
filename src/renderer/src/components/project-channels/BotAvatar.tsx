@@ -1,15 +1,18 @@
 import { useState, type CSSProperties } from 'react'
-import { Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { defaultBotIdentity, type BotIdentity } from '../../../../shared/bot-identity'
+import { observeOffscreenAnimation } from '@/lib/offscreen-animation-pause'
+import { BotBlob } from './BotBlob'
 
 export function BotAvatar({
   id,
   identity,
+  activity,
   className
 }: {
   id: string
   identity?: BotIdentity
+  activity?: 'idle' | 'working' | 'waiting'
   className?: string
 }): React.JSX.Element {
   const appearance = identity ?? defaultBotIdentity(id)
@@ -20,10 +23,11 @@ export function BotAvatar({
   return (
     <span
       aria-hidden="true"
+      ref={observeOffscreenAnimation}
       style={style}
       data-animated={appearance.animated}
       className={cn(
-        'bot-avatar inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-xl',
+        'bot-avatar inline-flex size-8 shrink-0 items-center justify-center',
         className
       )}
     >
@@ -31,11 +35,11 @@ export function BotAvatar({
         <img
           src={appearance.image}
           alt=""
-          className="size-full object-cover"
+          className="size-full rounded-full object-cover"
           onError={() => setFailedImage(appearance.image!)}
         />
       ) : (
-        <Bot className="bot-avatar-face size-3/5" />
+        <BotBlob identity={appearance} activity={activity} />
       )}
     </span>
   )

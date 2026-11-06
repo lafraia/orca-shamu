@@ -16,6 +16,8 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Accept external prompts through `bots send` and read their own replies through `bots result`, with stable request IDs, explicit profile selection, native queueing and persistent Received from CLI cards that retain the original prompt.
+- Replace the robot icon and tinted tile with a Bloub-inspired colored SVG avatar, shape and expression settings, motion tied to live bot activity, and circular photo uploads. Ship the adapted geometry's MIT attribution with the app.
 - Keep bot and group action menus quiet until hover or keyboard focus, remove group counts, and persist drag or keyboard reordering of groups and bots. Reuse workspace activity and attention icons from each bot's live primary session, including when its chat is closed.
 - Unlock Vault through the OS keychain when the Shamu window opens and revoke keys and pending uses when it closes or hides, independently of the primary Orca. Keep legacy Vault enrollment behind one verified master-password unlock.
 - Add an encrypted Vault beside Memory with a master password, OS keychain protection, per-bot credentials, guarded clipboard access and one-command approvals that keep credential values out of agent responses. See `SHAMU_VAULT.md` for security boundaries and research.

@@ -4,6 +4,7 @@ import { botMentionRequestSchema } from '../../shared/bot-mentions'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { BotCommandService, installBotCommandService } from '../shamu-bots/bot-command-service'
 import { BotRoutineService } from '../shamu-bots/bot-routine-service'
+import { BotCliService } from '../shamu-bots/bot-cli-service'
 import { BotUnreadService } from '../shamu-bots/bot-unread-service'
 import { botReadMarkSchema } from '../../shared/bot-unread'
 import { getBundledLauncherPath } from '../cli/bundled-cli-launcher-path'
@@ -80,6 +81,12 @@ export function registerProjectChannelsHandlers(
     }
   }
   const changed = (): void => publish('changed')
+  const cli =
+    primary && bots && memory
+      ? new BotCliService(channels, bots, memory, primary, store.getProfileStorageDirectory(), () =>
+          publish('communicationsChanged')
+        )
+      : null
   const mentions =
     primary && bots
       ? new BotMentionDelivery(
@@ -106,7 +113,8 @@ export function registerProjectChannelsHandlers(
           ),
           primary,
           changed,
-          vault
+          vault,
+          cli
         )
       : null
   installBotCommandService(commands)
@@ -128,7 +136,7 @@ export function registerProjectChannelsHandlers(
   }
   const id = z.string().min(1).max(1024)
   const communications = primary
-    ? new BotCommunicationStore(store.getProfileStorageDirectory(), channels, primary)
+    ? new BotCommunicationStore(store.getProfileStorageDirectory(), channels, primary, cli)
     : null
   ipcMain.removeHandler('projectChannels:communications')
   ipcMain.removeHandler('projectChannels:communicationTexts')

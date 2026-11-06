@@ -8,6 +8,7 @@ import type { BotConversationService } from '../bot-conversation-service'
 import type { BotMentionDelivery } from '../bot-mention-delivery'
 import type { BotRoutineService } from './bot-routine-service'
 import type { VaultService } from '../shamu-vault/vault-service'
+import type { BotCliService } from './bot-cli-service'
 import {
   readBotReferenceContext,
   requireBotUserRequest,
@@ -22,10 +23,17 @@ export class BotCommandService {
     readonly routines: BotRoutineService,
     private readonly primary: BotPrimary,
     private readonly changed: () => void,
-    private readonly vault?: VaultService | null
+    private readonly vault?: VaultService | null,
+    private readonly cli?: BotCliService | null
   ) {}
   async invoke(input: unknown, caller: 'desktop' | 'agent' = 'desktop'): Promise<unknown> {
     const command = botCommandSchema.parse(input)
+    if (command.action === 'send' || command.action === 'result') {
+      if (!this.cli) {
+        throw new Error('CLI prompts are unavailable in this Orca profile.')
+      }
+      return command.action === 'send' ? this.cli.send(command) : this.cli.result(command.requestId)
+    }
     if (
       command.action === 'vault.list' ||
       command.action === 'vault.run' ||

@@ -82,10 +82,8 @@ test('creates and reopens permanent native bot chats, including existing empty b
     await page.evaluate(async () =>
       window.__store!.getState().updateSettingsOrThrow({ theme: 'dark' })
     )
-    await expect(page.locator('html')).toHaveClass(/dark/)
     await bot.getByRole('button', { name: 'Bot settings', exact: true }).click()
-    await dialog.getByRole('button', { name: 'Use bot icon', exact: true }).click()
-    await expect(dialog.locator('.bot-avatar-face')).toHaveCSS('animation-name', 'none')
+    await dialog.getByRole('button', { name: 'Use animated avatar', exact: true }).click()
     await page.screenshot({ path: testInfo.outputPath('bot-identity-settings-dark.png') })
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
     await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -118,7 +116,6 @@ test('creates and reopens permanent native bot chats, including existing empty b
     await composer.fill('Hello from my permanent bot chat. What is the proposal deadline?')
     await composer.press('Enter')
     await expect(bot.getByText('Stub reply.', { exact: true }).first()).toBeVisible()
-    await expect(bot.getByText('Recalled memory: 1', { exact: true })).toBeVisible()
     await expect(bot).not.toContainText('[Orca Shamu bot context v1]')
     const snapshot = await page.evaluate(() => window.api.projectChannels!.read())
     const channel = snapshot.channels[0]

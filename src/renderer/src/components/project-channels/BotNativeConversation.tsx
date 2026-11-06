@@ -80,6 +80,8 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
     channel.instructions,
     channel.identity?.color,
     channel.identity?.animated,
+    channel.identity?.shape,
+    channel.identity?.expression,
     channel.identity?.image,
     attempt
   ])

@@ -18,7 +18,37 @@ function commandHandler(action: string): CommandHandler {
       throw new Error('Bot requests must be smaller than 1 MB.')
     }
     const text = file ? await readFile(file, 'utf8') : inline
-    const payload: unknown = text ? JSON.parse(text) : action === 'list' ? { action: 'list' } : null
+    const prompt = getOptionalStringFlag(flags, 'text')
+    const promptFile = getOptionalStringFlag(flags, 'text-file')
+    const direct =
+      prompt !== undefined ||
+      promptFile !== undefined ||
+      flags.has('bot') ||
+      flags.has('request-id') ||
+      flags.has('sender')
+    if ((text && direct) || (prompt && promptFile)) {
+      throw new Error('Choose one request input or one prompt text source.')
+    }
+    if (promptFile && (await stat(promptFile)).size > 80_000) {
+      throw new Error('Prompt text files must be smaller than 80 KB.')
+    }
+    const payload: unknown = text
+      ? JSON.parse(text)
+      : action === 'list'
+        ? { action: 'list' }
+        : action === 'send'
+          ? {
+              action,
+              bot: getRequiredStringFlag(flags, 'bot'),
+              requestId: getRequiredStringFlag(flags, 'request-id'),
+              text: promptFile
+                ? await readFile(promptFile, 'utf8')
+                : getRequiredStringFlag(flags, 'text'),
+              sender: getOptionalStringFlag(flags, 'sender')
+            }
+          : action === 'result'
+            ? { action, requestId: getRequiredStringFlag(flags, 'request-id') }
+            : null
     const command: BotCommand = botCommandSchema.parse(payload)
     if (
       action === 'routines'
@@ -35,8 +65,7 @@ function commandHandler(action: string): CommandHandler {
   }
 }
 export const BOT_HANDLERS: Record<string, CommandHandler> = Object.fromEntries(
-  ['list', 'create', 'organize', 'mention', 'context', 'routines', 'vault'].map((action) => [
-    `bots ${action}`,
-    commandHandler(action)
-  ])
+  ['list', 'send', 'result', 'create', 'organize', 'mention', 'context', 'routines', 'vault'].map(
+    (action) => [`bots ${action}`, commandHandler(action)]
+  )
 )

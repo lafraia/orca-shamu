@@ -3804,34 +3804,100 @@ body:has([data-contextual-tour-target='tab-create-menu'][data-state='open'])
   --bot-identity-pink: var(--color-pink-300);
   --bot-identity-violet: var(--color-violet-300);
 }
+/* The silhouette carries identity color; the surrounding surface stays untouched. */
 .bot-avatar {
   color: var(--bot-identity-color);
-  background: color-mix(in srgb, var(--bot-identity-color) 14%, var(--background));
-  border: 1px solid color-mix(in srgb, var(--bot-identity-color) 20%, transparent);
+  --bot-animation-play-state: running;
 }
-@keyframes bot-avatar-greet {
+.bot-avatar[data-animation-offscreen] {
+  --bot-animation-play-state: paused;
+}
+.bot-blob-body {
+  d: var(--bot-blob-rest);
+  transition: d var(--duration-fast) var(--ease-smooth-out);
+}
+.bot-blob-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.bot-blob-gaze {
+  transform-box: view-box;
+  transform-origin: center;
+}
+:root {
+  --duration-bot-blink: calc(var(--duration-very-slow) * 8);
+  --duration-bot-work: calc(var(--duration-slow) * 4);
+  --duration-bot-wait: calc(var(--duration-very-slow) * 5);
+}
+@keyframes bot-blob-blink {
+  0%,
+  42%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes bot-blob-morph {
+  0%,
+  100% {
+    d: var(--bot-blob-rest);
+  }
+  35% {
+    d: var(--bot-blob-wave);
+  }
+  70% {
+    d: var(--bot-blob-back);
+  }
+}
+@keyframes bot-blob-look {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  40% {
+    transform: translate(-3px, 2px);
+  }
+  70% {
+    transform: translate(2px, -1px);
+  }
+}
+@keyframes bot-blob-listen {
   0%,
   100% {
     transform: rotate(0deg);
   }
-  30% {
-    transform: rotate(-10deg);
-  }
+  45%,
   65% {
-    transform: rotate(7deg);
+    transform: rotate(-9deg);
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .bot-avatar[data-animated='true'] .bot-avatar-face {
-    animation: bot-avatar-greet var(--duration-very-slow) var(--ease-smooth-out) 1;
+  .bot-avatar[data-animated='true'] .bot-blob-eye {
+    animation: bot-blob-blink var(--duration-bot-blink) var(--ease-in-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
   }
-  .bot-avatar[data-animated='true']:hover .bot-avatar-face {
-    animation: bot-avatar-greet var(--duration-very-slow) var(--ease-smooth-out) infinite;
+  .bot-avatar[data-animated='true'] .bot-blob[data-activity='working'] .bot-blob-body,
+  .bot-avatar[data-animated='true']:hover .bot-blob-body {
+    animation: bot-blob-morph var(--duration-bot-work) var(--ease-in-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
+  }
+  .bot-avatar[data-animated='true'] .bot-blob[data-activity='working'] .bot-blob-gaze {
+    animation: bot-blob-look var(--duration-bot-work) var(--ease-in-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
+  }
+  .bot-avatar[data-animated='true'] .bot-blob[data-activity='waiting'] .bot-blob-gaze {
+    animation: bot-blob-listen var(--duration-bot-wait) var(--ease-smooth-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bot-avatar .bot-avatar-face {
-    animation: none !important;
-    transition: none !important;
+  .bot-avatar .bot-blob-body,
+  .bot-avatar .bot-blob-gaze,
+  .bot-avatar .bot-blob-eye {
+    animation: none;
+    transition: none;
   }
 }

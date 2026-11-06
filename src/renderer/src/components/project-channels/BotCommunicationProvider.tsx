@@ -8,6 +8,7 @@ import type { RuntimeClientTarget } from '../../../../shared/runtime-client-targ
 import { useShamuClient } from '../shamu/shamu-client-state'
 import { BotCommunicationContext } from './bot-communication-context'
 import { BotCommunicationThread } from '../native-chat/BotCommunicationThread'
+import { openProjectChannel } from './project-channel-store'
 
 export function BotCommunicationProvider({
   sessionId,
@@ -33,6 +34,13 @@ export function BotCommunicationProvider({
   const [selected, setSelected] = useState<BotCommunication | null>(null)
   const [attempt, setAttempt] = useState(0)
   const close = useCallback(() => setSelected(null), [])
+  const open = useCallback((entry: BotCommunication) => {
+    if (entry.cli && entry.recipient.botId) {
+      openProjectChannel(entry.recipient.botId)
+      return
+    }
+    setSelected(entry)
+  }, [])
   const retry = useCallback(() => setAttempt((value) => value + 1), [])
   useEffect(() => {
     const api = window.api?.projectChannels?.communications
@@ -81,11 +89,11 @@ export function BotCommunicationProvider({
       loaded,
       error,
       selectedPair: selected ? botCommunicationPairKey(selected) : null,
-      open: setSelected,
+      open,
       close,
       retry
     }),
-    [snapshot, sessionId, target, loaded, error, selected, close, retry]
+    [snapshot, sessionId, target, loaded, error, selected, open, close, retry]
   )
   if (!enabled) {
     return <>{children}</>

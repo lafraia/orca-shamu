@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { ProjectChannel } from '../../../../shared/project-channels'
-import { BotAvatar } from './BotAvatar'
+import { BotLiveAvatar } from './BotLiveAvatar'
 import { BotUnreadDot } from './BotUnreadDot'
 import { botUnreadDescription, useBotUnread } from './bot-unread-store'
 import { BotSidebarActions } from './BotSidebarActions'
@@ -61,9 +61,10 @@ export function BotSidebarRow({
             selected && 'bg-worktree-sidebar-accent'
           )}
         >
-          <BotAvatar
+          <BotLiveAvatar
             id={channel.id}
             identity={channel.identity}
+            member={member ?? undefined}
             className={channel.pinned ? 'size-12' : 'size-7 rounded-lg'}
           />
           <span

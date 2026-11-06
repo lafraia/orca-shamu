@@ -4,7 +4,7 @@ import { translate } from '@/i18n/i18n'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { openProjectChannelSource } from './project-channel-candidates'
 import { ProjectChannelSettingsButton } from './ProjectChannelSettingsButton'
-import { BotAvatar } from './BotAvatar'
+import { BotLiveAvatar } from './BotLiveAvatar'
 
 export function BotConversationHeader({
   channel,
@@ -29,7 +29,11 @@ export function BotConversationHeader({
   return (
     <>
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-5 py-3">
-        <BotAvatar id={channel.id} identity={channel.identity} />
+        <BotLiveAvatar
+          id={channel.id}
+          identity={channel.identity}
+          member={ready ? member : undefined}
+        />
         <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{channel.name}</h1>
         <Button
           variant="ghost"

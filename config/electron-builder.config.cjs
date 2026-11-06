@@ -139,6 +139,7 @@ const emojiShortcodeDatasetResource = {
   to: 'node_modules/emojibase-data/en/shortcodes/emojibase.json'
 }
 const commonExtraResources = [
+  { from: 'resources/licenses', to: 'licenses' },
   relayExtraResource,
   orcadTemplateExtraResource,
   orcadTemplateNodeModulesExtraResource,

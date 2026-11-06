@@ -55,7 +55,8 @@ function project(
   turnKeys: string[],
   sessionId = 'dev-session',
   submissions: AgentJournalSubmission[] = [],
-  working = false
+  working = false,
+  record = entry
 ) {
   const rows = { messages, turnKeys, liveTurnKey: working ? turnKeys.at(-1) : undefined }
   const slots = buildNativeChatTranscriptSlots({
@@ -69,7 +70,7 @@ function project(
   })
   return createNativeChatBotCommunicationProjection()(
     slots,
-    [entry],
+    [record],
     sessionId,
     rows,
     submissions,
@@ -78,6 +79,34 @@ function project(
 }
 
 describe('bot communication transcript separation', () => {
+  it('keeps external CLI answers in the chat and leaves an edited prompt visible as written', () => {
+    const cli: BotCommunication = {
+      ...entry,
+      actor: 'cli',
+      cli: { sender: 'Grokbot', text: 'Review the launch' },
+      source: { name: 'Grokbot', sessionId: 'cli:Grokbot' }
+    }
+    const text =
+      'Received from CLI ("Grokbot"). Request reference: cbe8f90b-af62-4ee2-9323-28c09f0d6001.\n\nReview the launch'
+    const messages = [
+      message('provider-user', 'user', text),
+      message('reply', 'assistant', 'An answer visible in the bot chat.')
+    ]
+    const submissions = [submission('sent', 'provider-user', operationId)]
+    const view = project(messages, ['turn', 'turn'], 'dev-session', submissions, false, cli)
+    expect(JSON.stringify(view.slots)).toContain('An answer visible in the bot chat.')
+    expect(view.hiddenPromptIds.has('provider-user')).toBe(true)
+    const edited = project(
+      [message('provider-user', 'user', 'A prompt edited after receipt.'), messages[1]],
+      ['turn', 'turn'],
+      'dev-session',
+      submissions,
+      false,
+      cli
+    )
+    expect(JSON.stringify(edited.slots)).toContain('A prompt edited after receipt.')
+    expect(edited.hiddenPromptIds.has('provider-user')).toBe(false)
+  })
   it('keeps human messages and replaces an internal prompt and answer with one compact row', () => {
     const id = agentJournalSubmissionKey(operationId)
     const view = project(

@@ -166,6 +166,32 @@ The local runtime RPC is authenticated through the existing CLI transport and re
 
 See `UPSTREAM_PATCHES.md` for upstream fix reviews, retired workarounds and regression coverage.
 
+## External CLI prompts
+
+Grokbot and other local integrations can address a bot's permanent native chat with the CLI bundled in the updated Shamu build. Select Shamu's local user-data directory explicitly; its authenticated connection forwards the prompt to the primary Orca. Use a unique name or the stable bot ID returned by `bots list`.
+
+```bash
+orca bots send --profile-dir "/path/to/Orca Shamu" \
+  --bot "Researcher" --sender "Grokbot" \
+  --request-id 36d3520e-8a10-49cc-92dd-ce1dcfd9d54d \
+  --text-file prompt.txt --json
+
+orca bots result --profile-dir "/path/to/Orca Shamu" \
+  --request-id 36d3520e-8a10-49cc-92dd-ce1dcfd9d54d --json
+```
+
+`--text` accepts a direct prompt; UTF-8 `--text-file` preserves multiline input. The same commands accept `--input-file` with `{"action":"send","requestId":"UUID","bot":"NAME_OR_ID","sender":"Grokbot","text":"Prompt"}` or `{"action":"result","requestId":"UUID"}`. Reuse the UUID after a timeout or lost connection. The same ID with changed input is refused; uncertain issued requests are inspected rather than sent again. Names shared by several bots require an ID.
+
+`delivery` describes the saved dispatch receipt; `state` describes observed execution. Busy bots use the native queue. The chat shows **Received from CLI**, the display sender and the received prompt, followed by the bot's normal reply. Queued cards retain their origin. Editing a queued prompt keeps the resulting text visible instead of hiding it behind the original receipt. Origin labels are caller-supplied metadata. Existing bot permissions and Vault approvals continue to apply.
+
+`result` returns only the requested turn's root assistant text, with a truncation flag when the native bounded output buffer applies. A pending, returned, unavailable or uncertain request does not borrow another turn's answer. Receipts are written before dispatch to private `bot-cli-requests` sidecars and survive Shamu restarts. The CLI uses the existing authenticated local transport; scripts can invoke it on the Shamu host through their existing authenticated execution channel. Shamu and the primary Orca must be running and connected.
+
+## Bot appearance
+
+Bot settings offer a live SVG preview with circle, star, cloud and squircle bodies, three expressions, foreground color and an animation switch. Idle avatars blink; work and pending-input states have distinct motion. The surrounding surface keeps its existing color. Motion respects the system's reduced-motion preference and pauses when the avatar is offscreen. Photos can be uploaded or dropped on the preview, are normalized locally and display in a circle. Returning to the animated avatar retains its saved appearance.
+
+Geometry is adapted from [Bloub](https://github.com/jeremy-prt/bloub) at `b4bb3c1b5f93c7b87a2e8d620f667c4093d97749`. It runs locally with the app. Its MIT notice lives in `resources/licenses/bloub.txt` and is copied into packaged resources on every platform.
+
 ## Bot sidebar
 
 The bot sidebar keeps group counts hidden and reveals action menus on hover, keyboard focus or touch devices. Drag a group header above or below another group, drag bots to reorder them, or drop a bot on a group header to append it even while that group is collapsed. Pinned bots keep their dedicated top section and can be reordered or moved into another section. Alt+Up and Alt+Down reorder the focused bot or group; menus retain group movement and bot section choices. Order and membership are saved atomically against the current roster, preserving filtered bots, conversation identities and drafts. Invalid or changed destinations leave the saved roster intact and report an error.
