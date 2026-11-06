@@ -82,6 +82,35 @@ describe('permanent bot conversations', () => {
     await rm(directory, { recursive: true, force: true })
   })
 
+  it('finishes a persisted bot setup when the host omits its optional tab identity', async () => {
+    const member = {
+      ...channelFixture().members[0],
+      tabId: '00000000-0000-4000-8000-000000000010',
+      sessionId: 'codex_00000000_0000_4000_8000_000000000001',
+      target: { kind: 'environment' as const, environmentId: 'primary' }
+    }
+    await channels.update('ceo', (current) => ({
+      ...current,
+      mainMemberId: member.id,
+      members: [member],
+      home: {
+        directory: join(directory, 'bot-home'),
+        memberId: member.id,
+        createOperationId: '00000000-0000-4000-8000-000000000011',
+        createFingerprint: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ready: false
+      }
+    }))
+    call.mockResolvedValueOnce({
+      ok: true,
+      value: { sessionId: 'codex_00000000_0000_4000_8000_000000000001' }
+    })
+    const saved = (await service.ensure('ceo')).channels[0]
+    expect(saved.home?.ready).toBe(true)
+    expect(saved.members[0].tabId).toBe('00000000-0000-4000-8000-000000000010')
+    expect((await service.ensure('ceo')).channels[0]).toEqual(saved)
+  })
+
   it('gives an existing empty bot a dedicated workspace and reopens its single native session', async () => {
     const first = await service.ensure('ceo')
     const channel = first.channels[0]

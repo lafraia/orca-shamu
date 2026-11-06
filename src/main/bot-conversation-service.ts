@@ -23,7 +23,10 @@ const settingsReply = z.object({
 const group = z.object({ id: z.string(), name: z.string(), parentPath: z.string().nullable() })
 const folder = z.object({ id: z.string(), folderPath: z.string() })
 const createReply = z.discriminatedUnion('ok', [
-  z.object({ ok: z.literal(true), value: z.object({ sessionId: z.string(), tabId: z.string() }) }),
+  z.object({
+    ok: z.literal(true),
+    value: z.object({ sessionId: z.string(), tabId: z.string().optional() })
+  }),
   z.object({ ok: z.literal(false), refusal: z.object({ message: z.string() }) })
 ])
 
@@ -114,7 +117,7 @@ export class BotConversationService {
           ...current,
           home: { ...home, ready: true },
           members: current.members.map((row) =>
-            row.id === member.id ? { ...row, tabId: result.value.tabId } : row
+            row.id === member.id ? { ...row, tabId: result.value.tabId ?? row.tabId } : row
           )
         }))
       }
