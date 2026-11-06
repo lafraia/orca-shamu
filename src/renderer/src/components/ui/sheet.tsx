@@ -32,7 +32,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        'fixed inset-0 z-50 bg-black/55 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0',
+        'fixed inset-0 z-50 bg-black/55 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none',
         className
       )}
       // Disable native dragging: the titlebar hit-test ignores z-index and would drag the window instead of activating sheet controls.
@@ -47,6 +47,12 @@ const sheetContentVariants = cva(
   'fixed z-50 flex flex-col gap-0 bg-dialog-surface text-foreground shadow-[0_20px_60px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] outline-none transition ease-in-out dark:shadow-[0_24px_72px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:animate-in data-[state=open]:duration-300',
   {
     variants: {
+      surface: { default: '', chat: 'native-chat-appearance bg-chat-canvas text-chat-foreground' },
+      motion: {
+        default: '',
+        theme:
+          'ease-(--ease-smooth-out) data-[state=closed]:duration-(--duration-medium) data-[state=open]:duration-(--duration-slow) motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none motion-reduce:transition-none'
+      },
       side: {
         right:
           'inset-y-0 right-0 h-full w-3/4 border-l border-black/14 dark:border-white/14 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-[560px]',
@@ -57,7 +63,8 @@ const sheetContentVariants = cva(
       }
     },
     defaultVariants: {
-      side: 'right'
+      side: 'right',
+      motion: 'default'
     }
   }
 )
@@ -66,6 +73,8 @@ function SheetContent({
   className,
   children,
   side = 'right',
+  motion = 'default',
+  surface = 'default',
   showCloseButton = true,
   overlayClassName,
   overlayStyle,
@@ -84,7 +93,7 @@ function SheetContent({
       <OverlayFocusScope value={scope}>
         <SheetPrimitive.Content
           data-slot="sheet-content"
-          className={cn(sheetContentVariants({ side }), className)}
+          className={cn(sheetContentVariants({ side, motion, surface }), className)}
           // Disable native dragging where portaled sheet headers overlap the titlebar.
           style={{ ...style, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           {...props}

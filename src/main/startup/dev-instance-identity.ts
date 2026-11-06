@@ -1,10 +1,19 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import type { AppIdentity } from '../../shared/app-identity'
+import { isShamuDistribution, SHAMU_APP_ID, SHAMU_APP_NAME } from '../../shared/shamu-client'
 
 const BASE_APP_NAME = 'Orca'
 const BASE_APP_USER_MODEL_ID = 'com.stablyai.orca'
 const MAX_LABEL_LENGTH = 80
+
+export function getAppInstanceIdentity(isDev: boolean, version: string): DevInstanceIdentity {
+  return getDevInstanceIdentity(
+    isDev,
+    process.env,
+    isShamuDistribution(version) ? SHAMU_APP_NAME : undefined
+  )
+}
 
 export type DevInstanceIdentity = AppIdentity & {
   appUserModelId: string
@@ -52,19 +61,20 @@ function createDevAppUserModelId(identityKey: string | null): string {
 
 export function getDevInstanceIdentity(
   isDev: boolean,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  packagedName = BASE_APP_NAME
 ): DevInstanceIdentity {
   if (!isDev) {
     return {
-      name: BASE_APP_NAME,
-      appName: BASE_APP_NAME,
+      name: packagedName,
+      appName: packagedName,
       isDev: false,
       devLabel: null,
       devBranch: null,
       devWorktreeName: null,
       devRepoRoot: null,
       dockBadgeLabel: null,
-      appUserModelId: BASE_APP_USER_MODEL_ID
+      appUserModelId: packagedName === SHAMU_APP_NAME ? SHAMU_APP_ID : BASE_APP_USER_MODEL_ID
     }
   }
 

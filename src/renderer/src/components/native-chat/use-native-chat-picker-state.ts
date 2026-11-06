@@ -1,3 +1,6 @@
+import { useNativeChatMentionCompletion } from './use-native-chat-mention-completion'
+import type { NativeChatMentionTarget } from './native-chat-mention-choices'
+import type { BotMention } from '../../../../shared/bot-mentions'
 import {
   writeNativeChatComposerText,
   type NativeChatComposerInput
@@ -18,7 +21,6 @@ import type { AgentType } from '../../../../shared/agent-status/contracts/agent-
 import { getNativeChatAgentProfile } from '../../../../shared/native-chat/native-chat-agent-profiles'
 
 import {
-  applyMentionSuggestion,
   deriveComposerAutocomplete,
   editReplacesTriggerToken,
   isSkillPickerTriggered,
@@ -49,7 +51,8 @@ export type NativeChatPickerState = {
   /** The draft still leads with the skill the user picked from the menu. */
   isPickedSkill: (draft: string) => boolean
   completeItem: (item: NativeChatPickerItem) => void
-  completeMention: (path: string) => void
+  completeMention: (target: NativeChatMentionTarget) => void
+  completeBotMention: (bot: BotMention) => void
   dismiss: (triggerKey: string) => void
   handleDraftOrCaretChange: (value: string, caret: number) => void
 }
@@ -214,15 +217,17 @@ export function useNativeChatPickerState(args: {
     [agent, autocomplete, commitCompletion, liveDraft, textareaRef]
   )
 
-  const completeMention = useCallback(
-    (path: string) => {
-      if (disabledRef.current || autocomplete.mode !== 'mention') {
-        return
-      }
-      commitCompletion(applyMentionSuggestion(...liveDraft(), path))
-    },
-    [autocomplete, commitCompletion, liveDraft]
-  )
+  const clearDismissal = useCallback(() => setDismissed(null), [])
+  const { completeMention, completeBotMention } = useNativeChatMentionCompletion({
+    mode: autocomplete.mode,
+    disabledRef,
+    isComposing,
+    textareaRef,
+    commitCompletion,
+    liveDraft,
+    setActiveSuggestion,
+    clearDismissal
+  })
 
   const handleDraftOrCaretChange = useCallback(
     (value: string, nextCaret: number) => {
@@ -299,6 +304,7 @@ export function useNativeChatPickerState(args: {
     isPickedSkill,
     completeItem,
     completeMention,
+    completeBotMention,
     dismiss,
     handleDraftOrCaretChange
   }

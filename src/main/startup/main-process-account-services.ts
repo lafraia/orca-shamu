@@ -16,6 +16,7 @@ import { resolveHostCodexSessionSourceHome } from '../codex/history/rollouts/cod
 import { browserManager } from '../browser/browser-manager'
 import { prewarmStructuredAgentModelCatalogs } from '../runtime/agent-session/model-catalog/structured-agent-model-catalog-wiring'
 import { mainProcessState as state } from './main-process-state'
+import { isShamuClientMode } from './shamu-client-mode'
 
 // Settings that change which account or binary a new chat's agent runs under.
 const MODEL_CATALOG_ACCOUNT_SETTINGS = [
@@ -31,13 +32,22 @@ const MODEL_CATALOG_ACCOUNT_SETTINGS = [
 
 export function initializeMainProcessAccountServices(): void {
   const store = state.store
-  if (
-    !store ||
-    !state.claudeUsage ||
-    !state.codexUsage ||
-    !state.openCodeUsage ||
-    !state.museUsage
-  ) {
+  if (!store) {
+    throw new Error('Store must be initialized before account services')
+  }
+  state.keybindings = new KeybindingService({
+    homePath: app.getPath('home'),
+    getLegacyOverrides: () => store.getSettings().keybindings,
+    legacyTabSwitchSeed: {
+      isPending: () => store.getSettings().tabSwitchKeybindingSeed === 'pending',
+      markSeeded: () => store.updateSettings({ tabSwitchKeybindingSeed: 'done' })
+    }
+  })
+  browserManager.setSettingsResolver(() => ({ keybindings: state.keybindings?.getOverrides() }))
+  if (isShamuClientMode()) {
+    return
+  }
+  if (!state.claudeUsage || !state.codexUsage || !state.openCodeUsage || !state.museUsage) {
     throw new Error('Usage stores must be initialized before account services')
   }
   state.codexSessionMigration = createCodexSessionMigrationScheduler({
@@ -75,13 +85,4 @@ export function initializeMainProcessAccountServices(): void {
     read: readOpenCodeGoApiKey,
     save: saveOpenCodeGoApiKey
   })
-  state.keybindings = new KeybindingService({
-    homePath: app.getPath('home'),
-    getLegacyOverrides: () => store.getSettings().keybindings,
-    legacyTabSwitchSeed: {
-      isPending: () => store.getSettings().tabSwitchKeybindingSeed === 'pending',
-      markSeeded: () => store.updateSettings({ tabSwitchKeybindingSeed: 'done' })
-    }
-  })
-  browserManager.setSettingsResolver(() => ({ keybindings: state.keybindings?.getOverrides() }))
 }

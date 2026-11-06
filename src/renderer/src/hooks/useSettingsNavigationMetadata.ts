@@ -1,3 +1,4 @@
+import { useShamuClient } from '@/components/shamu/shamu-client-state'
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 // Share Settings/Cmd+J visibility without Settings pane UI imports; an architecture test enforces this boundary.
@@ -44,6 +45,7 @@ export function buildSettingsNavigationMetadata({
   isLocalWindowsHost = isWindows,
   isWindowsTerminalHost = isWindows,
   isWebClient,
+  isShamu = false,
   hostQueuesMessages = false,
   typedChatPermissions = false,
   managedBrowserCreationEnabled = !isWebClient,
@@ -58,6 +60,7 @@ export function buildSettingsNavigationMetadata({
   isLocalWindowsHost?: boolean
   isWindowsTerminalHost?: boolean
   isWebClient: boolean
+  isShamu?: boolean
   hostQueuesMessages?: boolean
   typedChatPermissions?: boolean
   managedBrowserCreationEnabled?: boolean
@@ -87,6 +90,7 @@ export function buildSettingsNavigationMetadata({
     isLocalWindowsHost,
     isWindowsTerminalHost,
     isWebClient,
+    isShamu,
     hostQueuesMessages,
     typedChatPermissions,
     managedBrowserCreationEnabled,
@@ -124,6 +128,7 @@ export function useSettingsNavigationMetadata(): SettingsNavSection[] {
   )
   const typedChatPermissions = useChatSettingsOwnPermissions()
   const hostQueuesMessages = useStructuredAgentSessionHostQueuesMessages({ kind: 'local' })
+  const isShamu = useShamuClient((state) => state.enabled)
   const isMac = isMacUserAgent()
   const isWindows = isWindowsUserAgent()
   const isWebClient = isWebClientLocation()
@@ -164,6 +169,7 @@ export function useSettingsNavigationMetadata(): SettingsNavSection[] {
         isLocalWindowsHost,
         isWindowsTerminalHost,
         isWebClient,
+        isShamu,
         hostQueuesMessages,
         typedChatPermissions,
         managedBrowserCreationEnabled,
@@ -183,6 +189,7 @@ export function useSettingsNavigationMetadata(): SettingsNavSection[] {
       isLocalWindowsHost,
       isWindowsTerminalHost,
       isWebClient,
+      isShamu,
       hostQueuesMessages,
       typedChatPermissions,
       managedBrowserCreationEnabled,

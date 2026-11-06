@@ -1,3 +1,4 @@
+import { BOT_HANDLER_GROUP } from './bots-handler-group'
 import type { CommandHandler } from './dispatch'
 import { BROWSER_HANDLER_GROUPS } from './browser/browser-handler-groups'
 import { JIRA_HANDLER_GROUP } from './jira-handler-group'
@@ -14,6 +15,7 @@ export type HandlerGroup = {
 
 // handler-group-manifest.test.ts checks keys against the real exports to prevent drift.
 export const HANDLER_GROUPS: readonly HandlerGroup[] = [
+  BOT_HANDLER_GROUP,
   JIRA_HANDLER_GROUP,
   LINEAR_HANDLER_GROUP,
   REFERENCE_HANDLER_GROUP,

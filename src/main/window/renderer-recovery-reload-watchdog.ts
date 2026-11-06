@@ -1,9 +1,9 @@
-import { app } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { isSystemSessionEnding } from '../crash-reporting/expected-teardown-state'
 import type { LowCommitOomVerdict } from '../crash-reporting/low-commit-oom-recovery-gate'
 import type { CreateMainWindowOptions, MainWindowLoadObserver } from './main-window-contracts'
 import { mainWindowLoadErrorCode } from './main-window-load-error-code'
+import { usesDesktopRendererDevServer } from './desktop-renderer-url'
 
 // Field recoveries took up to 30.4s; allow 45s before retrying a load with no document.
 export const RENDERER_RECOVERY_LOAD_TIMEOUT_MS = 45_000
@@ -105,7 +105,7 @@ export function createRendererRecoveryReloadWatchdog(args: {
   }
   // Match loadMainWindow's dev/prod branch.
   const timeoutMs = (): number =>
-    !app.isPackaged && process.env.ELECTRON_RENDERER_URL
+    usesDesktopRendererDevServer()
       ? RENDERER_RECOVERY_DEV_LOAD_TIMEOUT_MS
       : RENDERER_RECOVERY_LOAD_TIMEOUT_MS
 

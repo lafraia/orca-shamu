@@ -168,7 +168,11 @@ export async function launchPairedElectronClient(
   testInfo: TestInfo,
   name: string,
   // Reuse the stored pairing credential/device id across relaunch, matching a real reopen.
-  options: { extraEnv?: Record<string, string>; reuseUserDataDir?: string } = {}
+  options: {
+    extraEnv?: Record<string, string>
+    reuseUserDataDir?: string
+    connect?: (page: Page) => Promise<string>
+  } = {}
 ): Promise<PairedElectronClient> {
   const reusedProfile = options.reuseUserDataDir !== undefined
   const userDataDir =
@@ -238,11 +242,13 @@ export async function launchPairedElectronClient(
       throw new Error('Paired-client direct SSH probe did not intercept its canary attempt')
     }
 
-    const environmentId = await selectPairedRuntimeEnvironment(page, {
-      name,
-      pairingUrl: offer.pairingUrl,
-      reusedProfile
-    })
+    const environmentId = options.connect
+      ? await options.connect(page)
+      : await selectPairedRuntimeEnvironment(page, {
+          name,
+          pairingUrl: offer.pairingUrl,
+          reusedProfile
+        })
     const captureDirectSshAttempts = async (): Promise<void> => {}
     const replacePairingInPlace = async (
       replacementOffer: RuntimeDesktopPairingOffer

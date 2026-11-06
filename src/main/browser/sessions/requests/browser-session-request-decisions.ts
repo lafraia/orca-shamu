@@ -1,4 +1,11 @@
 import {
+  finishShamuLiveRequest,
+  hasShamuLiveWindows,
+  registerShamuLiveWindow,
+  shamuLiveResponseDecision
+} from '../../../window/shamu-live-request-guard'
+import type { ShamuLiveRenderer } from '../../../../shared/shamu-live-renderer'
+import {
   reportBrowserSessionWebRequest,
   type ObservedWebRequestDetails
 } from './browser-session-web-request-observer'
@@ -117,9 +124,16 @@ export function decideBrowserSessionRequestHeaders(
 
 const headersReceivedSessions = new WeakSet<Electron.Session>()
 const requestLifecycleSessions = new WeakSet<Electron.Session>()
+const browserHeadersReceivedSessions = new WeakSet<Electron.Session>()
+const browserRequestLifecycleSessions = new WeakSet<Electron.Session>()
 
 /** Shared completion handlers also release enforcement state for cache hits and failed requests. */
 export function installBrowserSessionRequestLifecycle(session: Electron.Session): void {
+  browserRequestLifecycleSessions.add(session)
+  ensureBrowserSessionRequestLifecycle(session)
+}
+
+function ensureBrowserSessionRequestLifecycle(session: Electron.Session): void {
   if (requestLifecycleSessions.has(session)) {
     return
   }
@@ -128,6 +142,7 @@ export function installBrowserSessionRequestLifecycle(session: Electron.Session)
     event: 'onCompleted' | 'onErrorOccurred',
     details: ObservedWebRequestDetails
   ): void => {
+    finishShamuLiveRequest(session, details.id)
     reportBrowserSessionWebRequest(session, event, details)
     try {
       decider?.requestFinished?.(session, event, details)
@@ -141,6 +156,14 @@ export function installBrowserSessionRequestLifecycle(session: Electron.Session)
 }
 
 export function removeBrowserSessionRequestLifecycle(session: Electron.Session): void {
+  browserRequestLifecycleSessions.delete(session)
+  removeUnusedBrowserSessionRequestLifecycle(session)
+}
+
+function removeUnusedBrowserSessionRequestLifecycle(session: Electron.Session): void {
+  if (browserRequestLifecycleSessions.has(session) || hasShamuLiveWindows(session)) {
+    return
+  }
   if (requestLifecycleSessions.delete(session)) {
     session.webRequest.onCompleted(null)
     session.webRequest.onErrorOccurred(null)
@@ -153,6 +176,11 @@ export function removeBrowserSessionRequestLifecycle(session: Electron.Session):
  * webRequest, or content blocking that acts on responses) and removed when extensions turn off.
  */
 export function installBrowserSessionHeadersReceived(session: Electron.Session): void {
+  browserHeadersReceivedSessions.add(session)
+  ensureBrowserSessionHeadersReceived(session)
+}
+
+function ensureBrowserSessionHeadersReceived(session: Electron.Session): void {
   if (headersReceivedSessions.has(session)) {
     return
   }
@@ -160,6 +188,11 @@ export function installBrowserSessionHeadersReceived(session: Electron.Session):
   session.webRequest.onHeadersReceived(
     { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
     (details, callback) => {
+      const liveDecision = shamuLiveResponseDecision(session, details)
+      if (liveDecision?.cancel) {
+        callback(liveDecision)
+        return
+      }
       reportBrowserSessionWebRequest(session, 'onHeadersReceived', details)
       let response: Electron.HeadersReceivedResponse | null = null
       try {
@@ -174,7 +207,30 @@ export function installBrowserSessionHeadersReceived(session: Electron.Session):
 
 /** Every response otherwise waits on main, so drop the handler once nothing needs it. */
 export function removeBrowserSessionHeadersReceived(session: Electron.Session): void {
+  browserHeadersReceivedSessions.delete(session)
+  removeUnusedBrowserSessionHeadersReceived(session)
+}
+
+function removeUnusedBrowserSessionHeadersReceived(session: Electron.Session): void {
+  if (browserHeadersReceivedSessions.has(session) || hasShamuLiveWindows(session)) {
+    return
+  }
   if (headersReceivedSessions.delete(session)) {
     session.webRequest.onHeadersReceived(null)
+  }
+}
+
+export function registerShamuLiveBrowserSession(
+  session: Electron.Session,
+  webContentsId: number,
+  live: ShamuLiveRenderer
+): () => void {
+  const unregister = registerShamuLiveWindow(session, webContentsId, live)
+  ensureBrowserSessionHeadersReceived(session)
+  ensureBrowserSessionRequestLifecycle(session)
+  return () => {
+    unregister()
+    removeUnusedBrowserSessionHeadersReceived(session)
+    removeUnusedBrowserSessionRequestLifecycle(session)
   }
 }

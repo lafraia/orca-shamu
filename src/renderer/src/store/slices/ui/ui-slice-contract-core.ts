@@ -114,6 +114,7 @@ export type NewWorkspaceDraft = {
 }
 
 export type UiViewHistory =
+  | 'project-chat'
   | 'terminal'
   | 'settings'
   | 'tasks'

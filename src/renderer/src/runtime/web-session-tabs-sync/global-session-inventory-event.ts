@@ -158,7 +158,7 @@ export function handleGlobalSessionInventoryEvent({
             expectedEnvironmentPairingRevision,
             expectedTrackingGeneration,
             publishedSnapshotCount: event.snapshots.filter((snapshot) =>
-              isHostMirroredWorktree(snapshot.worktree)
+              isHostMirroredWorktree(snapshot.worktree, environmentId)
             ).length
           }
         },

@@ -9,6 +9,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        unreadDot: 'size-2 bg-chat-unread p-0',
         default: 'bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
         secondary: 'bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
         dot: 'bg-background text-foreground border-border shadow-xs dark:bg-secondary dark:border-white/20',
@@ -28,7 +29,7 @@ const badgeVariants = cva(
           'h-4 border-current/30 px-1.5 py-0 align-[1px] text-3xs font-semibold tracking-wider uppercase',
         /** A skill or file sitting inline in the chat message box, ringed while selected. */
         promptPill:
-          'max-w-full border-border bg-secondary px-1.5 py-0 align-baseline text-muted-foreground data-[selected=true]:ring-1 data-[selected=true]:ring-ring'
+          'max-w-full border-border bg-secondary px-1.5 py-0 align-baseline text-muted-foreground data-[selected=true]:ring-1 data-[selected=true]:ring-ring [button&]:cursor-pointer [button&]:hover:bg-accent [button&]:hover:text-foreground'
       }
     },
     defaultVariants: {

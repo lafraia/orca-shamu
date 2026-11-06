@@ -46,6 +46,7 @@ import { recordDurableCrashBreadcrumb } from '../crash-reporting/durable-crash-b
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
 import { getRuntimeEnvironmentRegistryRoot } from '../ipc/runtime-environments/runtime-environment-registry-root'
 import { openOffscreenBrowserPageLink } from '../runtime/browser/commands/offscreen-browser-page-link'
+import { isShamuClientMode } from './shamu-client-mode'
 
 export function getDesktopWindowStatus(): RuntimeDesktopWindowStatus {
   const activation = state.desktopActivationGate
@@ -122,18 +123,17 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     applySessionSearchSettings: applySessionSearchSettingsChange,
     skillTransactionRecovery: state.skillTransactionRecovery
   })
-  // Both desktop and headless serve own a host-local search service.
-  const sessionSearch = installChildSessionSearchService({
-    dataRoot: getCanonicalUserDataPath(),
-    getSettings: () => store.getSettings(),
-    // Read the host catalog per search so added repos/renamed workspaces are immediately in scope.
-    getScopeCatalog: () => sessionSearchScopeCatalogFromStore(store, LOCAL_EXECUTION_HOST_ID)
-  })
-  app.once('will-quit', () => sessionSearch?.dispose())
-  // Desktop and headless hosts each evaluate their own panes' rules.
-  startAgentStateRulesLiveUpdates(store, (rules) =>
-    recordDurableCrashBreadcrumb('agent_state_rules_active', rules)
-  )
+  if (!isShamuClientMode()) {
+    const sessionSearch = installChildSessionSearchService({
+      dataRoot: getCanonicalUserDataPath(),
+      getSettings: () => store.getSettings(),
+      getScopeCatalog: () => sessionSearchScopeCatalogFromStore(store, LOCAL_EXECUTION_HOST_ID)
+    })
+    app.once('will-quit', () => sessionSearch?.dispose())
+    startAgentStateRulesLiveUpdates(store, (rules) =>
+      recordDurableCrashBreadcrumb('agent_state_rules_active', rules)
+    )
+  }
   state.runtime = runtime
   runtime.attachAgentStatusStore(agentHookServer)
   agentHookServer.subscribeEnrichedStatus((enriched) =>
@@ -164,6 +164,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
 }
 
 export function configureRuntimeServices(runtime: OrcaRuntimeService): void {
+  if (isShamuClientMode()) {
+    return
+  }
   const store = state.store
   const claudeAccounts = state.claudeAccounts
   const codexAccounts = state.codexAccounts

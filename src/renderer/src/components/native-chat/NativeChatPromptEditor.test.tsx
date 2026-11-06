@@ -61,6 +61,25 @@ describe('native chat skill editor', () => {
     expect(inputRef.current?.value).toBe('Hello\nthere')
   })
 
+  it('inserts a selected bot as a stable pill and lets Undo restore the typed query', async () => {
+    const { input, editor, container } = setup('Please @co')
+    await act(async () =>
+      input.insertBotReference!(7, 10, { id: 'coordinator', name: 'Project Coordinator' })
+    )
+    expect(input.value).toBe('Please @Project Coordinator ')
+    expect(
+      container
+        .querySelector('[data-native-chat-bot-reference]')
+        ?.getAttribute('data-native-chat-bot-reference')
+    ).toBe('coordinator')
+    expect(editor.getJSON().content?.[0].content?.[1]).toMatchObject({
+      type: 'nativeChatBotReference',
+      attrs: { botId: 'coordinator', token: '@Project Coordinator' }
+    })
+    await act(async () => editor.commands.undo())
+    expect(input.value).toBe('Please @co')
+  })
+
   it('shows attached files as filename pills that serialize to the reference the agent reads', async () => {
     const { input, container, onChange } = setup('See  please')
     act(() => input.setSelectionRange(4, 4))

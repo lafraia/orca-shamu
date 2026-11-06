@@ -1,9 +1,17 @@
+import { BotCommunicationRow, BotCommunicationRowsContext } from './BotCommunicationRow'
+import {
+  BotCommunicationSummary,
+  BotCommunicationSummariesContext
+} from './BotCommunicationSummary'
 import { memo, useContext } from 'react'
 import { cn } from '@/lib/utils'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import { MessageRow, type NativeChatDeliveryNotice } from './NativeChatMessageRow'
 import { NativeChatResolutionReceipt } from './NativeChatResolutionReceipt'
 import { NativeChatWorkingStatus } from './NativeChatWorkingStatus'
+import { BotMemoryRecall } from '../project-channels/BotMemoryRecall'
+import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
+import { deriveNativeChatRowContent } from '../../../../shared/native-chat/transcript/native-chat-row-content'
 import { NativeChatTurnDiffRollup } from './NativeChatTurnDiffRollup'
 import { NativeChatSubagentSectionHead } from './NativeChatSubagentSectionHead'
 import { NativeChatSubagentEntries } from './NativeChatSubagentRun'
@@ -47,6 +55,19 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
 }): React.JSX.Element {
   // Offered only on the conversation's own turn-opening prompts (`nativeChatRowOffersRewind`).
   const rewind = useContext(NativeChatRewindContext)
+  const communication = useContext(BotCommunicationRowsContext).get(
+    slot.kind === 'message' ? slot.message.id : ''
+  )
+  const summary = useContext(BotCommunicationSummariesContext).get(
+    slot.kind === 'message' ? slot.message.id : ''
+  )
+  if (communication) {
+    return (
+      <div>
+        <BotCommunicationRow row={communication} />
+      </div>
+    )
+  }
   const sectionClassName = cn(
     slot.depth > 0 && 'border-l-2 border-border/60 pl-3',
     slot.depth > 1 && 'ml-4'
@@ -89,11 +110,27 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
       }
     />
   ) : null
+  const botPrompt =
+    slot.drawsMessage && message.role === 'user' && !message.from
+      ? readBotTurnPrompt(deriveNativeChatRowContent(message.blocks).markdown)
+      : null
+  const memory =
+    botPrompt && (botPrompt.context.entries.length > 0 || botPrompt.context.omitted > 0) ? (
+      <BotMemoryRecall context={botPrompt.context} messageId={message.id} />
+    ) : null
+  const turnHeader = memory ? (
+    <div className="flex min-w-0 flex-col gap-2">
+      {statusRow}
+      {memory}
+    </div>
+  ) : (
+    statusRow
+  )
   return (
     // The negative margin shortens the measured row, which is what moves the next one up.
     <div className={cn('flex flex-col gap-5', slot.continuesTurn && '-mb-3', sectionClassName)}>
       {/* A turn with no user bubble carries its bar above its first row. */}
-      {slot.statusAbove ? statusRow : null}
+      {slot.statusAbove ? turnHeader : null}
       {!slot.drawsMessage ? null : receipt ? (
         <NativeChatResolutionReceipt
           body={receipt}
@@ -134,7 +171,8 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
           workRun={workRun}
         />
       )}
-      {slot.statusAbove ? null : statusRow}
+      {slot.statusAbove ? null : turnHeader}
+      {summary && message.role === 'user' ? <BotCommunicationSummary entries={summary} /> : null}
       {turnDiff ? <NativeChatTurnDiffRollup diff={turnDiff} /> : null}
     </div>
   )

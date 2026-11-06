@@ -1,4 +1,6 @@
-import { Pencil, Pin, PinOff, SquareTerminal, Timer, X } from 'lucide-react'
+import { Bot, Pencil, Pin, PinOff, SquareTerminal, Timer, X } from 'lucide-react'
+import { isStructuredTab } from '../../../../shared/agent-session/view/structured-agent-session-tab'
+import { openProjectChannelEditor } from '../project-channels/project-channel-store'
 import {
   ContextMenuItem,
   ContextMenuSeparator,
@@ -133,6 +135,11 @@ export function SortableTabContextMenu({
   nativeChat
 }: SortableTabContextMenuProps): React.JSX.Element {
   const keybindings = useAppStore((state) => state.keybindings)
+  const projectChatTab = useAppStore((state) =>
+    state.unifiedTabsByWorktree[tab.worktreeId]?.find(
+      (candidate) => candidate.id === unifiedTabId && isStructuredTab(candidate)
+    )
+  )
   const splitRightShortcut = formatShortcutLabel('terminal.splitRight', keybindings)
   const splitDownShortcut = formatShortcutLabel('terminal.splitDown', keybindings)
 
@@ -154,6 +161,15 @@ export function SortableTabContextMenu({
       animation="none"
       className="min-w-[13rem] max-w-[calc(100vw-1rem)] whitespace-nowrap"
     >
+      {projectChatTab && window.api.projectChannels ? (
+        <>
+          <ContextMenuItem onSelect={() => openProjectChannelEditor({ tabId: projectChatTab.id })}>
+            <Bot className="size-3.5 shrink-0" />
+            {translate('projectChannels.promote', 'Create bot from chat…')}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+        </>
+      ) : null}
       <TerminalTabSplitMenuSection
         unifiedTabId={unifiedTabId}
         groupId={groupId}

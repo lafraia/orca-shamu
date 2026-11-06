@@ -8,6 +8,7 @@ const textareaVariants = cva('', {
   variants: {
     variant: {
       default: '',
+      chat: 'min-h-20 resize-none rounded-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 dark:bg-transparent',
       code: 'font-mono',
       cell: 'h-full min-h-0 resize-none rounded-none border-0 px-2 py-0 font-mono text-xs shadow-none md:text-xs focus-visible:ring-1 focus-visible:ring-inset',
       composite:

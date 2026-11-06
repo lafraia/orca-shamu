@@ -59,6 +59,7 @@ export const HOST_OPERATION_OWNERSHIP = {
   runtime: 'host',
   session: 'host',
   settings: 'scope-picked',
+  shamu: 'host',
   shell: 'client',
   sidebarInputs: 'host',
   sidebarSession: 'host',

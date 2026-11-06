@@ -40,7 +40,11 @@ export async function readSidecarSnapshot(file: string): Promise<unknown> {
   }
 }
 
-export async function writeSidecarSnapshot(file: string, payload: unknown): Promise<void> {
+export async function writeSidecarSnapshot(
+  file: string,
+  payload: unknown,
+  mode?: number
+): Promise<void> {
   let cleanup = staleTempCleanups.get(file)
   if (!cleanup) {
     cleanup = removeStaleDurableWriteTempFiles(file, { minimumAgeMs: STALE_TEMP_AGE_MS })
@@ -52,7 +56,7 @@ export async function writeSidecarSnapshot(file: string, payload: unknown): Prom
     })
   }
   await cleanup
-  await writeFileDurable(durableWriteTempPath(file), file, JSON.stringify(payload))
+  await writeFileDurable(durableWriteTempPath(file), file, JSON.stringify(payload), mode)
 }
 
 export function _getSidecarSnapshotPendingFileCountForTests(): number {

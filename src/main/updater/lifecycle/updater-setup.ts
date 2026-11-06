@@ -1,3 +1,4 @@
+import { isProjectChannelsDistribution } from '../../../shared/project-channels-distribution'
 import { app, powerMonitor } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../../shared/release-channel'
@@ -140,7 +141,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
       this.sendErrorStatus(`The server update did not complete: ${serveHandoffFailure}`, true)
     }
 
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isProjectChannelsDistribution(app.getVersion())) {
       return
     }
 

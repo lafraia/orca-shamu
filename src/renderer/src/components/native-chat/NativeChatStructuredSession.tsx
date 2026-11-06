@@ -125,9 +125,7 @@ export function NativeChatStructuredSession(props: Omit<NativeChatStructuredView
   const promptResponse = useStructuredPromptResponseHold(submits.respond)
   const needsFailureFacts =
     submits.queuedMessages.cards.some((card) => card.state === 'returned') ||
-    controller.submissions.some(
-      (submission) => submission.dispatchState === 'rejected' && !dispatchWasWithdrawn(submission)
-    )
+    controller.submissions.some((s) => s.dispatchState === 'rejected' && !dispatchWasWithdrawn(s))
   const startFailures = useStructuredAgentSessionStartFailureFacts(
     controller.journalItems,
     needsFailureFacts || props.agent === 'claude'

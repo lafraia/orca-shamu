@@ -1,4 +1,5 @@
 import { NativeChatTextAttachments } from './NativeChatTextAttachments'
+import { readBotTurnPrompt } from '../../../../shared/bot-turn-context'
 import { Goal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -83,6 +84,8 @@ export function NativeChatUserMessageRow({
   deliveryNotice?: NativeChatDeliveryNotice
 }): React.JSX.Element {
   // Agent-authored input belongs to the turn but uses a left-aligned sender row instead of the person’s bubble.
+  const botPrompt = readBotTurnPrompt(markdown)
+  markdown = botPrompt?.message ?? markdown
   const from = message.from
   const sending = deliveryNotice?.sending === true
   return (

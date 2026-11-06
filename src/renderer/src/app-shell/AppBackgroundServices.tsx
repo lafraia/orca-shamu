@@ -10,6 +10,7 @@ import { useAppStore } from '../store/index'
 import { ActiveWorkspaceSyncGate } from './ActiveWorkspaceSyncGate'
 import { StructuredAgentSessionAttentionBridge } from '../components/native-chat/StructuredAgentSessionAttentionBridge'
 import { StructuredAgentSessionStatusBridge } from '../components/native-chat/StructuredAgentSessionStatusBridge'
+import { useShamuClient } from '../components/shamu/shamu-client-state'
 import { NativeChatVisualGuestThemePublisher } from '../components/native-chat/NativeChatVisualGuestThemePublisher'
 
 const DashboardPopoutBridge = lazy(() => import('../components/dashboard/DashboardPopoutBridge'))
@@ -17,6 +18,7 @@ const DashboardPopoutBridge = lazy(() => import('../components/dashboard/Dashboa
 /** Isolate high-churn subscriptions from App rendering; services outlive their consuming surfaces. */
 export function AppBackgroundServices(): React.JSX.Element {
   const workspaceSessionReady = useAppStore((s) => s.workspaceSessionReady)
+  const isShamuClient = useShamuClient((state) => state.enabled)
   const dashboardPopoutEnabled = useAppStore(
     (s) => s.settings?.experimentalAgentDashboardPopout === true
   )
@@ -37,7 +39,7 @@ export function AppBackgroundServices(): React.JSX.Element {
           <DashboardPopoutBridge />
         </Suspense>
       ) : null}
-      <AgentHibernationGate />
+      {!isShamuClient ? <AgentHibernationGate /> : null}
       <StructuredAgentSessionStatusBridge />
       {/* Background chats have no mounted pane but still need completion attention. */}
       <StructuredAgentSessionAttentionBridge />

@@ -46,6 +46,18 @@ if (report.bunVersion !== readPinnedBunVersion(root)) {
 report.baselineSha = (
   await requireSuccess('git', ['rev-parse', baselineRef], 'compat-baseline-sha')
 ).stdout.trim()
+const baselineEntry = await requireSuccess(
+  'git',
+  ['ls-tree', '--name-only', report.baselineSha, '--', sourcePath],
+  'compat-baseline-entry'
+)
+if (!baselineEntry.stdout.trim()) {
+  report.skippedReason =
+    'The comparison revision predates the compatibility checker; this is an initial import.'
+  save()
+  console.log(report.skippedReason)
+  process.exit(0)
+}
 const baselineSource = (
   await requireSuccess(
     'git',
@@ -65,13 +77,14 @@ const baselineImportPaths = {
 writeFileSync(
   baselinePath,
   baselineSource.replace(
-    /from '(\.\/[^']+)'/g,
+    /from '(\.\.?\/[^']+)'/g,
     (_, specifier) =>
       `from '${
         pathToFileURL(
           path.resolve(
             root,
-            baselineImportPaths[specifier] ?? path.posix.join('config/scripts', specifier)
+            baselineImportPaths[specifier] ??
+              path.posix.join(path.posix.dirname(sourcePath), specifier)
           )
         ).href
       }'`

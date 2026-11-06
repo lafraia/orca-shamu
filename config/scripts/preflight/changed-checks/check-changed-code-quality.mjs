@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { runProcessSync } from '@orca/process-host'
 import { scanAstGrep } from '../../static-analysis/structural-scan/ast-grep-scan.mjs'
 import { resolvePullRequestDiffBase } from '../../git/pr-diff-base/git-pull-request-diff-base.mjs'
-import { resolveOxlintInvocation } from '../../tool-invocation/oxlint-cli-invocation.mjs'
+import { runOxlintScan } from './changed-code-oxlint-scan.mjs'
 import { createExistingTypeAssertionMatcher } from '../../static-analysis/type-assertion-budget/existing-type-assertions.mjs'
 
 const SOURCE_FILE_PATTERN = /\.(?:[cm]?[jt]sx?)$/
@@ -221,15 +221,6 @@ export function collectAddedLineRanges(
     rangesByFile.set(file, [{ start: 1, end: lineCount }])
   }
   return { comparisonBase, rangesByFile }
-}
-
-function parseOxlintOutput(stdout, label) {
-  const start = stdout.indexOf('{')
-  const end = stdout.lastIndexOf('}')
-  if (start === -1 || end === -1) {
-    throw new Error(`${label} did not return Oxlint JSON output.`)
-  }
-  return JSON.parse(stdout.slice(start, end + 1))
 }
 
 function normalizedDiagnosticPath(root, filename) {
@@ -543,24 +534,6 @@ export function findCastingDirectivesMissingSafety(root, rangesByFile) {
 function isSuppressedDiagnostic(diagnostic, root) {
   const files = SUPPRESSED_REACT_DOCTOR_DIAGNOSTICS.get(diagnostic.code)
   return files?.has(normalizedDiagnosticPath(root, diagnostic.filename)) ?? false
-}
-
-function runOxlintScan(root, scan, files) {
-  const { command, prefixArgs } = resolveOxlintInvocation(root)
-  const result = spawnSync(command, [...prefixArgs, ...scan.args, '--format', 'json', ...files], {
-    cwd: root,
-    encoding: 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
-    windowsHide: true
-  })
-  if (result.error) {
-    throw result.error
-  }
-  if (!result.stdout.trim()) {
-    process.stderr.write(result.stderr)
-    throw new Error(`${scan.label} failed before producing diagnostics.`)
-  }
-  return parseOxlintOutput(result.stdout, scan.label).diagnostics ?? []
 }
 
 /** ast-grep matches as Oxlint-shaped diagnostics; `info` flaky-test rules are owned by their ratchet. */

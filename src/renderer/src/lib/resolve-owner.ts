@@ -21,11 +21,7 @@ import {
   resolveIndexedFolderWorkspaceOwner,
   resolveIndexedProjectGroupOwner
 } from './worktree-runtime-owner-index'
-import {
-  hostAuthorityFromOperationRoute,
-  SELF_LOCAL_AUTHORITY,
-  type HostAuthority
-} from '../../../shared/host-authority'
+import { hostAuthorityFromOperationRoute, type HostAuthority } from '../../../shared/host-authority'
 import type { ExecutionHostOwnerMatch } from '../../../shared/worktree-execution-host-resolution'
 import {
   getFloatingWorkspaceOperationRoute,
@@ -100,8 +96,9 @@ export function resolveOwner(
   state: WorktreeOperationRouteState,
   ref: WorkspaceOwnerRef
 ): ExecutionHostOwnerMatch<HostAuthority> {
-  if (getFloatingWorkspaceOperationRoute(ref.workspaceId)) {
-    return { kind: 'resolved', owner: SELF_LOCAL_AUTHORITY }
+  const floatingRoute = getFloatingWorkspaceOperationRoute(ref.workspaceId)
+  if (floatingRoute) {
+    return toOwnerMatch({ kind: 'resolved', route: floatingRoute })
   }
   const hostId = namedHostForOwnerRef(state, ref)
   const scope = parseWorkspaceKey(ref.workspaceId)

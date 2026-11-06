@@ -95,6 +95,7 @@
   --color-dialog-surface: var(--dialog-surface);
   --color-agent-question: var(--agent-question);
   --color-agent-working: var(--agent-working);
+  --color-chat-unread: var(--chat-unread);
   --color-agent-question-text: var(--agent-question-text);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -271,6 +272,7 @@
   --worktree-sidebar-accent-foreground: #171717;
   --worktree-sidebar-border: #e5e5e5;
   --worktree-sidebar-ring: #a1a1a1;
+  --chat-unread: var(--color-blue-500);
   --sidebar: #fafafa;
   --sidebar-foreground: #0a0a0a;
   --sidebar-primary: #171717;
@@ -389,6 +391,7 @@
      aren't brighter than the rest of the UI in dark mode (#5906). */
   --worktree-sidebar-border: rgb(255 255 255 / 0.07);
   --worktree-sidebar-ring: #737373;
+  --chat-unread: var(--color-blue-400);
   --sidebar: #171717;
   --sidebar-foreground: #f0f0f0;
   --sidebar-primary: #1447e6;
@@ -1109,6 +1112,11 @@ html.native-shell .app-layout {
 .titlebar-traffic-light-pad {
   width: calc(80px / var(--ui-zoom-factor, 1));
   flex-shrink: 0;
+}
+
+[data-floating-terminal-panel],
+[data-floating-terminal-panel] button {
+  -webkit-app-region: no-drag;
 }
 
 /* Divide window-DIP viewport presets by live renderer zoom to match the CDP-emulated page width (STA-7568). */
@@ -3775,5 +3783,131 @@ body:has([data-contextual-tour-target='tab-create-menu'][data-state='open'])
 
   .browser-agent-cursor-layer[data-agent-active]::before {
     animation: none;
+  }
+}
+
+/* Bot identity is user-selected, independent of provider and conversation state. */
+:root {
+  --bot-identity-blue: var(--color-blue-600);
+  --bot-identity-teal: var(--color-teal-600);
+  --bot-identity-green: var(--color-green-700);
+  --bot-identity-amber: var(--color-amber-700);
+  --bot-identity-coral: var(--color-orange-700);
+  --bot-identity-pink: var(--color-pink-600);
+  --bot-identity-violet: var(--color-violet-600);
+  --duration-stagger: 40ms;
+  --duration-micro: 80ms;
+  --duration-quick: 150ms;
+  --duration-fast: 250ms;
+  --duration-medium: 350ms;
+  --duration-slow: 400ms;
+  --duration-very-slow: 500ms;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: ease-in-out;
+}
+.dark {
+  --bot-identity-blue: var(--color-blue-300);
+  --bot-identity-teal: var(--color-teal-300);
+  --bot-identity-green: var(--color-green-300);
+  --bot-identity-amber: var(--color-amber-300);
+  --bot-identity-coral: var(--color-orange-300);
+  --bot-identity-pink: var(--color-pink-300);
+  --bot-identity-violet: var(--color-violet-300);
+}
+/* The silhouette carries identity color; the surrounding surface stays untouched. */
+.bot-avatar {
+  color: var(--bot-identity-color);
+  --bot-animation-play-state: running;
+}
+.bot-avatar[data-animation-offscreen] {
+  --bot-animation-play-state: paused;
+}
+.bot-blob-body {
+  d: var(--bot-blob-rest);
+  transition: d var(--duration-fast) var(--ease-smooth-out);
+}
+.bot-blob-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.bot-blob-gaze {
+  transform-box: view-box;
+  transform-origin: center;
+}
+:root {
+  --duration-bot-blink: calc(var(--duration-very-slow) * 8);
+  --duration-bot-work: calc(var(--duration-slow) * 4);
+  --duration-bot-wait: calc(var(--duration-very-slow) * 5);
+}
+@keyframes bot-blob-blink {
+  0%,
+  42%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes bot-blob-morph {
+  0%,
+  100% {
+    d: var(--bot-blob-rest);
+  }
+  35% {
+    d: var(--bot-blob-wave);
+  }
+  70% {
+    d: var(--bot-blob-back);
+  }
+}
+@keyframes bot-blob-look {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  40% {
+    transform: translate(-3px, 2px);
+  }
+  70% {
+    transform: translate(2px, -1px);
+  }
+}
+@keyframes bot-blob-listen {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  45%,
+  65% {
+    transform: rotate(-9deg);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bot-avatar[data-animated='true'] .bot-blob-eye {
+    animation: bot-blob-blink var(--duration-bot-blink) var(--ease-in-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
+  }
+  .bot-avatar[data-animated='true'] .bot-blob[data-activity='working'] .bot-blob-body,
+  .bot-avatar[data-animated='true']:hover .bot-blob-body {
+    animation: bot-blob-morph var(--duration-bot-work) var(--ease-in-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
+  }
+  .bot-avatar[data-animated='true'] .bot-blob[data-activity='working'] .bot-blob-gaze {
+    animation: bot-blob-look var(--duration-bot-work) var(--ease-in-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
+  }
+  .bot-avatar[data-animated='true'] .bot-blob[data-activity='waiting'] .bot-blob-gaze {
+    animation: bot-blob-listen var(--duration-bot-wait) var(--ease-smooth-out) infinite;
+    animation-play-state: var(--bot-animation-play-state);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bot-avatar .bot-blob-body,
+  .bot-avatar .bot-blob-gaze,
+  .bot-avatar .bot-blob-eye {
+    animation: none;
+    transition: none;
   }
 }

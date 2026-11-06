@@ -1,3 +1,4 @@
+import { ShamuSettingsSection } from '../../shamu/ShamuSettingsSection'
 import { ActiveSettingsSectionProvider } from '../section-layout/SettingsSection'
 import { SettingsContentScrollElementProvider } from './settings-content-scroll-element'
 import { SettingsSidebar } from '../navigation/SettingsSidebar'
@@ -97,7 +98,8 @@ export function renderSettingsPage(context: SettingsRenderContext): React.JSX.El
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {!model.isWebClient &&
+        {model.activeSectionId !== 'orca-shamu' &&
+        !model.isWebClient &&
         shouldShowSettingsHostScopePicker(model.settingsHostScope, model.runtimeEnvironments) ? (
           <SettingsHostScopePicker
             scope={model.settingsHostScope}
@@ -140,6 +142,7 @@ export function renderSettingsPage(context: SettingsRenderContext): React.JSX.El
                   {renderDesktopCapabilitySettingsSections(context)}
                   {renderOrcaAccountSettingsSection(context)}
                   {renderSetupGuideSettingsSection(context)}
+                  <ShamuSettingsSection />
                   {renderGeneralSettingsSection(context)}
                   {renderIntegrationsSettingsSection(context)}
                   {renderMobileSettingsSection(context)}

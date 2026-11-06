@@ -1,3 +1,5 @@
+import type { BotMention } from '../../../../shared/bot-mentions'
+import type { NativeChatResourceReference } from '../../../../shared/native-chat/native-chat-resource-reference'
 import type { OrchestrationAgentReference } from '../../../../shared/orchestration-agent-reference'
 import type { HTMLAttributes, RefObject } from 'react'
 
@@ -12,6 +14,12 @@ export type NativeChatComposerInput = Pick<
   | 'select'
   | 'setSelectionRange'
 > & {
+  insertBotReference?: (from: number, to: number, bot: BotMention) => void
+  insertResourceReference?: (
+    from: number,
+    to: number,
+    reference: NativeChatResourceReference
+  ) => void
   insertAgentReferences?: (references: OrchestrationAgentReference[]) => void
   contains?: (node: Node | null) => boolean
   insertText?: (text: string) => void

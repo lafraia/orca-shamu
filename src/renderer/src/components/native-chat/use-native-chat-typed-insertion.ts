@@ -4,6 +4,7 @@ import {
   type NativeChatComposerInput
 } from './native-chat-composer-input'
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import { nativeChatSuggestionResetIndex } from './native-chat-mention-choices'
 import { withQuoteAppended } from './native-chat-selection-quote-draft'
 
 /** Insert/focus through the composer input for paste and imperative callers. */
@@ -37,7 +38,7 @@ export function useNativeChatTypedInsertion(args: {
         writeNativeChatComposerText(textarea, next, nextCaret)
       }
       setCaret(nextCaret)
-      setActiveSuggestion(0)
+      setActiveSuggestion(nativeChatSuggestionResetIndex(next, nextCaret))
     },
     [isComposing, setActiveSuggestion, setCaret, setDraft]
   )

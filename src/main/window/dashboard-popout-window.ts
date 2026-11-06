@@ -1,3 +1,4 @@
+import { loadDesktopRenderer } from './desktop-renderer-url'
 import { mainI18n, translateMain } from '../i18n/main-i18n'
 import { app, BrowserWindow, nativeTheme, type WebContents, type Event } from 'electron'
 import { join } from 'node:path'
@@ -93,11 +94,7 @@ function broadcastPopoutOpenChanged(open: boolean): void {
 
 function loadDashboardPopout(window: BrowserWindow): void {
   // Match main-window loading: dev server entry versus packaged emitted HTML.
-  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}/popout.html`)
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/popout.html'))
-  }
+  void loadDesktopRenderer(window, 'popout.html', join(__dirname, '../renderer/popout.html'))
 }
 
 function resolveRestoredBounds(store: Store | null): {

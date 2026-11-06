@@ -1,3 +1,4 @@
+import type { ProjectChannelsApi } from '../shared/project-channels'
 import type {
   ClaudeAccountsApi,
   CodexAccountsApi,
@@ -70,6 +71,7 @@ import type { UpdaterApi } from './api/updater-api'
 import type { WorkspaceCleanupApi, WorkspaceSpaceApi } from './api/workspace-cleanup-api'
 import type { LocalhostWorktreeLabelsApi, WorkspacePortsApi } from './api/workspace-port-api'
 import type { LinkPreviewApi } from './api/link-preview-api'
+import type { ShamuClientApi } from '../shared/shamu-client'
 import type { WorkspaceSessionApi } from './api/workspace-session-api'
 import type { FolderWorkspacesApi, SparsePresetsApi, WorktreeApi } from './api/worktree-api'
 
@@ -77,6 +79,8 @@ import type { FolderWorkspacesApi, SparsePresetsApi, WorktreeApi } from './api/w
 type Merged<T> = { [K in keyof T]: T[K] }
 
 export type PreloadApi = {
+  shamuClient?: ShamuClientApi
+  projectChannels?: ProjectChannelsApi
   app: AppApi
   orcaProfiles: OrcaProfileApi
   platform: PlatformApi

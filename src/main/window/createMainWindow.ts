@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, powerMonitor, screen } from 'electron'
+import { BrowserWindow, nativeTheme, powerMonitor, screen } from 'electron'
 import { release } from 'node:os'
 import { join } from 'node:path'
 import { getAppIconPath } from './desktop-integration/app-icon'
@@ -43,14 +43,16 @@ import { installMainWindowWebviewSecurity } from './main-window-webview-security
 import { rectHasVisibleAreaOnAnyDisplay } from './window-bounds-validation'
 import { installWindowsPathRegistryChangeListener } from '../pty/environment/windows-path-registry-change'
 import { recordAgentSessionRuntimeEnd } from '../runtime/agent-session/records/agent-session-runtime-end-record'
+import { loadDesktopRenderer } from './desktop-renderer-url'
 
 export { WINDOW_QUIT_RENDERER_ACK_TIMEOUT_MS }
 
 export function loadMainWindow(mainWindow: BrowserWindow, observer?: MainWindowLoadObserver): void {
-  const load =
-    !app.isPackaged && process.env.ELECTRON_RENDERER_URL
-      ? mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
-      : mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  const load = loadDesktopRenderer(
+    mainWindow,
+    'index.html',
+    join(__dirname, '../renderer/index.html')
+  )
   // Observe each load promise so failures cannot leave recovery waiting silently.
   load.then(
     () => observer?.onLoaded?.(),

@@ -6,6 +6,8 @@ import {
 import { getParkedTerminalWatcherTabIds } from './terminal-parked-tab-watchers'
 import { resolveTabScrollbackBuffers } from './leaf-scrollback-resolution'
 import { useAppStore } from '@/store'
+import { useShamuClient } from '../shamu/shamu-client-state'
+import { shamuTerminalMemoryPolicy } from '../shamu/shamu-memory-policy'
 
 export type TerminalWorktreeParkingDebugVerdict = {
   worktreeId: string
@@ -23,12 +25,14 @@ let worktreeVerdicts: TerminalWorktreeParkingDebugVerdict[] = []
 
 // Shrink hysteresis and hot-retain together for timely E2E parks; exposeStore keeps packaged builds immune to stray env flags.
 export function getTerminalParkingPolicyOverrides(): TerminalColdParkPolicyOverrides {
+  const clientPolicy = shamuTerminalMemoryPolicy(useShamuClient.getState().enabled)
   if (!e2eConfig.exposeStore) {
-    return {}
+    return clientPolicy
   }
   const delayMs = e2eConfig.terminalParkingDelayMs
   const retentionLimit = e2eConfig.terminalRetentionLimit
   return {
+    ...clientPolicy,
     // Keep absolute retention TTL unchanged so count-cap tests retain their newest hidden worktree.
     ...(typeof delayMs === 'number' && Number.isFinite(delayMs) && delayMs > 0
       ? { coldParkDelayMs: delayMs, hotRetainMs: delayMs }

@@ -330,6 +330,8 @@ jobs:
         run: |
           set -euo pipefail
           tools="$RUNNER_TEMP/native-fingerprint"
+          original_head="$(git rev-parse HEAD)"
+          trap 'git -C "$GITHUB_WORKSPACE" checkout --quiet --detach "$original_head"' EXIT
           mkdir -p "$tools"
           cp scripts/native-client.mjs scripts/native-build-cache.cjs "$tools/"
           pnpm install --frozen-lockfile --ignore-scripts

@@ -44,9 +44,16 @@ export function createGpuAccelerationAboutPanelOptions({
   const status = translateMain('native.about.gpu.summary', 'GPU acceleration: {{status}}', {
     status: describeGpuAcceleration(gpuFeatureStatus, gpuFallbackActive)
   })
+  const shamu = appVersion.match(/^(\d+\.\d+\.\d+)-shamu\.([1-9]\d*)$/)
+  const version: Pick<Electron.AboutPanelOptionsOptions, 'applicationVersion' | 'version'> =
+    shamu === null
+      ? { applicationVersion: appVersion }
+      : platform === 'darwin'
+        ? { applicationVersion: shamu[1], version: `Shamu ${shamu[2]}` }
+        : { applicationVersion: `${shamu[1]} (Shamu ${shamu[2]})` }
   return {
     applicationName: appName,
-    applicationVersion: appVersion,
+    ...version,
     ...(platform === 'linux' ? { copyright: status } : { credits: status })
   }
 }

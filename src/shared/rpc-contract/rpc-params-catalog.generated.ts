@@ -7,6 +7,7 @@ import {
   AiVaultSearchStatusRequestSchema,
   AiVaultSetSearchEnabledParamsSchema
 } from '../ai-vault/search/ai-vault-search-contract'
+import { botCommandSchema } from '../bot-commands'
 import {
   BrowserClientFileChannelAbortParams,
   BrowserClientFileChannelReadParams,
@@ -1435,6 +1436,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'settings.update': SettingsUpdate,
   'settings.updatePRBotAuthorOverride': PRBotAuthorOverrideUpdate,
   'settings.updateTerminalQuickCommands': TerminalQuickCommandsUpdate,
+  'shamu.bots': botCommandSchema,
   'sidebarInputs.activityFacts': null,
   'sidebarInputs.desktopFacts': null,
   'sidebarInputs.pairedServerRows': null,

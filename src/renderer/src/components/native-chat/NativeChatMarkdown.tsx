@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils'
 import { withoutPendingNativeChatVisualDirectiveTail } from '../../../../shared/native-chat/native-chat-visual-directive'
 import { NativeChatMarkdownRowKeyContext } from './native-chat-disclosure-store'
 import { useNativeChatVisualMarkdownExtension } from './native-chat-visual-markdown-extension'
+import { useNativeChatBotMarkdown } from './use-native-chat-bot-markdown'
+import { useNativeChatResourceMarkdown } from './use-native-chat-resource-markdown'
 import { useNativeChatFileLinkExists } from './use-native-chat-file-link-existence'
 import {
   NativeChatMarkdownImage,
@@ -135,13 +137,15 @@ export function NativeChatMarkdown({
   const onLinkClick = useNativeChatLinkClick()
   const wordFadeArmed = useWordFadeArmed(fadeWords)
   const visualExtension = useNativeChatVisualMarkdownExtension(visualMessageId)
-  const extension = useMemo(
+  const baseExtension = useMemo(
     () =>
       variant === 'document'
         ? createNativeChatImageExtension(visualExtension, onLinkClick)
         : withFileDestinations(visualExtension),
     [onLinkClick, variant, visualExtension]
   )
+  const botExtension = useNativeChatBotMarkdown(baseExtension, onLinkClick)
+  const extension = useNativeChatResourceMarkdown(botExtension, onLinkClick)
   const fileLinkExists = useNativeChatFileLinkExists(
     linkifyFilePaths && onLinkClick !== undefined,
     streaming

@@ -1,0 +1,231 @@
+import { BotCommunicationStore } from '../shamu-bots/bot-communication-store'
+import { BotMentionDelivery } from '../bot-mention-delivery'
+import { botMentionRequestSchema } from '../../shared/bot-mentions'
+import { app, BrowserWindow, ipcMain } from 'electron'
+import { BotCommandService, installBotCommandService } from '../shamu-bots/bot-command-service'
+import { BotRoutineService } from '../shamu-bots/bot-routine-service'
+import { BotCliService } from '../shamu-bots/bot-cli-service'
+import { BotUnreadService } from '../shamu-bots/bot-unread-service'
+import { botReadMarkSchema } from '../../shared/bot-unread'
+import { getBundledLauncherPath } from '../cli/bundled-cli-launcher-path'
+import { z } from 'zod'
+import type { Store } from '../persistence/loading-store/store'
+import { ProjectChannelsStore } from '../project-channels-store'
+import { isTrustedUIRenderer } from './ui'
+import type { ShamuPrimaryConnection } from '../shamu-primary-connection'
+import { projectChannelsSnapshotSchema } from '../../shared/project-channels'
+import { BotConversationService } from '../bot-conversation-service'
+import { BotMemoryService } from '../bot-memory-service'
+import { registerShamuVaultHandlers } from './shamu-vault'
+
+export function registerProjectChannelsHandlers(
+  store: Store,
+  primary?: ShamuPrimaryConnection | null
+): void {
+  const channels = new ProjectChannelsStore(store.getProfileStorageDirectory())
+  const unread = primary
+    ? new BotUnreadService(channels, primary, store.getProfileStorageDirectory())
+    : null
+  for (const name of ['readUnread', 'markRead']) {
+    ipcMain.removeHandler(`projectChannels:${name}`)
+  }
+  ipcMain.handle('projectChannels:readUnread', async (event, ids: unknown) => {
+    trusted(event)
+    if (!unread) {
+      throw new Error('Bot unread messages are available in Orca Shamu.')
+    }
+    return unread.read(z.array(z.string().min(1).max(1024)).max(100).optional().parse(ids))
+  })
+  ipcMain.handle('projectChannels:markRead', async (event, mark: unknown) => {
+    trusted(event)
+    if (!unread) {
+      throw new Error('Bot unread messages are available in Orca Shamu.')
+    }
+    const input = botReadMarkSchema.parse(mark)
+    const snapshot = await unread.markRead(input)
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (isTrustedUIRenderer(window.webContents)) {
+        window.webContents.send('projectChannels:unreadChanged', input.botId)
+      }
+    }
+    return snapshot
+  })
+  const memory = primary ? new BotMemoryService(channels, primary) : null
+  const vault = primary
+    ? registerShamuVaultHandlers(store.getProfileStorageDirectory(), channels)
+    : null
+  for (const name of ['readMemory', 'writeMemory', 'prepareMessage']) {
+    ipcMain.removeHandler(`projectChannels:${name}`)
+  }
+  ipcMain.removeHandler('projectChannels:notifyBots')
+  ipcMain.removeHandler('projectChannels:read')
+  ipcMain.removeHandler('projectChannels:write')
+  ipcMain.removeHandler('projectChannels:ensureConversation')
+  const bots = primary
+    ? new BotConversationService(
+        channels,
+        primary,
+        app.getPath('home'),
+        store.getProfileStorageDirectory(),
+        {
+          cliExecutable: getBundledLauncherPath(process.platform, process.resourcesPath) ?? 'orca',
+          userDataDirectory: app.getPath('userData')
+        }
+      )
+    : null
+  const publish = (topic: 'changed' | 'communicationsChanged'): void => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (isTrustedUIRenderer(window.webContents)) {
+        window.webContents.send(`projectChannels:${topic}`)
+      }
+    }
+  }
+  const changed = (): void => publish('changed')
+  const cli =
+    primary && bots && memory
+      ? new BotCliService(channels, bots, memory, primary, store.getProfileStorageDirectory(), () =>
+          publish('communicationsChanged')
+        )
+      : null
+  const mentions =
+    primary && bots
+      ? new BotMentionDelivery(
+          channels,
+          bots,
+          primary,
+          store.getProfileStorageDirectory(),
+          memory,
+          () => publish('communicationsChanged')
+        )
+      : null
+  const commands =
+    primary && bots && memory && mentions
+      ? new BotCommandService(
+          channels,
+          bots,
+          mentions,
+          new BotRoutineService(
+            channels,
+            bots,
+            memory,
+            primary,
+            store.getProfileStorageDirectory()
+          ),
+          primary,
+          changed,
+          vault,
+          cli
+        )
+      : null
+  installBotCommandService(commands)
+  void bots?.refreshGuides().catch(() => {
+    console.warn('[shamu] Could not refresh bot guides. Open the bot to retry.')
+  })
+  ipcMain.removeHandler('projectChannels:command')
+  ipcMain.handle('projectChannels:command', async (event, input: unknown) => {
+    trusted(event)
+    if (!commands) {
+      throw new Error('Bot controls are available in Orca Shamu.')
+    }
+    return commands.invoke(input)
+  })
+  const trusted = (event: Electron.IpcMainInvokeEvent): void => {
+    if (!isTrustedUIRenderer(event.sender) || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('Untrusted project conversation request.')
+    }
+  }
+  const id = z.string().min(1).max(1024)
+  const communications = primary
+    ? new BotCommunicationStore(store.getProfileStorageDirectory(), channels, primary, cli)
+    : null
+  ipcMain.removeHandler('projectChannels:communications')
+  ipcMain.removeHandler('projectChannels:communicationTexts')
+  ipcMain.handle('projectChannels:communications', async (event, sessionId: unknown) => {
+    trusted(event)
+    if (!communications) {
+      throw new Error('Bot communication is available in Orca Shamu.')
+    }
+    return communications.read(id.parse(sessionId))
+  })
+  ipcMain.handle('projectChannels:communicationTexts', async (event, ids: unknown) => {
+    trusted(event)
+    if (!communications) {
+      throw new Error('Bot communication is available in Orca Shamu.')
+    }
+    return communications.texts(z.array(z.uuid()).max(100).parse(ids))
+  })
+  ipcMain.handle('projectChannels:readMemory', async (event, channelId: unknown) => {
+    trusted(event)
+    if (!memory) {
+      throw new Error('Bot memory is available in Orca Shamu.')
+    }
+    return memory.read(id.parse(channelId))
+  })
+  ipcMain.handle(
+    'projectChannels:writeMemory',
+    async (event, channelId: unknown, input: unknown, fingerprint: unknown) => {
+      trusted(event)
+      if (!memory) {
+        throw new Error('Bot memory is available in Orca Shamu.')
+      }
+      return memory.write(
+        id.parse(channelId),
+        input,
+        z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .parse(fingerprint)
+      )
+    }
+  )
+  ipcMain.handle(
+    'projectChannels:prepareMessage',
+    async (event, session: unknown, environment: unknown, text: unknown) => {
+      trusted(event)
+      const prompt = z
+        .string()
+        .max(256 * 1024)
+        .parse(text)
+      return memory
+        ? memory.prepare(id.parse(session), id.nullable().parse(environment), prompt)
+        : prompt
+    }
+  )
+  ipcMain.handle('projectChannels:notifyBots', async (event, input: unknown) => {
+    trusted(event)
+    if (!mentions) {
+      throw new Error('Bot mentions are available in Orca Shamu.')
+    }
+    const request = botMentionRequestSchema.parse(input)
+    const sourceBot = (await channels.read()).channels.some((bot) =>
+      bot.members.some(
+        (member) =>
+          member.id === bot.home?.memberId &&
+          member.sessionId === request.source.sessionId &&
+          member.target.kind === 'environment' &&
+          member.target.environmentId === request.source.environmentId
+      )
+    )
+    if (sourceBot) {
+      throw new Error('The source bot must formulate its own consultation with bots ask.')
+    }
+    return mentions.deliver(request)
+  })
+  ipcMain.handle('projectChannels:read', (event) => {
+    trusted(event)
+    return channels.read()
+  })
+  ipcMain.handle('projectChannels:write', async (event, input: unknown) => {
+    trusted(event)
+    const snapshot = projectChannelsSnapshotSchema.parse(input)
+    await primary?.assertChannelAuthority(snapshot)
+    return channels.write(snapshot)
+  })
+  ipcMain.handle('projectChannels:ensureConversation', async (event, input: unknown) => {
+    trusted(event)
+    if (!bots) {
+      throw new Error('Open this bot in Orca Shamu connected to the primary Orca.')
+    }
+    return bots.ensure(z.string().min(1).max(1024).parse(input))
+  })
+}

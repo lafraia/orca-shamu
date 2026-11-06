@@ -23,15 +23,32 @@ const MAIN_WINDOW_SERVICE_REQUIREMENTS = [
 ] as const
 
 type MainWindowServiceKey = (typeof MAIN_WINDOW_SERVICE_REQUIREMENTS)[number][0]
+type ProviderServiceKey =
+  | 'rateLimits'
+  | 'codexAccounts'
+  | 'codexRuntimeHome'
+  | 'claudeAccounts'
+  | 'claudeRuntimeAuth'
+const PROVIDER_SERVICE_KEYS = new Set<string>([
+  'rateLimits',
+  'codexAccounts',
+  'codexRuntimeHome',
+  'claudeAccounts',
+  'claudeRuntimeAuth'
+])
 
 type RequiredServices<T extends Record<MainWindowServiceKey, unknown>> = {
-  [K in keyof T]: NonNullable<T[K]>
+  [K in keyof T]: K extends ProviderServiceKey ? T[K] : NonNullable<T[K]>
 }
 
 export function requireMainWindowServices<T extends Record<MainWindowServiceKey, unknown>>(
-  services: T
+  services: T,
+  primaryClient = false
 ): RequiredServices<T> {
   for (const [key, message] of MAIN_WINDOW_SERVICE_REQUIREMENTS) {
+    if (primaryClient && PROVIDER_SERVICE_KEYS.has(key)) {
+      continue
+    }
     if (!services[key]) {
       throw new Error(message)
     }

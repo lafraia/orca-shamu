@@ -1,4 +1,5 @@
 import type { CommandSpec } from '../args'
+import { BOT_COMMAND_SPECS } from './bots'
 import { ACCOUNT_COMMAND_SPECS } from './account'
 import { BROWSER_ADVANCED_COMMAND_SPECS } from './browser-advanced'
 import { BROWSER_BASIC_COMMAND_SPECS } from './browser-basic'
@@ -32,6 +33,7 @@ import { PLUGIN_AUTHORING_COMMAND_SPECS, PLUGIN_RUNTIME_COMMAND_SPECS } from './
 import { PLUGIN_VIEW_COMMAND_SPECS } from './plugin-view'
 
 export const COMMAND_SPECS: CommandSpec[] = [
+  ...BOT_COMMAND_SPECS,
   ...CORE_COMMAND_SPECS,
   ...REFERENCE_COMMAND_SPECS,
   ...ARTIFACT_COMMAND_SPECS,

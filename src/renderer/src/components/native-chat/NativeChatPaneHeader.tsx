@@ -13,7 +13,6 @@ import { NativeChatResumeInCliButton } from './NativeChatResumeInCliButton'
 import { NativeChatSettingsButton } from './NativeChatSettingsButton'
 import type { NativeChatStructuredViewProps } from './native-chat-view-types'
 import type { NativeChatHandOff } from './use-native-chat-hand-off'
-
 const HEADER_STYLE: React.CSSProperties & Record<'--orca-pane-title-bg', string> = {
   '--orca-pane-title-bg': 'var(--chat-canvas)'
 }

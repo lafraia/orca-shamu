@@ -51,6 +51,16 @@ vi.mock('./SidebarNav', () => ({
   default: () => <div data-testid="sidebar-nav" />
 }))
 
+vi.mock('../project-channels/ProjectChannelSidebar', () => ({
+  ProjectNavigationSwitch: () => null,
+  ProjectChannelSidebar: () => <div data-testid="project-channel-sidebar" />
+}))
+
+vi.mock('../project-channels/project-channel-store', () => ({
+  useProjectChannels: (selector: (state: { mode: string }) => unknown) =>
+    selector({ mode: 'workspaces' })
+}))
+
 vi.mock('./SetupScriptPromptCard', () => ({
   default: () => <div data-testid="setup-script-prompt-card" />
 }))

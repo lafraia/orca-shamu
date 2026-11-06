@@ -43,6 +43,8 @@ import {
 } from './quit-and-stop-all-sessions-prompt'
 import { isHoldingForNewerProtocolDaemon } from '../daemon/providers/routing/daemon-newer-protocol-hold'
 import { getDaemonProvider } from '../daemon/providers/lifecycle/daemon-provider-state'
+import { SHAMU_APP_NAME } from '../../shared/shamu-client'
+import { isShamuClientMode } from './shamu-client-mode'
 import { confirmNoDaemonSessionsRemain } from '../ipc/pty/pty-management'
 
 // Inject the opener to avoid an actions/lifecycle import cycle.
@@ -215,6 +217,7 @@ export function getSystemTrayOptions(): SystemTrayOptions | null {
     return null
   }
   return {
+    appName: isShamuClientMode() ? SHAMU_APP_NAME : undefined,
     appIcon: store.getSettings().appIcon,
     isDevInstance: state.devInstanceIdentity?.isDev ?? false,
     devInstanceLabel: state.devInstanceIdentity?.devLabel ?? null,

@@ -92,7 +92,7 @@ vi.mock('../updater/updater-service', () => ({
   isQuittingForUpdate: () => false
 }))
 vi.mock('./dev-instance-identity', () => ({
-  getDevInstanceIdentity: () => ({
+  getAppInstanceIdentity: () => ({
     isDev: true,
     appName: 'Orca Development',
     appUserModelId: 'com.orca.development'

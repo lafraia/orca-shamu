@@ -1,16 +1,12 @@
-import { createPortal } from 'react-dom'
-import { autoUpdate, computePosition, offset, size } from '@floating-ui/dom'
-import { memo, useEffect, useRef, useLayoutEffect, useState } from 'react'
+import { PickerOptionButton, PickerStatus } from './NativeChatPickerOption'
+import { NativeChatPickerListbox as PickerListbox } from './NativeChatPickerListbox'
+import { memo, useEffect, useRef } from 'react'
 import { Package, RotateCcw } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
-import { cn } from '@/lib/utils'
 import type { SkillSourceKind } from '../../../../shared/skills'
-import { FilenameFirstPath } from '@/components/file-path-cursor-tooltip'
-import { FileTypeIcon } from '@/components/FileTypeIcon'
 import type { ComposerAutocomplete } from '../../../../shared/native-chat/input/native-chat-composer-autocomplete'
 import type { NativeChatPickerItem } from '../../../../shared/native-chat/input/native-chat-picker-items'
-import type { NativeChatMentionFiles } from './use-native-chat-mention-files'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { localizeSlashCommandDescription } from './native-chat-slash-command-descriptions'
 
@@ -163,14 +159,6 @@ function PickerGroupHeading({ kind }: { kind: 'commands' | 'skills' }): React.JS
   )
 }
 
-function PickerStatus({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
-      {children}
-    </div>
-  )
-}
-
 function PickerOption({
   item,
   index,
@@ -228,105 +216,6 @@ function PickerOption({
   )
 }
 
-function PickerListbox({
-  id,
-  children
-}: {
-  id: string
-  children: React.ReactNode
-}): React.JSX.Element {
-  const marker = useRef<HTMLSpanElement>(null)
-  const listbox = useRef<HTMLDivElement>(null)
-  const [container, setContainer] = useState<HTMLElement | null>(null)
-  useLayoutEffect(() => {
-    setContainer(marker.current?.closest<HTMLElement>('.native-chat-appearance') ?? document.body)
-  }, [])
-  useLayoutEffect(() => {
-    const anchor = marker.current?.parentElement
-    const floating = listbox.current
-    if (!anchor || !floating) {
-      return
-    }
-    // autoUpdate also follows moves with no resize or scroll, like dragging the floating panel.
-    return autoUpdate(anchor, floating, () => {
-      void computePosition(anchor, floating, {
-        strategy: 'fixed',
-        placement: 'top-start',
-        middleware: [
-          offset(4),
-          size({
-            padding: 8,
-            apply: ({ rects, availableHeight }) => {
-              floating.style.width = `${rects.reference.width}px`
-              floating.style.maxHeight = `min(calc(var(--spacing) * 72), ${Math.max(0, availableHeight)}px)`
-            }
-          })
-        ]
-      }).then(({ x, y }) => {
-        floating.style.left = `${x}px`
-        floating.style.top = `${y}px`
-      })
-    })
-  }, [container])
-  return (
-    <>
-      <span ref={marker} />
-      {container &&
-        createPortal(
-          <div
-            ref={listbox}
-            id={id}
-            role="listbox"
-            data-focus-behavior="composer-suggestions"
-            // Inside the launch setup (a popover or the new-tab menu's submenu), take the menu layer those overlays use.
-            className={`scrollbar-sleek fixed left-0 top-0 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-floating ${marker.current?.closest('[data-slot="popover-content"], [data-slot="dropdown-menu-sub-content"]') ? 'z-[70]' : 'z-50'}`}
-          >
-            {children}
-          </div>,
-          container
-        )}
-    </>
-  )
-}
-
-function PickerOptionButton({
-  id,
-  selected,
-  activeItemRef,
-  onChoose,
-  children
-}: {
-  id: string
-  selected: boolean
-  activeItemRef: React.MutableRefObject<HTMLButtonElement | null>
-  onChoose: () => void
-  children: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <button
-      id={id}
-      ref={selected ? activeItemRef : null}
-      role="option"
-      aria-selected={selected}
-      type="button"
-      onPointerDown={(event) => {
-        // Accept before focus transfer because the textarea owns query and caret state.
-        event.preventDefault()
-        if (event.button === 0) {
-          onChoose()
-        }
-      }}
-      className={cn(
-        'flex w-full items-start gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground hover:[--muted-foreground:var(--accent-foreground)]',
-        selected &&
-          'border-border bg-accent text-accent-foreground [--muted-foreground:var(--accent-foreground)]'
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 function getPickerAnnotation(item: NativeChatPickerItem): string | null {
   if (item.kind === 'skill' && item.location) {
     return item.location
@@ -358,60 +247,4 @@ function scopeLabel(sourceKind: SkillSourceKind | undefined): string {
   return sourceKind ? (labels[sourceKind] ?? '') : ''
 }
 
-export const NativeChatMentionMenu = memo(function NativeChatMentionMenu({
-  mention,
-  activeIndex,
-  listboxId,
-  onChoose
-}: {
-  mention: NativeChatMentionFiles
-  activeIndex: number
-  listboxId: string
-  onChoose: (path: string) => void
-}): React.JSX.Element {
-  useUiLanguageRevision()
-  const activeItemRef = useRef<HTMLButtonElement | null>(null)
-  const selectedIndex = Math.min(activeIndex, mention.files.length - 1)
-
-  useEffect(() => {
-    activeItemRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [selectedIndex, mention.files])
-
-  const statusText =
-    mention.files.length > 0
-      ? null
-      : mention.loading
-        ? translate('components.native-chat.composer.loadingFiles', 'Loading files...')
-        : mention.failed
-          ? translate('components.native-chat.composer.filesLoadFailed', "Couldn't load files")
-          : translate('components.native-chat.composer.noFiles', 'No matching files')
-
-  return (
-    <PickerListbox id={listboxId}>
-      {mention.files.map((path, index) => (
-        <PickerOptionButton
-          key={path}
-          id={`${listboxId}-option-${index}`}
-          selected={index === selectedIndex}
-          activeItemRef={activeItemRef}
-          onChoose={() => onChoose(path)}
-        >
-          <FileTypeIcon
-            filePath={path}
-            className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-          />
-          <FilenameFirstPath path={path} />
-        </PickerOptionButton>
-      ))}
-      {statusText ? (
-        <PickerStatus>
-          {mention.loading ? <LoadingSpinner className="size-3.5" /> : null}
-          {statusText}
-        </PickerStatus>
-      ) : null}
-      <div aria-live="polite" className="sr-only">
-        {statusText ?? ''}
-      </div>
-    </PickerListbox>
-  )
-})
+export { NativeChatMentionMenu } from './NativeChatMentionMenu'

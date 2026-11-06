@@ -41,6 +41,7 @@ import { recordRendererLaunchFailureProbe } from '../window/renderer-launch-fail
 import { trackBrowserExtensionMainWindow } from '../browser/extensions/tabs-and-windows/browser-extension-window-model'
 
 import { isResourceWindowVisible } from '../window/resource-view-admission'
+import { isShamuClientMode } from './shamu-client-mode'
 import {
   applyBackgroundActivationPolicy,
   applyServeDesktopWindowActivationPolicy
@@ -51,22 +52,25 @@ const AGENT_STATE_CRASH_BREADCRUMB_MIN_INTERVAL_MS = 30_000
 
 export function openMainWindow(options: { revealOnDidFinishLoad?: boolean } = {}): BrowserWindow {
   logStartupMilestone('open-main-window-start')
-  const { store, keybindings } = requireMainWindowServices({
-    store: state.store,
-    runtime: state.runtime,
-    stats: state.stats,
-    claudeUsage: state.claudeUsage,
-    codexUsage: state.codexUsage,
-    openCodeUsage: state.openCodeUsage,
-    museUsage: state.museUsage,
-    rateLimits: state.rateLimits,
-    automations: state.automations,
-    codexAccounts: state.codexAccounts,
-    codexRuntimeHome: state.codexRuntimeHome,
-    claudeAccounts: state.claudeAccounts,
-    claudeRuntimeAuth: state.claudeRuntimeAuth,
-    keybindings: state.keybindings
-  })
+  const { store, keybindings } = requireMainWindowServices(
+    {
+      store: state.store,
+      runtime: state.runtime,
+      stats: state.stats,
+      claudeUsage: state.claudeUsage,
+      codexUsage: state.codexUsage,
+      openCodeUsage: state.openCodeUsage,
+      museUsage: state.museUsage,
+      rateLimits: state.rateLimits,
+      automations: state.automations,
+      codexAccounts: state.codexAccounts,
+      codexRuntimeHome: state.codexRuntimeHome,
+      claudeAccounts: state.claudeAccounts,
+      claudeRuntimeAuth: state.claudeRuntimeAuth,
+      keybindings: state.keybindings
+    },
+    isShamuClientMode()
+  )
   if (process.platform === 'win32') {
     logStartupMilestone('acl-grant-start')
     ensureWindowsUserDataAclGrant(app.getPath('userData'), {
