@@ -29,7 +29,7 @@ export function BotMemoryPanel({
   open: boolean
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
-  const catalogue = useNativeChatBotCatalogue(open)
+  const catalogue = useNativeChatBotCatalogue()
   const [snapshot, setSnapshot] = useState<BotMemorySnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -143,7 +143,16 @@ export function BotMemoryPanel({
         }
       }}
     >
-      <SheetContent motion="theme" className="w-full sm:max-w-xl">
+      <SheetContent
+        motion="theme"
+        className="w-full sm:max-w-xl"
+        onCloseAutoFocus={() => {
+          setSnapshot(null)
+          setError(null)
+          setEditing(null)
+          setArchived(false)
+        }}
+      >
         <SheetHeader>
           <SheetTitle>
             <Brain className="mr-2 inline size-4" />

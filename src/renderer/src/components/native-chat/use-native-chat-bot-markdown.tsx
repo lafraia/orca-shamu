@@ -46,6 +46,7 @@ export function useNativeChatBotMarkdown(
           }
           return (
             <NativeChatPromptPill
+              variant="inlineReference"
               icon={Bot}
               label={bot.name}
               selected={false}

@@ -1,6 +1,7 @@
 import { defineFixture } from '../../component-fixtures/component-fixture'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { useProjectChannels } from '../project-channels/project-channel-store'
+import { useShamuClient } from '../shamu/shamu-client-state'
 import {
   CommunicationPair,
   CommunicationPost,
@@ -11,7 +12,7 @@ import {
 const ceo = { botId: 'ceo', name: 'CEO', sessionId: 'ceo-session' }
 const specialist = {
   botId: 'specialist',
-  name: 'Orlando em Detalhes',
+  name: 'Release specialist',
   sessionId: 'specialist-session'
 }
 const bots: ProjectChannel[] = [ceo, specialist].map((bot, index) => ({
@@ -34,7 +35,7 @@ const posts: CommunicationPostData[] = [
     blocks: [
       {
         type: 'text',
-        text: 'Preciso passar uma previsão confiável para o Daniel. O que você consegue confirmar sobre o lançamento e o que ainda está pendente?'
+        text: '@Release specialist, can you confirm the status of `example/app#33` and what remains before launch?'
       }
     ]
   },
@@ -47,7 +48,7 @@ const posts: CommunicationPostData[] = [
     blocks: [
       {
         type: 'text',
-        text: 'Ainda não tenho uma data confirmada.\n\nA revisão da loja é a dependência principal. Minha estimativa depende da aprovação, então prefiro informar essa condição junto do prazo.'
+        text: 'I do not have a confirmed date yet.\n\nStore review is the main dependency. My estimate depends on approval, so I will include that condition with the timeline.'
       }
     ]
   },
@@ -60,7 +61,7 @@ const posts: CommunicationPostData[] = [
     blocks: [
       {
         type: 'text',
-        text: 'Entendi. Vou separar a estimativa da confirmação e levar essa dependência para ele.'
+        text: 'Understood. I will separate the estimate from the confirmed date and report that dependency.'
       }
     ]
   }
@@ -85,11 +86,13 @@ function Thread({ loading = false }: { loading?: boolean }): React.JSX.Element {
     </div>
   )
 }
-const setup = () =>
+const setup = () => {
+  useShamuClient.setState({ enabled: true, environmentId: 'fixture' })
   useProjectChannels.setState({
     snapshot: { version: 1, revision: 0, channels: bots },
     loaded: true
   })
+}
 export const exchange = defineFixture({ width: 560, setup, render: () => <Thread /> })
 export const narrow = defineFixture({ width: 360, setup, render: () => <Thread /> })
 export const loading = defineFixture({ width: 360, setup, render: () => <Thread loading /> })

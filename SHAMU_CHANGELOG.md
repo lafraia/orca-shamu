@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Match inline bot and resource references to the chat's existing highlights, and keep bot communication, Memory and Routines drawers mounted through their dismissal animation. Preserve immediate Vault cleanup while sharing the corrected sheet exit lifecycle.
 - Extend bot hover and selection across the whole sidebar row, with pinned indicators and action menus sharing one aligned trailing slot.
 - Retain shared request hooks while live renderer windows need proof validation, release them with the last live window and preserve active browser consumers.
 - Complete bot provisioning when a successful host reply omits its optional tab ID, retaining the persisted tab identity.

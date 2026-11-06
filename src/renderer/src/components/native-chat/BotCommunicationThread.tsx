@@ -36,12 +36,16 @@ export function BotCommunicationThread({
   selected,
   entries,
   target,
-  onClose
+  open,
+  onClose,
+  onClosed
 }: {
   selected: BotCommunication
   entries: readonly BotCommunication[]
   target: RuntimeClientTarget
+  open: boolean
   onClose: () => void
+  onClosed: () => void
 }): React.JSX.Element {
   const [count, setCount] = useState(20)
   const [texts, setTexts] = useState<ReadonlyMap<string, BotCommunicationText>>(new Map())
@@ -88,6 +92,9 @@ export function BotCommunicationThread({
     [shown]
   )
   useEffect(() => {
+    if (!open) {
+      return
+    }
     let current = true
     setLoading(true)
     setError(null)
@@ -116,7 +123,7 @@ export function BotCommunicationThread({
     return () => {
       current = false
     }
-  }, [referenceIds, attempt])
+  }, [referenceIds, attempt, open])
   const receive = useCallback((sessionId: string, snapshot: BotCommunicationPeerSnapshot) => {
     setPeers((current) =>
       current[sessionId] === snapshot ? current : { ...current, [sessionId]: snapshot }
@@ -126,7 +133,7 @@ export function BotCommunicationThread({
     () => [selected.source.sessionId, selected.recipient.sessionId],
     [selected.source.sessionId, selected.recipient.sessionId]
   )
-  const open = (participant: BotCommunicationParticipant): void => {
+  const openParticipant = (participant: BotCommunicationParticipant): void => {
     if (participant.botId) {
       onClose()
       openProjectChannel(participant.botId)
@@ -219,7 +226,7 @@ export function BotCommunicationThread({
   const mixed = Object.values(peers).some((peer) => peer.mixed.has(selected.id))
   return (
     <Sheet
-      open
+      open={open}
       onOpenChange={(value) => {
         if (!value) {
           onClose()
@@ -232,6 +239,7 @@ export function BotCommunicationThread({
         data-bot-communication-thread
         surface="chat"
         style={appearance}
+        onCloseAutoFocus={onClosed}
       >
         <div className="shrink-0 border-b border-border">
           <SheetHeader>
@@ -241,12 +249,12 @@ export function BotCommunicationThread({
                   source={{
                     participant: source,
                     available: sourceAvailable,
-                    onOpen: () => open(selected.source)
+                    onOpen: () => openParticipant(selected.source)
                   }}
                   recipient={{
                     participant: recipient,
                     available: recipientAvailable,
-                    onOpen: () => open(selected.recipient)
+                    onOpen: () => openParticipant(selected.recipient)
                   }}
                 />
               </SheetTitle>

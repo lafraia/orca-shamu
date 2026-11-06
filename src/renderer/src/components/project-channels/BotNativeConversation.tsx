@@ -109,16 +109,13 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
         open={vaultOpen}
         onOpenChange={setVaultOpen}
       />
-      {routinesOpen ? (
-        <BotRoutinesPanel
-          botId={channel.id}
-          name={channel.name}
-          onClose={() => setRoutinesOpen(false)}
-        />
-      ) : null}
-      {memoryOpen ? (
-        <BotMemoryPanel channel={channel} open={memoryOpen} onOpenChange={setMemoryOpen} />
-      ) : null}
+      <BotRoutinesPanel
+        botId={channel.id}
+        name={channel.name}
+        open={routinesOpen}
+        onOpenChange={setRoutinesOpen}
+      />
+      <BotMemoryPanel channel={channel} open={memoryOpen} onOpenChange={setMemoryOpen} />
       {ready ? (
         <NativeChatView
           mode="structured"
