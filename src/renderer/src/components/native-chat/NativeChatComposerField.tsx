@@ -19,7 +19,7 @@ import type { BotMention } from '../../../../shared/bot-mentions'
 import { NativeChatComposerActions } from './NativeChatComposerActions'
 import { NativeChatComposerNotices } from './NativeChatComposerNotices'
 import type { NativeChatComposerNotice } from './native-chat-composer-notice'
-import type { NativeChatContextUsageSummary } from './native-chat-context-usage-summary'
+import type { NativeChatContextUsageSummary } from '../../../../shared/native-chat/native-chat-context-usage-summary'
 import {
   nativeChatComposerPlaceholder,
   type NativeChatAfterStopSend

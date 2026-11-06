@@ -28,6 +28,7 @@ import {
 import { remarkNativeChatFileDestinations } from './native-chat-markdown-file-destinations'
 import { NativeChatLinkPeek } from './NativeChatLinkPeek'
 import { NativeChatLinkPeekContext } from './native-chat-link-peek-context'
+import { useNativeChatLinkClick } from './native-chat-link-click-context'
 import './native-chat-markdown.css'
 
 /** Existing words stay opaque when a reply first starts growing. */
@@ -44,8 +45,11 @@ function useWordFadeArmed(fadeWords: boolean): boolean {
   return armed && fadeWords
 }
 
-type NativeChatMarkdownProps = Omit<ComponentProps<typeof CommentMarkdown>, 'fileLinkExists'> & {
-  /** Underline file paths in the text that exist in the chat's workspace. */
+type NativeChatMarkdownProps = Omit<
+  ComponentProps<typeof CommentMarkdown>,
+  'fileLinkExists' | 'onLinkClick' | 'allowFileUriLinks'
+> & {
+  /** Underline file paths in the text that exist in the chat's workspace, when the chat can open them. */
   linkifyFilePaths?: boolean
   visualMessageId?: string
   streaming?: boolean
@@ -87,9 +91,7 @@ function createNativeChatImageExtension(
     ...base,
     components: {
       ...base.components,
-      img: ({ src, alt }) => (
-        <NativeChatMarkdownImage src={src} alt={alt} onLinkClick={onLinkClick} />
-      ),
+      img: ({ src, alt }) => <NativeChatMarkdownImage src={src} alt={alt} />,
       a: (props) => {
         const renderAnchor = (children: ReactNode): ReactNode => (
           <NativeChatLinkPeek href={props.href}>
@@ -130,9 +132,9 @@ export function NativeChatMarkdown({
   rowKey,
   content,
   variant,
-  onLinkClick,
   ...props
 }: NativeChatMarkdownProps): React.JSX.Element {
+  const onLinkClick = useNativeChatLinkClick()
   const wordFadeArmed = useWordFadeArmed(fadeWords)
   const visualExtension = useNativeChatVisualMarkdownExtension(visualMessageId)
   const baseExtension = useMemo(
@@ -144,7 +146,10 @@ export function NativeChatMarkdown({
   )
   const botExtension = useNativeChatBotMarkdown(baseExtension, onLinkClick)
   const extension = useNativeChatResourceMarkdown(botExtension, onLinkClick)
-  const fileLinkExists = useNativeChatFileLinkExists(linkifyFilePaths, streaming)
+  const fileLinkExists = useNativeChatFileLinkExists(
+    linkifyFilePaths && onLinkClick !== undefined,
+    streaming
+  )
   const { githubRepo } = useContext(NativeChatLinkPeekContext)
   return (
     <NativeChatMarkdownRowKeyContext.Provider value={rowKey}>
@@ -154,6 +159,7 @@ export function NativeChatMarkdown({
         // Only the document variant's links can peek; bare #123 links follow it.
         githubRepo={variant === 'document' ? githubRepo?.referenceRepo : undefined}
         onLinkClick={onLinkClick}
+        allowFileUriLinks={onLinkClick !== undefined}
         content={
           visualExtension && streaming
             ? withoutPendingNativeChatVisualDirectiveTail(content)

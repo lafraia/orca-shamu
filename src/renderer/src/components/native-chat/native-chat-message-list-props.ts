@@ -1,4 +1,3 @@
-import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
 import type { NativeChatLiveSession } from './use-native-chat-live-session'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import type { NativeChatTurnActivity } from '../../../../shared/native-chat/transcript/native-chat-turn-activity'
@@ -37,8 +36,6 @@ export type NativeChatMessageListProps = {
   workingStartedAt?: number | null
   /** Host durations by prompt id; otherwise fall back to a duration observed locally. */
   settledTurns?: NativeChatSettledTurns
-  onLinkClick?: CommentMarkdownLinkClickHandler
-  allowFileUriLinks?: boolean
   deliveryNotices?: ReadonlyMap<string, NativeChatDeliveryNotice>
   /** Set while the turn waits on the reader; the live activity line yields to it. */
   awaitingInput?: NativeChatAwaitingInput | null

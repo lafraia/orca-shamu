@@ -11,6 +11,7 @@ import {
 import { useProjectChannels } from '../project-channels/project-channel-store'
 import { useShamuClient } from '../shamu/shamu-client-state'
 import { NativeChatMarkdown } from './NativeChatMarkdown'
+import { NativeChatLinkClickContext } from './native-chat-link-click-context'
 import {
   createNativeChatBotCatalogue,
   nativeChatBotCatalogue,
@@ -82,13 +83,14 @@ describe('bot mentions in the native transcript', () => {
   it('leaves emails, identifiers, code and existing Markdown links intact', () => {
     const onLinkClick = vi.fn((event) => event.preventDefault())
     render(
-      <NativeChatMarkdown
-        content={
-          '@CEO_extra a@CEO @Unknown `@CEO` [@CEO](https://example.com)\n\n```text\n@CEO\n```\n\nFale com @CEO.'
-        }
-        variant="compact"
-        onLinkClick={onLinkClick}
-      />
+      <NativeChatLinkClickContext.Provider value={onLinkClick}>
+        <NativeChatMarkdown
+          content={
+            '@CEO_extra a@CEO @Unknown `@CEO` [@CEO](https://example.com)\n\n```text\n@CEO\n```\n\nFale com @CEO.'
+          }
+          variant="compact"
+        />
+      </NativeChatLinkClickContext.Provider>
     )
     expect(screen.getAllByRole('button', { name: 'Open bot chat: CEO' })).toHaveLength(1)
     const link = screen.getByRole('link', { name: '@CEO' })

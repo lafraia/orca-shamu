@@ -4,8 +4,8 @@ import {
   type NativeChatComposerInput
 } from './native-chat-composer-input'
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react'
-import { appendReturnedDraftText } from '../../../../shared/returned-draft-text'
 import { nativeChatSuggestionResetIndex } from './native-chat-mention-choices'
+import { withQuoteAppended } from './native-chat-selection-quote-draft'
 
 /** Insert/focus through the composer input for paste and imperative callers. */
 export function useNativeChatTypedInsertion(args: {
@@ -66,7 +66,8 @@ export function useNativeChatTypedInsertion(args: {
     (text: string): void => {
       const textarea = usableInput()
       if (textarea) {
-        const next = appendReturnedDraftText(textarea.value, text)
+        // A quote the user adds lands after what they typed, as typing it would.
+        const next = withQuoteAppended({ text: textarea.value }, text).text
         showDraft(textarea, next, next.length)
       }
     },

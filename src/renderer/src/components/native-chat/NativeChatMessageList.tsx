@@ -72,8 +72,6 @@ export function NativeChatMessageList({
   isVisible = true,
   isWorking,
   expandSignal,
-  onLinkClick,
-  allowFileUriLinks = false,
   workingStartedAt,
   settledTurns,
   deliveryNotices,
@@ -310,9 +308,7 @@ export function NativeChatMessageList({
     taskListPredecessors,
     expandedTurnIds,
     deliveryNotices,
-    allowFileUriLinks,
     runtimeContext,
-    onLinkClick,
     onToggleExpandedTurn: toggleExpandedTurn,
     subagentDisclosure,
     onScrollMessageToTop: scrollMessageToTop,
@@ -358,11 +354,7 @@ export function NativeChatMessageList({
                       forwardGesture={readerInput.forwardedGesture}
                     />
                     {liveLine && !communicationView.hiddenLiveTurn ? (
-                      <NativeChatTurnActivityLine
-                        line={liveLine}
-                        onLinkClick={onLinkClick}
-                        allowFileUriLinks={allowFileUriLinks}
-                      />
+                      <NativeChatTurnActivityLine line={liveLine} />
                     ) : tailRow === 'awaiting-input' ? (
                       <NativeChatAwaitingInputRow subject={null} pending />
                     ) : null}
