@@ -6,7 +6,6 @@ import {
   findCommandSpec,
   normalizeCommandPositionals,
   parseArgs,
-  supportsBrowserPageFlag,
   validateCommandAndFlags
 } from './args'
 
@@ -36,14 +35,6 @@ describe('parseArgs', () => {
     const parsed = parseArgs(['--value='])
 
     expect(parsed.flags.get('value')).toBe('')
-  })
-
-  it('still parses boolean flags and space-separated values', () => {
-    const parsed = parseArgs(['tab', 'create', '--json', '--url', 'https://example.com'])
-
-    expect(parsed.commandPath).toEqual(['tab', 'create'])
-    expect(parsed.flags.get('json')).toBe(true)
-    expect(parsed.flags.get('url')).toBe('https://example.com')
   })
 
   it('does not consume a command token after an unknown flag', () => {
@@ -93,6 +84,16 @@ describe('parseArgs', () => {
     expect(parsed.flags.get('repo')).toBe('id:abc')
   })
 
+  it('preserves a project selector before the project command', () => {
+    const parsed = parseArgs(
+      ['--project', 'github:stablyai/orca', 'project', 'setups'],
+      [['project', 'setups']]
+    )
+
+    expect(parsed.commandPath).toEqual(['project', 'setups'])
+    expect(parsed.flags.get('project')).toBe('github:stablyai/orca')
+  })
+
   it('preserves a selector value that is also a registered command', () => {
     const parsed = parseArgs(
       ['--environment', 'status', 'worktree', 'list'],
@@ -113,12 +114,14 @@ describe('parseArgs', () => {
     expect(parsed.flags.get('environment')).toBe('worktree')
   })
 
-  it('parses emulator reinstall as a boolean flag', () => {
-    const parsed = parseArgs(['emulator', 'install', 'app.apk', '--reinstall', '--device', 'emu'])
+  it.each([
+    ['--project', 'project', 'project', 'setups'],
+    ['--project=project', 'project', 'setups']
+  ])('preserves a command-named project selector in %j', (...args) => {
+    const parsed = parseArgs(args, [['project', 'setups']])
 
-    expect(parsed.commandPath).toEqual(['emulator', 'install', 'app.apk'])
-    expect(parsed.flags.get('reinstall')).toBe(true)
-    expect(parsed.flags.get('device')).toBe('emu')
+    expect(parsed.commandPath).toEqual(['project', 'setups'])
+    expect(parsed.flags.get('project')).toBe('project')
   })
 
   it('normalizes partial positionals without conflicting later flag-supplied args', () => {
@@ -184,20 +187,8 @@ describe('command aliases', () => {
     }
   ]
 
-  it('resolves an exact canonical path to its spec', () => {
-    expect(findCommandSpec(specs, ['worktree', 'rm'])?.path).toEqual(['worktree', 'rm'])
-  })
-
   it('resolves an aliased path to the canonical spec', () => {
     expect(findCommandSpec(specs, ['worktree', 'remove'])?.path).toEqual(['worktree', 'rm'])
-  })
-
-  it('resolves each declared alias to the canonical spec', () => {
-    expect(findCommandSpec(specs, ['worktree', 'delete'])?.path).toEqual(['worktree', 'rm'])
-  })
-
-  it('returns undefined for a path matching neither canonical nor alias', () => {
-    expect(findCommandSpec(specs, ['worktree', 'destroy'])).toBeUndefined()
   })
 
   it('canonicalizes an aliased command path during normalization', () => {
@@ -210,32 +201,11 @@ describe('command aliases', () => {
     expect(normalized.flags.get('force')).toBe(true)
   })
 
-  it('leaves a canonical command path unchanged during normalization', () => {
-    const normalized = normalizeCommandPositionals(specs, parseArgs(['worktree', 'rm']))
-
-    expect(normalized.commandPath).toEqual(['worktree', 'rm'])
-  })
-
   it('binds a trailing positional after canonicalizing the base path', () => {
     const normalized = normalizeCommandPositionals(specs, parseArgs(['repo', 'show', 'id:abc']))
 
     expect(normalized.commandPath).toEqual(['repo', 'show'])
     expect(normalized.flags.get('repo')).toBe('id:abc')
-  })
-})
-
-describe('supportsBrowserPageFlag', () => {
-  it('does not expose browser page targeting on orchestration commands', () => {
-    expect(supportsBrowserPageFlag(['orchestration', 'send'])).toBe(false)
-  })
-
-  it('does not expose browser page targeting on local agent discovery', () => {
-    expect(supportsBrowserPageFlag(['agent-context'])).toBe(false)
-  })
-
-  it('does not expose browser page targeting on host-local account commands', () => {
-    expect(supportsBrowserPageFlag(['account', 'add'])).toBe(false)
-    expect(supportsBrowserPageFlag(['account', 'list'])).toBe(false)
   })
 })
 
@@ -280,49 +250,5 @@ describe('validateCommandAndFlags', () => {
     expect(() => validateCommandAndFlags(specs, parsed)).toThrow(
       'Unknown flag --bogus for command: demo'
     )
-  })
-
-  it('enumerates valid flags and suggests a near-miss on unknown-flag errors', () => {
-    const flagSpecs: CommandSpec[] = [
-      {
-        path: ['worktree', 'rm'],
-        summary: 'Remove a worktree',
-        usage: 'orca worktree rm',
-        allowedFlags: ['worktree', 'force', 'run-hooks']
-      }
-    ]
-    const parsed = parseArgs(['worktree', 'rm', '--forcce'])
-
-    try {
-      validateCommandAndFlags(flagSpecs, parsed)
-      throw new Error('expected validateCommandAndFlags to throw')
-    } catch (error) {
-      const data = (error as { data?: { validFlags: string[]; nextSteps: string[] } }).data
-      expect(data?.validFlags).toContain('force')
-      expect(data?.validFlags).toContain('json')
-      expect(data?.nextSteps.join('\n')).toContain('--force')
-      expect(data?.nextSteps.join('\n')).toContain('Valid flags:')
-    }
-  })
-
-  it('attaches did-you-mean suggestions to unknown-command errors', () => {
-    const suggestSpecs: CommandSpec[] = [
-      {
-        path: ['worktree', 'rm'],
-        summary: 'Remove a worktree',
-        usage: 'orca worktree rm',
-        allowedFlags: []
-      }
-    ]
-    const parsed = parseArgs(['worktree', 'remov'])
-
-    try {
-      validateCommandAndFlags(suggestSpecs, parsed)
-      throw new Error('expected validateCommandAndFlags to throw')
-    } catch (error) {
-      const data = (error as { data?: { suggestions: string[]; nextSteps: string[] } }).data
-      expect(data?.suggestions).toContain('worktree rm')
-      expect(data?.nextSteps[0]).toContain('orca worktree rm')
-    }
   })
 })

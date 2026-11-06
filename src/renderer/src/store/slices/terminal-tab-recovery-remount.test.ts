@@ -1,7 +1,21 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestStore, makeWorktree, seedStore } from './store-test-helpers'
+import './terminal-tab-retirement'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
+import { createStoreSessionMockApi } from './store-session-test-harness'
 
 const WORKTREE_ID = 'repo1::/path/wt1'
+
+beforeEach(() => {
+  // Track the original global before the shared fixture installs the renderer API.
+  vi.stubGlobal('window', undefined)
+  createStoreSessionMockApi()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 function seedWorktreeWithTab(store: ReturnType<typeof createTestStore>): string {
   seedStore(store, {
@@ -12,38 +26,69 @@ function seedWorktreeWithTab(store: ReturnType<typeof createTestStore>): string 
   return store.getState().createTab(WORKTREE_ID).id
 }
 
-describe('remountTerminalTabForRecovery', () => {
-  it('bumps the tab generation so TerminalPane remounts', () => {
+// Recovery ledger follows tab rows across worktree, folder and floating buckets; no repository-only lookup may strand it.
+describe.each([
+  ['a repository worktree', WORKTREE_ID],
+  ['a folder workspace', folderWorkspaceKey('fw-1')],
+  ['the floating terminal bucket', FLOATING_TERMINAL_WORKTREE_ID]
+])('the recovery ledger on %s', (_label, bucketId) => {
+  function seedBucket(store: ReturnType<typeof createTestStore>): string {
+    seedStore(store, {
+      worktreesByRepo: {
+        repo1: [makeWorktree({ id: WORKTREE_ID, repoId: 'repo1', path: '/path/wt1' })]
+      }
+    })
+    return store.getState().createTab(bucketId).id
+  }
+
+  const AUTOMATIC = { reason: 'write-stalled', trigger: 'automatic', now: 0 } as const
+
+  it('admits, observes and then refuses the same reason until a new trigger', () => {
     const store = createTestStore()
-    const tabId = seedWorktreeWithTab(store)
-    const before = store.getState().tabsByWorktree[WORKTREE_ID].find((tab) => tab.id === tabId)
+    const tabId = seedBucket(store)
+    const row = (): { recovery?: unknown } | undefined =>
+      store.getState().tabsByWorktree[bucketId]?.find((tab) => tab.id === tabId)
 
-    const remounted = store.getState().remountTerminalTabForRecovery(tabId)
+    const first = store.getState().remountTerminalTabForRecovery(tabId, AUTOMATIC)
+    expect(first.remounted).toBe(true)
+    expect(row()?.recovery).toMatchObject({ outcome: 'pending', reason: 'write-stalled' })
 
-    expect(remounted).toBe(true)
-    const after = store.getState().tabsByWorktree[WORKTREE_ID].find((tab) => tab.id === tabId)
-    expect(after?.generation ?? 0).toBe((before?.generation ?? 0) + 1)
-    // Recovery is not user interaction — the remount's PTY updates must not
-    // reshuffle Recent, mirroring the activation-time generation bump.
-    expect(after?.pendingActivationSpawn).toBeTruthy()
+    // Unsettled blocks the next automatic ask, even past the cooldown.
+    expect(
+      store.getState().remountTerminalTabForRecovery(tabId, { ...AUTOMATIC, now: 16_000 })
+    ).toEqual({ remounted: false, declinedBy: 'unsettled', retryInMs: 15_000 })
+
+    if (!first.remounted) {
+      throw new Error('unreachable: the first remount was admitted')
+    }
+    store.getState().settleTerminalTabRecovery(tabId, first.generation, 'failed')
+    expect(row()?.recovery).toMatchObject({ outcome: 'failed' })
+    expect(
+      store.getState().remountTerminalTabForRecovery(tabId, { ...AUTOMATIC, now: 600_000 })
+    ).toEqual({ remounted: false, declinedBy: 'settled-failure' })
+
+    // The user asking again is the new trigger the refusal waits for.
+    expect(
+      store
+        .getState()
+        .remountTerminalTabForRecovery(tabId, { ...AUTOMATIC, trigger: 'user', now: 600_000 })
+        .remounted
+    ).toBe(true)
   })
+})
 
-  it('leaves sibling tabs untouched', () => {
+// Pane mount snapshots startup commands once; recovery must retain queued commands until owning-pane spawn or leave quick commands at a bare prompt (STA-4876).
+describe('queued startup command retention', () => {
+  // Only the owning pane spends it, via this action, once its own fresh spawn exists.
+  it('is spent through consumeTabStartupCommand and does not replay afterwards', () => {
     const store = createTestStore()
     const tabId = seedWorktreeWithTab(store)
-    const siblingId = store.getState().createTab(WORKTREE_ID).id
+    store.getState().queueTabStartupCommand(tabId, { command: 'echo hi' })
+
+    expect(store.getState().consumeTabStartupCommand(tabId)).toEqual({ command: 'echo hi' })
 
     store.getState().remountTerminalTabForRecovery(tabId)
-
-    const sibling = store.getState().tabsByWorktree[WORKTREE_ID].find((tab) => tab.id === siblingId)
-    expect(sibling?.generation ?? 0).toBe(0)
-    expect(sibling?.pendingActivationSpawn).toBeFalsy()
-  })
-
-  it('returns false when the tab no longer exists', () => {
-    const store = createTestStore()
-    seedWorktreeWithTab(store)
-
-    expect(store.getState().remountTerminalTabForRecovery('missing-tab')).toBe(false)
+    expect(store.getState().pendingStartupByTabId[tabId]).toBeUndefined()
+    expect(store.getState().consumeTabStartupCommand(tabId)).toBeNull()
   })
 })

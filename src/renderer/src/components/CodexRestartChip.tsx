@@ -1,70 +1,10 @@
-import { useEffect, useId, useMemo, useRef } from 'react'
-import { useShallow } from 'zustand/react/shallow'
+import { useEffect, useId, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '../store'
-import { selectCodexRestartInputs } from './codex-restart-chip-inputs'
 import { translate } from '@/i18n/i18n'
 import { shouldFocusMobileDriverAction } from './terminal-pane/mobile-driver-overlay-focus'
-import { buildCodexRestartNoticeKey } from './codex-restart-notice-key'
 import { awaitsCodexRestartAnswer } from './codex-restart-notice-state'
-import type { CodexRestartNotice } from '../store/slices/terminals'
-
-const EMPTY_TABS: { id: string }[] = []
-
-export function collectStalePtyIdsForTabs({
-  tabs,
-  ptyIdsByTabId,
-  codexRestartNoticeByPtyId
-}: {
-  tabs: { id: string }[]
-  ptyIdsByTabId: Record<string, string[]>
-  codexRestartNoticeByPtyId: Record<string, CodexRestartNotice | undefined>
-}): string[] {
-  // Why: an already-requested restart runs when its pane next mounts. Keeping it
-  // out of the prompt is what stops the panel from sticking on a worktree whose
-  // stale pane is parked or deferred and cannot answer the request yet. A
-  // dismissed notice is likewise answered — it only survives as launch-account
-  // memory.
-  return tabs.flatMap((tab) =>
-    (ptyIdsByTabId[tab.id] ?? []).filter((ptyId) =>
-      awaitsCodexRestartAnswer(codexRestartNoticeByPtyId[ptyId])
-    )
-  )
-}
-
-export function collectStaleWorktreePtyIds({
-  tabsByWorktree,
-  ptyIdsByTabId,
-  codexRestartNoticeByPtyId,
-  worktreeId
-}: {
-  tabsByWorktree: Record<string, { id: string }[]>
-  ptyIdsByTabId: Record<string, string[]>
-  codexRestartNoticeByPtyId: Record<string, CodexRestartNotice | undefined>
-  worktreeId: string
-}): string[] {
-  return collectStalePtyIdsForTabs({
-    tabs: tabsByWorktree[worktreeId] ?? EMPTY_TABS,
-    ptyIdsByTabId,
-    codexRestartNoticeByPtyId
-  })
-}
-
-export function dismissStaleWorktreePtyIds(
-  staleWorktreePtyIds: string[],
-  dismissCodexRestartNotices: (ptyIds: string[]) => void,
-  forgetLaunchAccounts: (ptyIds: string[]) => void
-): void {
-  // Why: restart notices are stored per PTY, but the workspace host presents
-  // one shared prompt. Dismissing all matching PTY notices keeps every pane in
-  // that worktree consistent with the dismissal.
-  dismissCodexRestartNotices(staleWorktreePtyIds)
-  // Why: notices are renderer-only, so without dropping the on-disk launch
-  // record the startup sweep re-raises this exact prompt — and re-blocks the
-  // pane's input — after every app restart the user already answered.
-  forgetLaunchAccounts(staleWorktreePtyIds)
-}
 
 function isInsideHiddenTree(element: HTMLElement): boolean {
   return element.closest('[aria-hidden="true"], [hidden], [inert]') !== null
@@ -77,58 +17,41 @@ type RestartNotice = {
 
 export default function CodexRestartChip({
   isVisible = true,
-  worktreeId
+  ptyId,
+  onReturnFocus,
+  shouldFocus = false
 }: {
   isVisible?: boolean
-  worktreeId: string
+  ptyId: string
+  onReturnFocus: () => void
+  shouldFocus?: boolean
 }): React.JSX.Element | null {
-  const tabs = useAppStore((s) => s.tabsByWorktree[worktreeId] ?? EMPTY_TABS)
-  // Why: both of these maps churn on unrelated pty lifecycle events (ptyIdsByTabId
-  // on attach/detach; codexRestartNoticeByPtyId is re-spread even when empty on
-  // pty teardown), so subscribe to them only while a restart notice actually
-  // exists. Otherwise this per-worktree chip re-rendered on every pty event to
-  // compute "no notice → render nothing". See codex-restart-chip-inputs.
-  const { ptyIdsByTabId, codexRestartNoticeByPtyId } = useAppStore(
-    useShallow(selectCodexRestartInputs)
-  )
-  const staleWorktreePtyIds = useMemo(
-    () =>
-      collectStalePtyIdsForTabs({
-        tabs,
-        ptyIdsByTabId,
-        codexRestartNoticeByPtyId
-      }),
-    [codexRestartNoticeByPtyId, ptyIdsByTabId, tabs]
-  )
-  const restartNotice = staleWorktreePtyIds[0]
-    ? codexRestartNoticeByPtyId[staleWorktreePtyIds[0]]
-    : undefined
-  const queueCodexPaneRestarts = useAppStore((s) => s.queueCodexPaneRestarts)
-  const dismissCodexRestartNotices = useAppStore((s) => s.dismissCodexRestartNotices)
-
-  const noticeKey = restartNotice ? buildCodexRestartNoticeKey(restartNotice) : null
-
-  if (staleWorktreePtyIds.length === 0 || !restartNotice) {
+  // Select by PTY in O(1) so split panes ignore unrelated map churn without per-pane workspace scans.
+  const restartNotice = useAppStore((state) => state.codexRestartNoticeByPtyId[ptyId])
+  if (!restartNotice || !awaitsCodexRestartAnswer(restartNotice)) {
     return null
   }
 
   const handleRestart = (): void => {
-    queueCodexPaneRestarts(staleWorktreePtyIds)
+    useAppStore.getState().queuePaneAccountRestarts([ptyId], 'codex')
+    onReturnFocus()
   }
 
   const handleDismiss = (): void => {
-    dismissStaleWorktreePtyIds(staleWorktreePtyIds, dismissCodexRestartNotices, (ptyIds) => {
-      void window.api.codexAccounts.forgetStalePanes({ ptyIds }).catch((err: unknown) => {
-        console.warn('Failed to forget dismissed Codex pane accounts:', err)
-      })
+    useAppStore.getState().dismissCodexRestartNotices([ptyId])
+    onReturnFocus()
+    // Clear the persisted launch record too, or startup recreates this answered renderer notice.
+    void window.api.codexAccounts.forgetStalePanes({ ptyIds: [ptyId] }).catch((err: unknown) => {
+      console.warn('Failed to forget dismissed Codex pane account:', err)
     })
   }
 
   return (
     <LoudRestartOverlay
       isVisible={isVisible}
-      noticeKey={noticeKey}
+      ptyId={ptyId}
       restartNotice={restartNotice}
+      shouldFocus={shouldFocus}
       onDismiss={handleDismiss}
       onRestart={handleRestart}
     />
@@ -137,14 +60,16 @@ export default function CodexRestartChip({
 
 function LoudRestartOverlay({
   isVisible,
-  noticeKey,
+  ptyId,
   restartNotice,
+  shouldFocus,
   onDismiss,
   onRestart
 }: {
   isVisible: boolean
-  noticeKey: string | null
+  ptyId: string
   restartNotice: RestartNotice
+  shouldFocus: boolean
   onDismiss: () => void
   onRestart: () => void
 }): React.JSX.Element {
@@ -152,18 +77,9 @@ function LoudRestartOverlay({
   const bodyId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
 
-  // Why: move focus to the card only when the user isn't typing elsewhere;
-  // unconditional autoFocus would steal keys from an active composer.
-  //
-  // The target is the dialog itself, never Restart. This card is mounted per
-  // WORKTREE (a sibling of the split layout), so its focus scope is every
-  // terminal in the worktree — a notice for one pane lands while the user may
-  // be typing in a different, perfectly healthy pane. With Restart focused, the
-  // next Space/Enter of their prose queued a restart of every stale pane here
-  // and destroyed those sessions. Focus must not land on a destructive action
-  // the user never aimed at. See #10863.
+  // Focus only if the user is not typing elsewhere. Focus the dialog, never Restart, so Space/Enter cannot destroy an unchosen session (#10863).
   useEffect(() => {
-    if (!isVisible) {
+    if (!isVisible || !shouldFocus) {
       return
     }
     const root = rootRef.current
@@ -174,19 +90,37 @@ function LoudRestartOverlay({
     if (shouldFocusMobileDriverAction(document.activeElement, document.body, paneScope)) {
       root.focus()
     }
-  }, [isVisible, noticeKey])
+  }, [
+    isVisible,
+    ptyId,
+    restartNotice.previousAccountLabel,
+    restartNotice.nextAccountLabel,
+    shouldFocus
+  ])
 
   return (
     <div
       ref={rootRef}
       role="dialog"
-      // Why: programmatically focusable so the card can take focus itself, but
-      // out of the Tab order — Tab from here still reaches Restart/Keep.
+      data-overlay-focus-scope="parent"
+      // Allow programmatic focus while keeping Tab navigation on Restart/Keep.
       tabIndex={-1}
       aria-live="assertive"
       aria-labelledby={titleId}
       aria-describedby={bodyId}
-      className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center p-6 outline-none"
+      onMouseDown={(event) => {
+        if (event.button === 0 && event.target === event.currentTarget) {
+          onDismiss()
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          onDismiss()
+        }
+      }}
+      className="absolute inset-0 z-50 flex items-center justify-center p-6 outline-none"
     >
       <div className="pointer-events-auto flex w-full max-w-[30rem] flex-col gap-3 rounded-lg border border-border bg-card p-6 pb-5 text-card-foreground shadow-xs">
         <div className="flex items-start gap-3">

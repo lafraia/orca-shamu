@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   captureParkedTerminalPaneCandidates,
+  pruneParkedTerminalWatchers,
   retireParkedTerminalTab
 } from './terminal-parked-watcher-registry'
+import { resolveParkedTerminalPaneCandidates } from './terminal-parked-watcher-reconciliation'
 import {
-  reconcileParkedWatcherPtyIds,
-  resolveParkedTerminalPaneCandidates
-} from './terminal-parked-watcher-reconciliation'
+  readTerminalScrollIntentKeyRetention,
+  writeKeyedTerminalScrollIntent
+} from '../../lib/pane-manager/terminal-scroll-intent-key-store'
 
 const TAB_ID = 'tab-1'
 const WORKTREE_ID = 'repo::/worktree'
@@ -65,23 +67,75 @@ describe('paired parked-watcher reconciliation', () => {
       }
     ])
   })
+})
 
-  it('surgically reconciles a reminted split leaf without restarting its sibling', () => {
-    expect(
-      reconcileParkedWatcherPtyIds({
-        currentTabPtyId: FIRST_PTY_ID,
-        entryTabPtyId: FIRST_PTY_ID,
-        paneIdByPtyId: new Map([
-          [FIRST_PTY_ID, 1],
-          [OLD_SECOND_PTY_ID, 2]
-        ]),
-        expectedPtyIds: new Set([FIRST_PTY_ID, NEW_SECOND_PTY_ID])
-      })
-    ).toEqual({
-      restartAll: false,
-      addedPtyIds: [NEW_SECOND_PTY_ID],
-      retainedPtyIds: [FIRST_PTY_ID],
-      retiredPaneIds: [2]
-    })
+it('releases captured scroll-intent keys when a parked tab is closed', () => {
+  writeKeyedTerminalScrollIntent(FIRST_LEAF_ID, {
+    kind: 'pinnedViewport',
+    bufferType: 'normal',
+    viewportY: 4,
+    baseY: 12,
+    revision: 1
+  })
+  captureParkedTerminalPaneCandidates(TAB_ID, WORKTREE_ID, [
+    { ptyId: FIRST_PTY_ID, paneId: 1, leafId: FIRST_LEAF_ID, drivesTabTitle: true }
+  ])
+
+  expect(readTerminalScrollIntentKeyRetention().intents).toBe(1)
+  retireParkedTerminalTab(TAB_ID)
+  expect(readTerminalScrollIntentKeyRetention().intents).toBe(0)
+})
+
+it('releases captured scroll-intent keys when a parked worktree is removed', () => {
+  writeKeyedTerminalScrollIntent(SECOND_LEAF_ID, {
+    kind: 'pinnedViewport',
+    bufferType: 'normal',
+    viewportY: 8,
+    baseY: 16,
+    revision: 1
+  })
+  captureParkedTerminalPaneCandidates(TAB_ID, WORKTREE_ID, [
+    { ptyId: FIRST_PTY_ID, paneId: 1, leafId: SECOND_LEAF_ID, drivesTabTitle: true }
+  ])
+
+  pruneParkedTerminalWatchers(new Set())
+
+  expect(readTerminalScrollIntentKeyRetention().intents).toBe(0)
+})
+
+// Carry sole-newborn facts only while the rescued leaf still binds the captured PTY.
+describe('untouchedFreshSpawn carry through the layout-fallback rescue', () => {
+  const soleLeafState = {
+    runtimePaneTitlesByTabId: {},
+    terminalLayoutsByTabId: {
+      [TAB_ID]: {
+        root: { type: 'leaf' as const, leafId: FIRST_LEAF_ID },
+        activeLeafId: FIRST_LEAF_ID,
+        expandedLeafId: null,
+        ptyIdsByLeafId: { [FIRST_LEAF_ID]: FIRST_PTY_ID }
+      }
+    }
+  }
+
+  it('drops the fact when the leaf re-minted a different PTY', () => {
+    captureParkedTerminalPaneCandidates(TAB_ID, WORKTREE_ID, [
+      {
+        ptyId: OLD_SECOND_PTY_ID,
+        paneId: 1,
+        leafId: FIRST_LEAF_ID,
+        drivesTabTitle: true,
+        untouchedFreshSpawn: true,
+        workspaceOwner: { executionHostId: 'ssh:qa', runtimeEnvironmentId: 'env-1' }
+      }
+    ])
+
+    const panes = resolveParkedTerminalPaneCandidates(
+      { id: TAB_ID, ptyId: FIRST_PTY_ID },
+      soleLeafState
+    )
+
+    expect(panes).toHaveLength(1)
+    expect(panes[0].untouchedFreshSpawn).toBeUndefined()
+    expect(panes[0].workspaceOwner).toBeUndefined()
   })
 })

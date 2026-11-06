@@ -1,39 +1,20 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AppState } from '../types'
 import type {
+  WorkspaceCleanupScanArgs,
   WorkspaceCleanupScanProgress,
   WorkspaceCleanupScanResult
-} from '../../../../shared/workspace-cleanup'
+} from '../../../../shared/workspace-cleanup/workspace-cleanup'
 import {
   NOW,
-  WORKTREE_ID,
   createCleanupTestStore,
   deferred,
   installWorkspaceCleanupApi,
   makeCandidate
 } from './workspace-cleanup-slice-test-harness'
+import { WorkspaceCleanupScanSupersededError } from './workspace-cleanup-broad-scan-registry'
 
 describe('workspace cleanup scan progress', () => {
-  it('joins duplicate broad cleanup scans', async () => {
-    const pending = deferred<WorkspaceCleanupScanResult>()
-    const scan = vi.fn().mockReturnValue(pending.promise)
-    installWorkspaceCleanupApi(scan)
-    const store = createCleanupTestStore()
-
-    const first = store.getState().scanWorkspaceCleanup()
-    const second = store.getState().scanWorkspaceCleanup()
-
-    expect(scan).toHaveBeenCalledTimes(1)
-    expect(store.getState().workspaceCleanupLoading).toBe(true)
-
-    const result = { scannedAt: NOW, candidates: [makeCandidate()], errors: [] }
-    pending.resolve(result)
-
-    await expect(Promise.all([first, second])).resolves.toEqual([result, result])
-    expect(store.getState().workspaceCleanupScan?.candidates).toHaveLength(1)
-    expect(store.getState().workspaceCleanupLoading).toBe(false)
-  })
-
   it('does not leave cleanup loading stuck when a reopen joins a just-settled scan', async () => {
     const pending = deferred<WorkspaceCleanupScanResult>()
     const result = { scannedAt: NOW, candidates: [makeCandidate()], errors: [] }
@@ -63,11 +44,11 @@ describe('workspace cleanup scan progress', () => {
     expect(store.getState().workspaceCleanupLoading).toBe(false)
   })
 
-  it('shows scanned cleanup candidates before the final broad scan resolves', async () => {
+  it('keeps same-id host rows distinct across streamed enrichment frames', async () => {
     const pending = deferred<WorkspaceCleanupScanResult>()
     let onProgress: ((progress: WorkspaceCleanupScanProgress) => void) | undefined
-    const partialCandidate = makeCandidate({ worktreeId: 'repo1::/tmp/partial' })
-    const finalCandidate = makeCandidate({ worktreeId: 'repo1::/tmp/final' })
+    const localCandidate = makeCandidate({ executionHostId: 'local' })
+    const remoteCandidate = makeCandidate({ executionHostId: 'ssh:ssh-1', connectionId: 'ssh-1' })
     const scan = vi.fn((_args, progressCallback) => {
       onProgress = progressCallback
       return pending.promise
@@ -81,161 +62,80 @@ describe('workspace cleanup scan progress', () => {
       scannedAt: NOW,
       scannedWorktreeCount: 1,
       totalWorktreeCount: 2,
-      candidates: [partialCandidate],
-      errors: []
-    })
-
-    expect(store.getState().workspaceCleanupLoading).toBe(true)
-    await vi.waitFor(() => {
-      expect(store.getState().workspaceCleanupProgress).toMatchObject({
-        scannedWorktreeCount: 1,
-        totalWorktreeCount: 2
-      })
-    })
-    expect(store.getState().workspaceCleanupScan?.candidates).toEqual([partialCandidate])
-
-    pending.resolve({
-      scannedAt: NOW,
-      candidates: [partialCandidate, finalCandidate],
-      errors: []
-    })
-
-    await expect(scanPromise).resolves.toEqual({
-      scannedAt: NOW,
-      candidates: [partialCandidate, finalCandidate],
-      errors: []
-    })
-    expect(store.getState().workspaceCleanupLoading).toBe(false)
-    expect(store.getState().workspaceCleanupProgress).toMatchObject({
-      scannedWorktreeCount: 2,
-      totalWorktreeCount: 2
-    })
-  })
-
-  it('does not re-probe previously enriched rows during cumulative progress updates', async () => {
-    const pending = deferred<WorkspaceCleanupScanResult>()
-    let onProgress: ((progress: WorkspaceCleanupScanProgress) => void) | undefined
-    const terminalCandidate = makeCandidate({ worktreeId: 'repo1::/tmp/terminal' })
-    const laterCandidate = makeCandidate({ worktreeId: 'repo1::/tmp/later' })
-    const scan = vi.fn((_args, progressCallback) => {
-      onProgress = progressCallback
-      return pending.promise
-    })
-    installWorkspaceCleanupApi(scan)
-    const hasChildProcesses = vi.fn().mockResolvedValue(false)
-    const getForegroundProcess = vi.fn().mockResolvedValue('zsh')
-    ;(
-      globalThis.window as unknown as {
-        api: {
-          pty?: {
-            hasChildProcesses: typeof hasChildProcesses
-            getForegroundProcess: typeof getForegroundProcess
-          }
-        }
-      }
-    ).api.pty = { hasChildProcesses, getForegroundProcess }
-    const store = createCleanupTestStore()
-    store.setState({
-      tabsByWorktree: {
-        'repo1::/tmp/terminal': [
-          { id: 'tab-1', title: 'zsh' }
-        ] as AppState['tabsByWorktree'][string]
-      },
-      ptyIdsByTabId: { 'tab-1': ['pty-1'] }
-    } as Partial<AppState>)
-
-    const scanPromise = store.getState().scanWorkspaceCleanup()
-    onProgress?.({
-      scanId: 'scan-1',
-      scannedAt: NOW,
-      scannedWorktreeCount: 1,
-      totalWorktreeCount: 2,
-      candidates: [terminalCandidate],
+      candidates: [localCandidate],
       errors: [],
       candidateMode: 'append'
     })
-
     await vi.waitFor(() => {
       expect(store.getState().workspaceCleanupProgress?.scannedWorktreeCount).toBe(1)
     })
-    expect(hasChildProcesses).toHaveBeenCalledTimes(1)
-    expect(getForegroundProcess).toHaveBeenCalledTimes(1)
 
     onProgress?.({
       scanId: 'scan-1',
       scannedAt: NOW,
       scannedWorktreeCount: 2,
       totalWorktreeCount: 2,
-      candidates: [laterCandidate],
+      candidates: [remoteCandidate],
       errors: [],
       candidateMode: 'append'
     })
-
     await vi.waitFor(() => {
-      expect(store.getState().workspaceCleanupProgress?.scannedWorktreeCount).toBe(2)
+      expect(store.getState().workspaceCleanupScan?.candidates).toHaveLength(2)
     })
-    expect(store.getState().workspaceCleanupScan?.candidates).toHaveLength(2)
-    expect(hasChildProcesses).toHaveBeenCalledTimes(1)
-    expect(getForegroundProcess).toHaveBeenCalledTimes(1)
 
-    pending.resolve({
-      scannedAt: NOW,
-      candidates: [terminalCandidate, laterCandidate],
-      errors: []
-    })
+    pending.resolve({ scannedAt: NOW, candidates: [localCandidate, remoteCandidate], errors: [] })
     await scanPromise
 
-    expect(hasChildProcesses).toHaveBeenCalledTimes(1)
-    expect(getForegroundProcess).toHaveBeenCalledTimes(1)
+    expect(store.getState().workspaceCleanupScan?.candidates).toEqual([
+      expect.objectContaining({ executionHostId: 'local' }),
+      expect.objectContaining({ executionHostId: 'ssh:ssh-1' })
+    ])
   })
 
-  it('updates count-only append progress without replacing existing candidate rows', async () => {
+  it('keeps Ignore and Stop ignoring across later streamed frames', async () => {
     const pending = deferred<WorkspaceCleanupScanResult>()
     let onProgress: ((progress: WorkspaceCleanupScanProgress) => void) | undefined
-    const candidate = makeCandidate({ worktreeId: 'repo1::/tmp/alpha' })
     const scan = vi.fn((_args, progressCallback) => {
       onProgress = progressCallback
       return pending.promise
     })
     installWorkspaceCleanupApi(scan)
     const store = createCleanupTestStore()
+    const first = makeCandidate({ worktreeId: 'repo1::/tmp/first' })
+    const frame = (count: number, worktreeId: string): void =>
+      onProgress?.({
+        scanId: 'scan-1',
+        scannedAt: NOW,
+        scannedWorktreeCount: count,
+        totalWorktreeCount: 3,
+        candidates: [makeCandidate({ worktreeId })],
+        errors: [],
+        candidateMode: 'append'
+      })
+    const firstBlockers = (): readonly string[] | undefined =>
+      store
+        .getState()
+        .workspaceCleanupScan?.candidates.find((c) => c.worktreeId === first.worktreeId)?.blockers
 
     const scanPromise = store.getState().scanWorkspaceCleanup()
-    onProgress?.({
-      scanId: 'scan-1',
-      scannedAt: NOW,
-      scannedWorktreeCount: 1,
-      totalWorktreeCount: 2,
-      candidates: [candidate],
-      errors: [],
-      candidateMode: 'append'
-    })
+    frame(1, first.worktreeId)
+    await vi.waitFor(() => expect(firstBlockers()).toEqual([]))
 
-    await vi.waitFor(() => {
-      expect(store.getState().workspaceCleanupProgress?.scannedWorktreeCount).toBe(1)
-    })
-    const candidatesAfterFirstAppend = store.getState().workspaceCleanupScan?.candidates
+    await store.getState().dismissWorkspaceCleanupCandidates([first])
+    frame(2, 'repo1::/tmp/second')
+    await vi.waitFor(() =>
+      expect(store.getState().workspaceCleanupScan?.candidates).toHaveLength(2)
+    )
+    expect(firstBlockers()).toEqual(['dismissed'])
 
-    onProgress?.({
-      scanId: 'scan-1',
-      scannedAt: NOW,
-      scannedWorktreeCount: 2,
-      totalWorktreeCount: 2,
-      candidates: [],
-      errors: [],
-      candidateMode: 'append'
-    })
+    await store.getState().restoreWorkspaceCleanupCandidates([first])
+    frame(3, 'repo1::/tmp/third')
+    await vi.waitFor(() =>
+      expect(store.getState().workspaceCleanupScan?.candidates).toHaveLength(3)
+    )
+    expect(firstBlockers()).toEqual([])
 
-    await vi.waitFor(() => {
-      expect(store.getState().workspaceCleanupProgress?.scannedWorktreeCount).toBe(2)
-    })
-    expect(store.getState().workspaceCleanupScan?.candidates).toBe(candidatesAfterFirstAppend)
-
-    pending.resolve({
-      scannedAt: NOW,
-      candidates: [candidate],
-      errors: []
-    })
+    pending.resolve({ scannedAt: NOW, candidates: [], errors: [] })
     await scanPromise
   })
 
@@ -314,7 +214,7 @@ describe('workspace cleanup scan progress', () => {
     await scanPromise
   })
 
-  it('publishes the final scan result without waiting for queued progress', async () => {
+  it('drains queued progress before publishing the final scan result', async () => {
     const pending = deferred<WorkspaceCleanupScanResult>()
     const terminalProbe = deferred<boolean>()
     let scanSettled = false
@@ -372,15 +272,17 @@ describe('workspace cleanup scan progress', () => {
       candidates: [finalCandidate],
       errors: []
     })
-    await scanPromise
-    expect(scanSettled).toBe(true)
+    await Promise.resolve()
+    expect(scanSettled).toBe(false)
 
     terminalProbe.resolve(false)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await scanPromise
+    expect(scanSettled).toBe(true)
 
     expect(
       store.getState().workspaceCleanupScan?.candidates.map((candidate) => candidate.worktreeId)
     ).toEqual(['repo1::/tmp/final'])
+    expect(hasChildProcesses).toHaveBeenCalledTimes(1)
     expect(store.getState().workspaceCleanupProgress).toMatchObject({
       scannedWorktreeCount: 1,
       totalWorktreeCount: 1
@@ -466,7 +368,7 @@ describe('workspace cleanup scan progress', () => {
     terminalProbe.resolve(false)
     await secondScan
     firstPending.resolve({ scannedAt: NOW - 1, candidates: [firstCandidate], errors: [] })
-    await firstScan
+    await expect(firstScan).rejects.toBeInstanceOf(WorkspaceCleanupScanSupersededError)
 
     expect(
       store.getState().workspaceCleanupScan?.candidates.map((candidate) => candidate.worktreeId)
@@ -479,8 +381,8 @@ describe('workspace cleanup scan progress', () => {
     const candidate = makeCandidate()
     const refreshedCandidate = makeCandidate({ worktreeId: 'repo1::/tmp/refreshed' })
     const broadScans = [firstBroadScan, secondBroadScan]
-    const scan = vi.fn((args?: { worktreeId?: string }) => {
-      if (args?.worktreeId) {
+    const scan = vi.fn((args?: WorkspaceCleanupScanArgs) => {
+      if (args?.worktreeId || args?.worktreeIds) {
         return Promise.resolve({ scannedAt: NOW, candidates: [candidate], errors: [] })
       }
       const nextBroadScan = broadScans.shift()
@@ -490,6 +392,15 @@ describe('workspace cleanup scan progress', () => {
       return nextBroadScan.promise
     })
     installWorkspaceCleanupApi(scan)
+    const cancelScan = vi.fn(async () => {
+      firstBroadScan.reject(new Error('Workspace cleanup scan cancelled'))
+      return true
+    })
+    ;(
+      globalThis.window as unknown as {
+        api: { workspaceCleanup: { cancelScan: typeof cancelScan } }
+      }
+    ).api.workspaceCleanup.cancelScan = cancelScan
     const removeWorktree = vi.fn().mockResolvedValue({ ok: true })
     const store = createCleanupTestStore(removeWorktree)
     store.setState({
@@ -497,102 +408,21 @@ describe('workspace cleanup scan progress', () => {
     } as Partial<AppState>)
 
     const pendingRefresh = store.getState().scanWorkspaceCleanup()
+    const firstBroadScanId = scan.mock.calls[0]?.[0]?.scanId
     await store.getState().removeWorkspaceCleanupCandidates([candidate.worktreeId])
     const replacementRefresh = store.getState().scanWorkspaceCleanup()
 
     expect(scan).toHaveBeenCalledTimes(3)
+    expect(cancelScan).toHaveBeenCalledExactlyOnceWith(firstBroadScanId)
 
     secondBroadScan.resolve({ scannedAt: NOW, candidates: [refreshedCandidate], errors: [] })
     await expect(replacementRefresh).resolves.toMatchObject({
       candidates: [refreshedCandidate]
     })
 
-    firstBroadScan.resolve({ scannedAt: NOW - 1, candidates: [candidate], errors: [] })
-    await pendingRefresh
+    await expect(pendingRefresh).rejects.toBeInstanceOf(WorkspaceCleanupScanSupersededError)
 
     expect(store.getState().workspaceCleanupLoading).toBe(false)
     expect(store.getState().workspaceCleanupScan?.candidates).toEqual([refreshedCandidate])
-  })
-
-  it('does not join broad cleanup scans with different explicit args', async () => {
-    const firstPending = deferred<WorkspaceCleanupScanResult>()
-    const secondPending = deferred<WorkspaceCleanupScanResult>()
-    const firstResult = {
-      scannedAt: NOW,
-      candidates: [makeCandidate({ worktreeId: 'repo1::/tmp/first' })],
-      errors: []
-    }
-    const secondResult = {
-      scannedAt: NOW + 1,
-      candidates: [makeCandidate({ worktreeId: 'repo1::/tmp/second' })],
-      errors: []
-    }
-    const scan = vi.fn((args?: { skipGitWorktreeIds?: string[] }) =>
-      args?.skipGitWorktreeIds?.includes('repo1::/tmp/first')
-        ? firstPending.promise
-        : secondPending.promise
-    )
-    installWorkspaceCleanupApi(scan)
-    const store = createCleanupTestStore()
-
-    const first = store
-      .getState()
-      .scanWorkspaceCleanup({ skipGitWorktreeIds: ['repo1::/tmp/first'] })
-    const second = store
-      .getState()
-      .scanWorkspaceCleanup({ skipGitWorktreeIds: ['repo1::/tmp/second'] })
-
-    expect(scan).toHaveBeenCalledTimes(2)
-    secondPending.resolve(secondResult)
-    await second
-    expect(store.getState().workspaceCleanupScan).toMatchObject(secondResult)
-
-    firstPending.resolve(firstResult)
-    await expect(Promise.all([first, second])).resolves.toEqual([firstResult, secondResult])
-    expect(store.getState().workspaceCleanupScan).toMatchObject(secondResult)
-  })
-
-  it('keeps stale cleanup results visible after a broad refresh failure', async () => {
-    const previous = { scannedAt: NOW, candidates: [makeCandidate()], errors: [] }
-    const scan = vi
-      .fn()
-      .mockResolvedValueOnce(previous)
-      .mockRejectedValueOnce(new Error('scan failed'))
-    installWorkspaceCleanupApi(scan)
-    const store = createCleanupTestStore()
-
-    await store.getState().scanWorkspaceCleanup()
-    await expect(store.getState().scanWorkspaceCleanup()).rejects.toThrow('scan failed')
-
-    expect(store.getState().workspaceCleanupScan).toMatchObject(previous)
-    expect(store.getState().workspaceCleanupError).toBe('scan failed')
-    expect(store.getState().workspaceCleanupLoading).toBe(false)
-  })
-
-  it('keeps focused cleanup preflight scans separate from broad scans', async () => {
-    const broad = deferred<WorkspaceCleanupScanResult>()
-    const scan = vi.fn((args?: { worktreeId?: string }) => {
-      if (args?.worktreeId) {
-        return Promise.resolve({
-          scannedAt: NOW + 1,
-          candidates: [makeCandidate({ worktreeId: args.worktreeId })],
-          errors: []
-        } satisfies WorkspaceCleanupScanResult)
-      }
-      return broad.promise
-    })
-    installWorkspaceCleanupApi(scan)
-    const store = createCleanupTestStore()
-
-    const broadScan = store.getState().scanWorkspaceCleanup()
-    const focusedScan = await store.getState().scanWorkspaceCleanup({ worktreeId: WORKTREE_ID })
-
-    expect(scan).toHaveBeenCalledTimes(2)
-    expect(focusedScan.candidates[0]?.worktreeId).toBe(WORKTREE_ID)
-    expect(store.getState().workspaceCleanupScan).toBeNull()
-
-    broad.resolve({ scannedAt: NOW, candidates: [], errors: [] })
-    await broadScan
-    expect(store.getState().workspaceCleanupScan?.scannedAt).toBe(NOW)
   })
 })

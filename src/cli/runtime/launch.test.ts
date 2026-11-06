@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promise
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { encodePairingOffer, PAIRING_OFFER_VERSION } from '../../shared/pairing'
+import { encodePairingOffer } from '../../shared/remote-runtime/pairing/pairing'
+import { PAIRING_OFFER_VERSION } from '../../shared/remote-runtime/pairing/mobile-relay-pairing-offer'
 import {
   getServeUpdateHandoffPath,
   parseServeUpdateHandoffState
@@ -13,15 +14,16 @@ import {
   SERVE_REPLACEMENT_READY_TIMEOUT_MS
 } from './serve-update-supervisor'
 
-const { spawnMock } = vi.hoisted(() => ({
-  spawnMock: vi.fn()
+const { spawnMock, spawnSyncMock } = vi.hoisted(() => ({
+  spawnMock: vi.fn(),
+  spawnSyncMock: vi.fn()
 }))
 
 vi.mock('child_process', () => ({
-  spawn: spawnMock
+  spawn: spawnMock,
+  spawnSync: spawnSyncMock
 }))
-
-import { launchOrcaApp, serveOrcaApp } from './launch'
+import { serveOrcaApp } from './launch'
 
 class FakeChildProcess extends EventEmitter {
   stdout = new EventEmitter()
@@ -68,6 +70,7 @@ const SSH_RECIPE_JSON = JSON.stringify({
 })
 const INVALID_SSH_RECIPE_JSON = SSH_RECIPE_JSON.replace('/workspace/repo', 'relative/repo')
 const IGNORED_NON_RECIPE_STDOUT = '[serve] ignored non-recipe stdout'
+const PROFILE = resolve('/profiles/serve')
 
 function startRecipeJsonServer() {
   const child = new FakeChildProcess()
@@ -86,14 +89,18 @@ describe('serveOrcaApp', () => {
 
   beforeEach(() => {
     spawnMock.mockReset()
+    spawnSyncMock.mockReset()
     process.env.ORCA_APP_EXECUTABLE = '/Applications/Orca.app/Contents/MacOS/Orca'
+    // Test Electron here; launch-serve-runtime.test.ts covers orcad selection.
+    process.env.ORCA_SERVE_RUNTIME = 'electron'
+    process.env.ORCA_USER_DATA_PATH = PROFILE
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    delete process.env.ORCA_SERVE_RUNTIME
     delete process.env.ORCA_APP_EXECUTABLE
     delete process.env.ORCA_APP_EXECUTABLE_NEEDS_APP_ROOT
-    delete process.env.ORCA_APPIMAGE_NO_SANDBOX
     delete process.env.ORCA_USER_DATA_PATH
     return Promise.all(
       temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true }))
@@ -326,160 +333,6 @@ describe('serveOrcaApp', () => {
     }
   )
 
-  it('pins the Electron child cwd to the app root instead of the caller cwd', async () => {
-    const child = {
-      kill: vi.fn(),
-      once: vi.fn(
-        (event: string, handler: (code: number | null, signal: string | null) => void) => {
-          if (event === 'exit') {
-            queueMicrotask(() => handler(0, null))
-          }
-          return child
-        }
-      )
-    }
-    spawnMock.mockReturnValue(child)
-
-    await expect(serveOrcaApp({ json: true })).resolves.toBe(0)
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      '/Applications/Orca.app/Contents/MacOS/Orca',
-      ['--serve', '--serve-json'],
-      expect.objectContaining({
-        cwd: resolve(__dirname, '../../..')
-      })
-    )
-  })
-
-  it('passes mobile pairing through to the foreground server child', async () => {
-    const child = {
-      kill: vi.fn(),
-      once: vi.fn(
-        (event: string, handler: (code: number | null, signal: string | null) => void) => {
-          if (event === 'exit') {
-            queueMicrotask(() => handler(0, null))
-          }
-          return child
-        }
-      )
-    }
-    spawnMock.mockReturnValue(child)
-
-    await expect(
-      serveOrcaApp({
-        json: true,
-        port: '6768',
-        pairingAddress: '100.64.1.20',
-        mobilePairing: true
-      })
-    ).resolves.toBe(0)
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      '/Applications/Orca.app/Contents/MacOS/Orca',
-      [
-        '--serve',
-        '--serve-json',
-        '--serve-port',
-        '6768',
-        '--serve-pairing-address',
-        '100.64.1.20',
-        '--serve-mobile-pairing'
-      ],
-      expect.objectContaining({
-        cwd: resolve(__dirname, '../../..')
-      })
-    )
-  })
-
-  it('preserves an AppImage no-sandbox launch for the server child', async () => {
-    process.env.ORCA_APPIMAGE_NO_SANDBOX = '1'
-    const child = {
-      kill: vi.fn(),
-      once: vi.fn(
-        (event: string, handler: (code: number | null, signal: string | null) => void) => {
-          if (event === 'exit') {
-            queueMicrotask(() => handler(0, null))
-          }
-          return child
-        }
-      )
-    }
-    spawnMock.mockReturnValue(child)
-
-    await expect(serveOrcaApp({ json: true })).resolves.toBe(0)
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      '/Applications/Orca.app/Contents/MacOS/Orca',
-      ['--no-sandbox', '--serve', '--serve-json'],
-      expect.any(Object)
-    )
-    const spawnOptions = spawnMock.mock.calls[0]?.[2] as { env?: NodeJS.ProcessEnv }
-    expect(spawnOptions.env).not.toHaveProperty('ORCA_APPIMAGE_NO_SANDBOX')
-  })
-
-  it('passes the app root before serve flags for dev Electron executables', async () => {
-    process.env.ORCA_APP_EXECUTABLE = '/repo/node_modules/.bin/electron'
-    process.env.ORCA_APP_EXECUTABLE_NEEDS_APP_ROOT = '1'
-    const child = {
-      kill: vi.fn(),
-      once: vi.fn(
-        (event: string, handler: (code: number | null, signal: string | null) => void) => {
-          if (event === 'exit') {
-            queueMicrotask(() => handler(0, null))
-          }
-          return child
-        }
-      )
-    }
-    spawnMock.mockReturnValue(child)
-
-    await expect(serveOrcaApp({ json: true, port: '6768' })).resolves.toBe(0)
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      '/repo/node_modules/.bin/electron',
-      [resolve(__dirname, '../../..'), '--serve', '--serve-json', '--serve-port', '6768'],
-      expect.objectContaining({
-        cwd: resolve(__dirname, '../../..')
-      })
-    )
-  })
-
-  it('prints recipe JSON from a detached server child and exits', async () => {
-    const child = new FakeChildProcess()
-    spawnMock.mockReturnValue(child)
-    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
-
-    const result = serveOrcaApp({
-      pairingAddress: 'wss://sandbox.example.com',
-      recipeJson: true,
-      projectRoot: '/workspace/repo'
-    })
-    queueMicrotask(() => {
-      child.stdout.emit('data', `${RECIPE_JSON}\n`)
-    })
-
-    await expect(result).resolves.toBe(0)
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      '/Applications/Orca.app/Contents/MacOS/Orca',
-      [
-        '--serve',
-        '--serve-pairing-address',
-        'wss://sandbox.example.com',
-        '--serve-recipe-json',
-        '--serve-project-root',
-        '/workspace/repo'
-      ],
-      expect.objectContaining({
-        cwd: resolve(__dirname, '../../..'),
-        detached: true,
-        stdio: ['ignore', 'pipe', 'inherit']
-      })
-    )
-    expect(writeSpy).toHaveBeenCalledWith(`${RECIPE_JSON}\n`)
-    expect(child.unref).toHaveBeenCalled()
-  })
-
   it('waits past startup status lines for valid recipe JSON', async () => {
     const { child, result, stdoutSpy, stderrSpy } = startRecipeJsonServer()
     queueMicrotask(() => {
@@ -560,62 +413,5 @@ describe('serveOrcaApp', () => {
 
     expect(stdoutSpy).toHaveBeenCalledWith(`${RECIPE_JSON}\n`)
     expect(child.unref).toHaveBeenCalledOnce()
-  })
-
-  it('uses a shell when a Windows npm command shim is the Electron executable', async () => {
-    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform')
-    Object.defineProperty(process, 'platform', { value: 'win32' })
-    process.env.ORCA_APP_EXECUTABLE = 'C:\\repo\\node_modules\\.bin\\electron.cmd'
-    const child = {
-      kill: vi.fn(),
-      once: vi.fn(
-        (event: string, handler: (code: number | null, signal: string | null) => void) => {
-          if (event === 'exit') {
-            queueMicrotask(() => handler(0, null))
-          }
-          return child
-        }
-      )
-    }
-    spawnMock.mockReturnValue(child)
-
-    try {
-      await expect(serveOrcaApp({ json: true })).resolves.toBe(0)
-      expect(spawnMock).toHaveBeenCalledWith(
-        'C:\\repo\\node_modules\\.bin\\electron.cmd',
-        ['--serve', '--serve-json'],
-        expect.objectContaining({
-          shell: true
-        })
-      )
-    } finally {
-      if (platformDescriptor) {
-        Object.defineProperty(process, 'platform', platformDescriptor)
-      }
-    }
-  })
-})
-
-describe('launchOrcaApp', () => {
-  beforeEach(() => {
-    spawnMock.mockReset()
-  })
-
-  afterEach(() => {
-    delete process.env.ORCA_OPEN_COMMAND
-    delete process.env.ORCA_APP_EXECUTABLE
-    delete process.env.ORCA_APP_EXECUTABLE_NEEDS_APP_ROOT
-  })
-
-  it('handles asynchronous detached spawn errors without throwing', async () => {
-    process.env.ORCA_APP_EXECUTABLE = '/missing/Orca'
-    const child = new FakeChildProcess()
-    spawnMock.mockReturnValue(child)
-
-    launchOrcaApp()
-    child.emit('error', new Error('ENOENT'))
-    await Promise.resolve()
-
-    expect(child.unref).toHaveBeenCalled()
   })
 })

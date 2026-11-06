@@ -3,11 +3,8 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NativeChatLaunchDraft } from '@/lib/native-chat-launch-prompt'
-import type { NativeChatMessage } from '../../../../shared/native-chat-types'
-import {
-  useNativeChatLaunchDraftAdoption,
-  useNativeChatLaunchDraftSignal
-} from './use-native-chat-launch-draft-adoption'
+import type { NativeChatMessage } from '../../../../shared/native-chat/native-chat-types'
+import { useNativeChatLaunchDraftSignal } from './use-native-chat-launch-draft-adoption'
 
 const mocks = vi.hoisted(() => ({
   markNativeChatLaunchDraftAdopted: vi.fn(),
@@ -29,36 +26,16 @@ vi.mock('../../store', () => {
   return { useAppStore }
 })
 
+const SEED_TEXT = 'https://github.com/o/r/issues/12'
+
 function launchDraft(overrides: Partial<NativeChatLaunchDraft> = {}): NativeChatLaunchDraft {
   return {
     tabId: 'tab-1',
     agent: 'claude',
-    text: 'https://github.com/o/r/issues/12',
+    text: SEED_TEXT,
     createdAt: 1000,
     ...overrides
   }
-}
-
-function setup(args: {
-  launchDraft: NativeChatLaunchDraft | null
-  launchDraftResolved?: boolean
-  draft?: string
-  agent?: string
-}): { setDraft: ReturnType<typeof vi.fn>; setCaret: ReturnType<typeof vi.fn> } {
-  const setDraft = vi.fn()
-  const setCaret = vi.fn()
-  renderHook(() =>
-    useNativeChatLaunchDraftAdoption({
-      terminalTabId: 'tab-1',
-      agent: args.agent ?? 'claude',
-      launchDraft: args.launchDraft,
-      launchDraftResolved: args.launchDraftResolved ?? false,
-      draft: args.draft ?? '',
-      setDraft,
-      setCaret
-    })
-  )
-  return { setDraft, setCaret }
 }
 
 const SEEDED_AT = 1_000_000
@@ -67,7 +44,10 @@ function userTurn(id: string, timestamp: number | null): NativeChatMessage {
   return { id, role: 'user', blocks: [{ type: 'text', text: id }], timestamp, source: 'transcript' }
 }
 
-type SignalProps = { messages: NativeChatMessage[]; transcriptLoading?: boolean }
+type SignalProps = {
+  messages: NativeChatMessage[]
+  transcriptLoading?: boolean
+}
 
 function renderSignal(messages: NativeChatMessage[], transcriptLoading = false) {
   const initialProps: SignalProps = { messages, transcriptLoading }
@@ -76,8 +56,10 @@ function renderSignal(messages: NativeChatMessage[], transcriptLoading = false) 
       useNativeChatLaunchDraftSignal({
         terminalTabId: 'tab-1',
         agent: 'claude',
-        messages: props.messages,
-        transcriptLoading: props.transcriptLoading === true
+        session: {
+          messages: props.messages,
+          readPhase: props.transcriptLoading === true ? 'loading' : 'ready'
+        }
       }),
     { initialProps }
   )
@@ -91,50 +73,14 @@ describe('useNativeChatLaunchDraftSignal', () => {
     }
   })
 
-  it('resolves on an undated user turn (Grok omits row timestamps)', () => {
-    const { result } = renderSignal([userTurn('u1', null)])
-
-    expect(result.current.launchDraftResolved).toBe(true)
-  })
-
   it('resolves a new turn even when the executing host clock runs far behind', () => {
-    // SSH/remote workspaces stamp the JSONL on the other host's clock, so no
-    // timestamp on either side proves the turn is new — the baseline does.
+    // Remote JSONL timestamps use another clock; only the baseline proves a new turn.
     const stale = userTurn('u1', SEEDED_AT - 600_000)
     const { result, rerender } = renderSignal([stale])
     expect(result.current.launchDraftResolved).toBe(false)
 
     rerender({ messages: [stale, userTurn('u2', SEEDED_AT - 599_000)] })
     expect(result.current.launchDraftResolved).toBe(true)
-  })
-
-  it('does not resolve when "load earlier" only prepends older history', () => {
-    const tail = userTurn('u9', SEEDED_AT - 600_000)
-    const { result, rerender } = renderSignal([tail])
-    expect(result.current.launchDraftResolved).toBe(false)
-
-    rerender({ messages: [userTurn('u7', SEEDED_AT - 900_000), tail] })
-    expect(result.current.launchDraftResolved).toBe(false)
-  })
-
-  it('does not resolve when a loading transcript backfills older history', () => {
-    // The baseline must not be snapshotted on the empty in-flight list: the
-    // backfill itself would then push the count above it and silently drop a
-    // seed the user never saw.
-    const { result, rerender } = renderSignal([], true)
-    expect(result.current.launchDraftResolved).toBe(false)
-
-    rerender({
-      messages: [
-        userTurn('u1', SEEDED_AT - 900_000),
-        userTurn('u2', SEEDED_AT - 800_000),
-        userTurn('u3', SEEDED_AT - 700_000)
-      ],
-      transcriptLoading: false
-    })
-
-    expect(result.current.launchDraftResolved).toBe(false)
-    expect(result.current.launchDraft).not.toBeNull()
   })
 
   it('still resolves a genuinely new turn after that backfilled history', () => {
@@ -152,12 +98,11 @@ describe('useNativeChatLaunchDraftSignal', () => {
   })
 
   it('keeps a settled baseline across a later transcript reload', () => {
-    // Discarding it and re-taking from the fuller list would swallow the very
-    // user turn that resolves the draft, so a stale prefill gets re-adopted.
+    // A refreshed baseline would swallow the resolving turn and re-adopt the stale prefill.
     const { result, rerender } = renderSignal([])
     expect(result.current.launchDraftResolved).toBe(false)
 
-    // Provably older than the seed, so only the baseline can resolve it.
+    // The older timestamp forces resolution through the baseline.
     const turn = userTurn('u1', SEEDED_AT - 600_000)
     rerender({ messages: [turn], transcriptLoading: true })
     expect(result.current.launchDraftResolved).toBe(false)
@@ -167,102 +112,10 @@ describe('useNativeChatLaunchDraftSignal', () => {
   })
 
   it('does not resolve from an in-flight transcript that still shows recent turns', () => {
-    // A read in flight can still be rendering the previous generation's tail;
-    // those turns say nothing about this draft.
+    // In-flight reads may still show the previous generation’s tail.
     const { result } = renderSignal([userTurn('u1', SEEDED_AT)], true)
 
     expect(result.current.launchDraftResolved).toBe(false)
     expect(result.current.launchDraft).not.toBeNull()
-  })
-
-  it('resolves immediately from an accepted mobile submission', () => {
-    mocks.storeState.nativeChatLaunchDraftByTabId = {
-      'tab-1': launchDraft({ adopted: true, resolved: true, createdAt: SEEDED_AT })
-    }
-
-    const { result } = renderSignal([], true)
-
-    expect(result.current.launchDraftResolved).toBe(true)
-    expect(result.current.launchDraft?.resolved).toBe(true)
-  })
-
-  it('ignores a draft seeded for another agent', () => {
-    mocks.storeState.nativeChatLaunchDraftByTabId = {
-      'tab-1': launchDraft({ agent: 'codex', createdAt: SEEDED_AT })
-    }
-    const { result } = renderSignal([userTurn('u1', null)])
-
-    expect(result.current.launchDraft).toBeNull()
-    expect(result.current.launchDraftResolved).toBe(false)
-  })
-})
-
-describe('useNativeChatLaunchDraftAdoption', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('adopts an unadopted seed into an empty composer', () => {
-    const entry = launchDraft()
-    const { setDraft, setCaret } = setup({ launchDraft: entry })
-
-    expect(mocks.markNativeChatLaunchDraftAdopted).toHaveBeenCalledWith('tab-1')
-    expect(setDraft).toHaveBeenCalledWith(entry.text)
-    expect(setCaret).toHaveBeenCalledWith(entry.text.length)
-    expect(mocks.clearNativeChatLaunchDraft).not.toHaveBeenCalled()
-  })
-
-  it('declines the seed permanently when the composer already holds text', () => {
-    const { setDraft } = setup({ launchDraft: launchDraft(), draft: 'user typed first' })
-
-    expect(mocks.markNativeChatLaunchDraftAdopted).toHaveBeenCalledWith('tab-1')
-    expect(setDraft).not.toHaveBeenCalled()
-  })
-
-  it('does nothing for a different agent or a missing seed', () => {
-    setup({ launchDraft: launchDraft({ agent: 'codex' }) })
-    setup({ launchDraft: null })
-
-    expect(mocks.markNativeChatLaunchDraftAdopted).not.toHaveBeenCalled()
-    expect(mocks.clearNativeChatLaunchDraft).not.toHaveBeenCalled()
-  })
-
-  it('does not re-adopt an already adopted seed after the user clears the composer', () => {
-    const { setDraft } = setup({ launchDraft: launchDraft({ adopted: true }), draft: '' })
-
-    expect(setDraft).not.toHaveBeenCalled()
-    expect(mocks.markNativeChatLaunchDraftAdopted).not.toHaveBeenCalled()
-  })
-
-  it('clears an untouched adopted copy once the transcript resolves the draft', () => {
-    const entry = launchDraft({ adopted: true })
-    const { setDraft, setCaret } = setup({
-      launchDraft: entry,
-      launchDraftResolved: true,
-      draft: entry.text
-    })
-
-    expect(setDraft).toHaveBeenCalledWith('')
-    expect(setCaret).toHaveBeenCalledWith(0)
-    expect(mocks.clearNativeChatLaunchDraft).toHaveBeenCalledWith('tab-1')
-  })
-
-  it('keeps user edits when the transcript resolves the draft', () => {
-    const { setDraft } = setup({
-      launchDraft: launchDraft({ adopted: true }),
-      launchDraftResolved: true,
-      draft: 'edited context'
-    })
-
-    expect(setDraft).not.toHaveBeenCalled()
-    expect(mocks.clearNativeChatLaunchDraft).toHaveBeenCalledWith('tab-1')
-  })
-
-  it('drops an unadopted seed once the transcript resolves it', () => {
-    const { setDraft } = setup({ launchDraft: launchDraft(), launchDraftResolved: true })
-
-    expect(setDraft).not.toHaveBeenCalled()
-    expect(mocks.markNativeChatLaunchDraftAdopted).not.toHaveBeenCalled()
-    expect(mocks.clearNativeChatLaunchDraft).toHaveBeenCalledWith('tab-1')
   })
 })

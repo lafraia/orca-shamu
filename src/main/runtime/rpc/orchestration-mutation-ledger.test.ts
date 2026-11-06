@@ -1,3 +1,4 @@
+import './unused-default-rpc-methods.test-fixture'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -10,6 +11,7 @@ import { OrchestrationDb } from '../orchestration/db'
 import { defineMethod, type RpcRequest } from './core'
 import { RpcDispatcher } from './dispatcher'
 import { ORCHESTRATION_METHODS } from './methods/orchestration'
+import { createRootDispatch } from '../orchestration/db/root-dispatch-test-fixture'
 
 const Params = z.object({ subject: z.string() })
 
@@ -38,18 +40,19 @@ describe('durable orchestration mutation ledger', () => {
     }
   })
 
-  function createHarness(dbPath: string | ':memory:' = ':memory:') {
+  function createHarness(dbPath: (string & {}) | ':memory:' = ':memory:') {
     const db = new OrchestrationDb(dbPath)
     const runtime = new OrcaRuntimeService()
     runtime.setOrchestrationDb(db)
     const effect = vi.fn((subject: string) =>
-      db.insertMessage({ from: 'caller', to: 'recipient', subject })
+      db.insertMessage({ runId: 'run_legacy_local', from: 'caller', to: 'recipient', subject })
     )
     const dispatcher = new RpcDispatcher({
       runtime,
       methods: [
         defineMethod({
           name: 'orchestration.send',
+          permission: 'workspace',
           params: Params,
           handler: ({ subject }) => ({ message: effect(subject) })
         })
@@ -57,6 +60,83 @@ describe('durable orchestration mutation ledger', () => {
     })
     return { db, runtime, dispatcher, effect }
   }
+
+  it('replays federation imports across old and new optional-report parsers without enriching the first acceptance', async () => {
+    const db = new OrchestrationDb(':memory:')
+    const runtime = new OrcaRuntimeService()
+    runtime.setOrchestrationDb(db)
+    const item = z.object({ dispatch_id: z.string(), sequence: z.number(), payload: z.string() })
+    const effects: unknown[] = []
+    const makeDispatcher = (newReader: boolean) =>
+      new RpcDispatcher({
+        runtime,
+        methods: [
+          defineMethod({
+            name: 'orchestration.federationImport',
+            permission: 'workspace',
+            params: z.object({
+              dispatchId: z.string(),
+              items: z.array(
+                newReader
+                  ? item.extend({
+                      answerSenderReport: z.unknown().optional()
+                    })
+                  : item
+              )
+            }),
+            handler: (params) => {
+              effects.push(params.items[0])
+              return { acknowledgedThrough: 1 }
+            }
+          })
+        ]
+      })
+    const wire = {
+      dispatchId: 'dispatch-one',
+      items: [
+        {
+          dispatch_id: 'dispatch-one',
+          sequence: 1,
+          payload: 'canonical',
+          answerSenderReport: { version: 1, name: 'Known A', agent: 'codex' }
+        }
+      ]
+    }
+    const req = (id: string, params: unknown) => ({
+      id,
+      authToken: 'caller-token',
+      method: 'orchestration.federationImport',
+      params,
+      orchestrationContractVersion: ORCHESTRATION_CONTRACT_VERSION,
+      orchestrationRequestId: 'relay_import_one_1'
+    })
+    expect(await makeDispatcher(false).dispatch(req('old', wire))).toMatchObject({
+      ok: true,
+      result: { mutation: { replayed: false } }
+    })
+    expect(await makeDispatcher(true).dispatch(req('new', wire))).toMatchObject({
+      ok: true,
+      result: { mutation: { replayed: true } }
+    })
+    expect(
+      await makeDispatcher(true).dispatch(
+        req('omitted', {
+          dispatchId: wire.dispatchId,
+          items: [{ dispatch_id: 'dispatch-one', sequence: 1, payload: 'canonical' }]
+        })
+      )
+    ).toMatchObject({ ok: true, result: { mutation: { replayed: true } } })
+    expect(
+      await makeDispatcher(true).dispatch(
+        req('changed', {
+          dispatchId: wire.dispatchId,
+          items: [{ ...wire.items[0], payload: 'different canonical body' }]
+        })
+      )
+    ).toMatchObject({ ok: false, error: { code: 'request_mismatch' } })
+    expect(effects).toEqual([{ dispatch_id: 'dispatch-one', sequence: 1, payload: 'canonical' }])
+    db.close()
+  })
 
   it('replays one completed receipt without repeating the effect', async () => {
     const { db, dispatcher, effect } = createHarness()
@@ -93,7 +173,7 @@ describe('durable orchestration mutation ledger', () => {
     db.close()
   })
 
-  it('applies the same ledger on authenticated WebSocket dispatch', async () => {
+  it('keys WebSocket replay to the authenticated device across reconnects', async () => {
     const { db, dispatcher, effect } = createHarness()
     const replies: string[] = []
     const firstRequest = request({
@@ -102,10 +182,23 @@ describe('durable orchestration mutation ledger', () => {
       subject: 'remote'
     }) as RpcRequest & { deviceToken?: string }
     firstRequest.authToken = ''
-    firstRequest.deviceToken = 'paired-device'
-    await dispatcher.dispatchStreaming(firstRequest, (reply) => replies.push(reply))
-    const replayRequest = { ...firstRequest, id: 'rpc_2' }
-    await dispatcher.dispatchStreaming(replayRequest, (reply) => replies.push(reply))
+    firstRequest.deviceToken = 'untrusted-request-value-a'
+    await dispatcher.dispatchStreaming(firstRequest, (reply) => replies.push(reply), {
+      authenticatedCallerFingerprint: 'paired-device-a'
+    })
+    const replayRequest = {
+      ...firstRequest,
+      id: 'rpc_2',
+      deviceToken: 'untrusted-request-value-b'
+    }
+    await dispatcher.dispatchStreaming(replayRequest, (reply) => replies.push(reply), {
+      authenticatedCallerFingerprint: 'paired-device-a'
+    })
+    await dispatcher.dispatchStreaming(
+      { ...replayRequest, id: 'rpc_3' },
+      (reply) => replies.push(reply),
+      { authenticatedCallerFingerprint: 'paired-device-b' }
+    )
 
     expect(JSON.parse(replies[0] ?? '{}')).toMatchObject({
       ok: true,
@@ -115,7 +208,12 @@ describe('durable orchestration mutation ledger', () => {
       ok: true,
       result: { mutation: { replayed: true } }
     })
-    expect(effect).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(replies[2] ?? '{}')).toMatchObject({
+      ok: true,
+      result: { mutation: { replayed: false } }
+    })
+    expect(effect).toHaveBeenCalledTimes(2)
+    expect(db.getInbox(10)).toHaveLength(2)
     db.close()
   })
 
@@ -136,6 +234,7 @@ describe('durable orchestration mutation ledger', () => {
       methods: [
         defineMethod({
           name: 'orchestration.send',
+          permission: 'workspace',
           params: Params,
           handler: effect
         })
@@ -178,10 +277,42 @@ describe('durable orchestration mutation ledger', () => {
     second.db.close()
   })
 
+  it('replays a local mutation after runtime authentication rotates', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orca-mutation-ledger-'))
+    paths.push(dir)
+    const dbPath = join(dir, 'orchestration.db')
+    const firstRuntime = createHarness(dbPath)
+    const first = await firstRuntime.dispatcher.dispatch(
+      request({
+        rpcId: 'rpc_1',
+        mutationId: 'mutation_restart',
+        subject: 'once',
+        authToken: 'before-restart'
+      })
+    )
+    firstRuntime.db.close()
+
+    const restartedRuntime = createHarness(dbPath)
+    const replay = await restartedRuntime.dispatcher.dispatch(
+      request({
+        rpcId: 'rpc_2',
+        mutationId: 'mutation_restart',
+        subject: 'once',
+        authToken: 'after-restart'
+      })
+    )
+
+    expect(first).toMatchObject({ ok: true, result: { mutation: { replayed: false } } })
+    expect(replay).toMatchObject({ ok: true, result: { mutation: { replayed: true } } })
+    expect(firstRuntime.effect).toHaveBeenCalledOnce()
+    expect(restartedRuntime.effect).not.toHaveBeenCalled()
+    restartedRuntime.db.close()
+  })
+
   it('returns unknown for a pending receipt left by a previous process', async () => {
     const { db, dispatcher } = createHarness()
     db.beginMutationReceipt({
-      callerFingerprint: createHash('sha256').update('caller-token').digest('hex'),
+      callerFingerprint: db.getOrCreateLocalMutationCallerFingerprint(),
       requestId: 'mutation_1',
       method: 'orchestration.send',
       payloadHash: createHash('sha256')
@@ -196,16 +327,70 @@ describe('durable orchestration mutation ledger', () => {
     db.close()
   })
 
+  it('resumes a pending idempotent worker release after restart', async () => {
+    const db = new OrchestrationDb(':memory:')
+    const runtime = new OrcaRuntimeService()
+    runtime.setOrchestrationDb(db)
+    const params = { dispatch: 'ctx_release' }
+    const callerFingerprint = db.getOrCreateLocalMutationCallerFingerprint()
+    const payloadHash = createHash('sha256')
+      .update(JSON.stringify({ method: 'orchestration.workerRelease', params }))
+      .digest('hex')
+    db.beginMutationReceipt({
+      callerFingerprint,
+      requestId: 'mutation_release',
+      method: 'orchestration.workerRelease',
+      payloadHash
+    })
+    const effect = vi.fn().mockReturnValue({ state: 'release_pending' })
+    const dispatcher = new RpcDispatcher({
+      runtime,
+      methods: [
+        defineMethod({
+          name: 'orchestration.workerRelease',
+          permission: 'workspace',
+          params: z.object({ dispatch: z.string() }),
+          handler: effect
+        })
+      ]
+    })
+
+    const result = await dispatcher.dispatch({
+      id: 'rpc_release_retry',
+      authToken: 'caller-token',
+      method: 'orchestration.workerRelease',
+      params,
+      orchestrationContractVersion: ORCHESTRATION_CONTRACT_VERSION,
+      orchestrationRequestId: 'mutation_release'
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      result: {
+        state: 'release_pending',
+        mutation: { requestId: 'mutation_release', replayed: true }
+      }
+    })
+    expect(effect).toHaveBeenCalledTimes(1)
+    expect(db.getMutationReceipt(callerFingerprint, 'mutation_release')?.state).toBe('completed')
+    db.close()
+  })
+
   it('returns the accepted Dispatch when worker-start was interrupted by restart', async () => {
     const db = new OrchestrationDb(':memory:')
     const runtime = new OrcaRuntimeService()
     runtime.setOrchestrationDb(db)
-    const params = { from: 'term_coord', task: db.createTask({ spec: 'restart' }).id }
-    const callerFingerprint = createHash('sha256').update('caller-token').digest('hex')
+    const params = {
+      from: 'term_coord',
+      task: db.createTask({ runId: 'run_legacy_local', spec: 'restart' }).id
+    }
+    const callerFingerprint = db.getOrCreateLocalMutationCallerFingerprint()
     const payloadHash = createHash('sha256')
       .update(JSON.stringify({ method: 'orchestration.workerStart', params }))
       .digest('hex')
     const started = db.createStartingWorkerDispatch({
+      creator: { kind: 'system' },
+      maxDepth: Number.MAX_SAFE_INTEGER,
       taskId: params.task,
       startOptions: {},
       mutationReceipt: {
@@ -221,6 +406,7 @@ describe('durable orchestration mutation ledger', () => {
       methods: [
         defineMethod({
           name: 'orchestration.workerStart',
+          permission: 'workspace',
           params: z.object({ from: z.string(), task: z.string() }),
           handler: effect
         })
@@ -273,18 +459,19 @@ describe('durable orchestration mutation ledger', () => {
       coordinatorPaneKey: 'tab_coord:leaf_coord'
     })
     const task = db.createTask({ spec: 'ask', runId: run.id })
-    const dispatch = db.createDispatchContext(task.id, 'term_worker', 'tab_worker:leaf_worker')
-    const capability = db.mintDispatchCapability({
-      dispatchId: dispatch.id,
-      paneKey: 'tab_worker:leaf_worker',
-      processIncarnation: 'runtime:pty:1'
-    })
+    createRootDispatch(
+      db,
+      task.id,
+      'term_worker',
+      'tab_worker:leaf_worker',
+      undefined,
+      'runtime:pty:1'
+    )
     const askRequest: RpcRequest = {
       id: 'rpc_ask_1',
       authToken: 'caller-token',
       method: 'orchestration.ask',
       params: { from: 'term_worker', question: 'Proceed?', timeoutMs: 60_000 },
-      orchestrationCapability: capability,
       orchestrationContractVersion: ORCHESTRATION_CONTRACT_VERSION,
       orchestrationRequestId: 'mutation_ask'
     }

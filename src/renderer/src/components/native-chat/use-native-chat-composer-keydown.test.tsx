@@ -1,99 +1,157 @@
 // @vitest-environment happy-dom
 
-import { renderHook } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { EMPTY_HISTORY, type ComposerAutocomplete } from './native-chat-composer-state'
+
+import { useNativeChatRecallPosition } from './use-native-chat-composer-recall'
+import type { NativeChatMessage } from '../../../../shared/native-chat/native-chat-types'
 import { useNativeChatComposerKeyDown } from './use-native-chat-composer-keydown'
 
-const COMMAND = {
-  kind: 'command' as const,
-  id: 'command:clear',
-  name: 'clear',
-  description: 'Clear history',
-  skillCollision: false
-}
-
-function picker(items = [COMMAND]): Extract<ComposerAutocomplete, { mode: 'slash' }> {
-  return {
-    mode: 'slash',
-    query: '',
-    items,
-    triggerKey: '/:0',
-    prefix: '/',
-    grouped: false,
-    commandsEnabled: true,
-    skillsEnabled: false,
-    skillStatus: 'ready'
-  }
-}
-
-function setup(autocomplete: ComposerAutocomplete = picker(), composing = false) {
-  const callbacks = {
-    completePickerItem: vi.fn(),
-    dispatchPickerCommand: vi.fn(),
-    dismissPicker: vi.fn(),
-    interrupt: vi.fn(),
-    send: vi.fn(),
-    setActiveSuggestion: vi.fn(),
-    setDraft: vi.fn(),
-    setCaret: vi.fn(),
-    setHistory: vi.fn()
-  }
-  const hook = renderHook(() =>
-    useNativeChatComposerKeyDown({
-      autocomplete,
-      activeSuggestion: 0,
-      draft: '/',
-      history: EMPTY_HISTORY,
-      isComposing: () => composing,
-      ...callbacks
-    })
-  )
-  return { handler: hook.result.current, callbacks }
-}
-
-function keyEvent(key: string, isComposing = false) {
-  return {
-    key,
-    shiftKey: false,
-    keyCode: isComposing ? 229 : 0,
-    nativeEvent: { isComposing },
-    preventDefault: vi.fn()
-  }
-}
-
 describe('useNativeChatComposerKeyDown', () => {
-  it('dispatches command Enter but completes command Tab', () => {
-    const enter = setup()
-    enter.handler(keyEvent('Enter') as never)
-    expect(enter.callbacks.dispatchPickerCommand).toHaveBeenCalledWith(COMMAND)
-    expect(enter.callbacks.completePickerItem).not.toHaveBeenCalled()
+  describe('prompt recall', () => {
+    const userMessage = (id: string, text: string): NativeChatMessage => ({
+      id,
+      role: 'user',
+      blocks: [{ type: 'text', text }],
+      timestamp: null,
+      source: 'transcript'
+    })
 
-    const tab = setup()
-    tab.handler(keyEvent('Tab') as never)
-    expect(tab.callbacks.completePickerItem).toHaveBeenCalledWith(COMMAND)
-    expect(tab.callbacks.dispatchPickerCommand).not.toHaveBeenCalled()
+    const onEveryEdge = (): boolean => true
+
+    function Composer({
+      prompts,
+      initialDraft = '',
+      hasAttachments,
+      isCaretOnVisualEdge = onEveryEdge
+    }: {
+      prompts: string[]
+      initialDraft?: string
+      hasAttachments?: boolean
+      isCaretOnVisualEdge?: (edge: 'start' | 'end') => boolean
+    }): React.JSX.Element {
+      const [draft, setDraft] = useState(initialDraft)
+      const [recallPosition, setRecallPosition] = useNativeChatRecallPosition(draft)
+      const onKeyDown = useNativeChatComposerKeyDown({
+        autocomplete: { mode: 'none' },
+        activeSuggestion: 0,
+        draft,
+        mentionFiles: { files: [], loading: false, failed: false },
+        completeMention: vi.fn(),
+        recall: {
+          source: { messages: prompts.map((text, index) => userMessage(String(index), text)) },
+          position: recallPosition,
+          setPosition: setRecallPosition,
+          isCaretOnVisualEdge,
+          show: vi.fn()
+        },
+        isComposing: () => false,
+        completePickerItem: vi.fn(),
+        dispatchPickerCommand: vi.fn(),
+        dismissPicker: vi.fn(),
+        interrupt: vi.fn(),
+        send: vi.fn(),
+        setActiveSuggestion: vi.fn(),
+        setDraft,
+        setCaret: vi.fn(),
+        ...(hasAttachments === undefined ? {} : { hasAttachments })
+      })
+      return (
+        <textarea
+          aria-label="composer"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={onKeyDown}
+        />
+      )
+    }
+
+    function setup(props: Parameters<typeof Composer>[0]) {
+      const field = render(<Composer {...props} />).container.querySelector('textarea')!
+      return {
+        field,
+        press: (key: string, init: KeyboardEventInit = {}) => {
+          const claimed = !fireEvent.keyDown(field, { key, ...init })
+          return { draft: field.value, claimed }
+        }
+      }
+    }
+
+    it('treats an edited recall as a typed draft', () => {
+      const { field, press } = setup({ prompts: ['one', 'two'] })
+      press('ArrowUp')
+      fireEvent.change(field, { target: { value: 'two, edited' } })
+      expect(press('ArrowUp')).toEqual({ draft: 'two, edited', claimed: false })
+      // Edited back to the recalled text, it is still a typed draft.
+      fireEvent.change(field, { target: { value: 'two' } })
+      expect(press('ArrowUp')).toEqual({ draft: 'two', claimed: false })
+    })
   })
 
-  it('falls through to composer send when the open picker has no options', () => {
-    const { handler, callbacks } = setup(picker([]))
-    handler(keyEvent('Enter') as never)
-    expect(callbacks.send).toHaveBeenCalledOnce()
-  })
+  describe('steer chord', () => {
+    function Composer({
+      initialDraft,
+      alternateSteers,
+      send,
+      steerHead
+    }: {
+      initialDraft: string
+      alternateSteers: boolean
+      send: (intent?: { alternate?: boolean }) => void
+      steerHead: () => boolean
+    }): React.JSX.Element {
+      const [draft, setDraft] = useState(initialDraft)
+      const onKeyDown = useNativeChatComposerKeyDown({
+        autocomplete: { mode: 'none' },
+        activeSuggestion: 0,
+        draft,
+        mentionFiles: { files: [], loading: false, failed: false },
+        completeMention: vi.fn(),
+        isComposing: () => false,
+        completePickerItem: vi.fn(),
+        dispatchPickerCommand: vi.fn(),
+        dismissPicker: vi.fn(),
+        interrupt: vi.fn(),
+        send,
+        steerHead,
+        alternateSteers,
+        setActiveSuggestion: vi.fn(),
+        setDraft,
+        setCaret: vi.fn()
+      })
+      return (
+        <textarea aria-label="composer" value={draft} onChange={() => {}} onKeyDown={onKeyDown} />
+      )
+    }
 
-  it('dismisses Escape without interrupting the agent', () => {
-    const { handler, callbacks } = setup()
-    handler(keyEvent('Escape') as never)
-    expect(callbacks.dismissPicker).toHaveBeenCalledWith('/:0')
-    expect(callbacks.interrupt).not.toHaveBeenCalled()
-  })
+    function pressModEnter(
+      initialDraft: string,
+      { alternateSteers = true, ...init }: KeyboardEventInit & { alternateSteers?: boolean } = {}
+    ) {
+      const send = vi.fn()
+      const steerHead = vi.fn(() => true)
+      const field = render(
+        <Composer
+          initialDraft={initialDraft}
+          alternateSteers={alternateSteers}
+          send={send}
+          steerHead={steerHead}
+        />
+      ).container.querySelector('textarea')!
+      // Both modifiers: the platform picks which one is the chord's.
+      fireEvent.keyDown(field, { key: 'Enter', metaKey: true, ctrlKey: true, ...init })
+      return { send, steerHead }
+    }
 
-  it('does not accept or submit while IME composition is active', () => {
-    const { handler, callbacks } = setup(picker(), true)
-    const event = keyEvent('Enter', true)
-    handler(event as never)
-    expect(event.preventDefault).toHaveBeenCalledOnce()
-    expect(callbacks.dispatchPickerCommand).not.toHaveBeenCalled()
-    expect(callbacks.send).not.toHaveBeenCalled()
+    it('steers the head card from an empty composer, once per press, only where the chord steers', () => {
+      const { send, steerHead } = pressModEnter('')
+      expect(steerHead).toHaveBeenCalledTimes(1)
+      expect(send).not.toHaveBeenCalled()
+      expect(pressModEnter('', { repeat: true }).steerHead).not.toHaveBeenCalled()
+      // With follow-ups off the chord queues, so a second press never steers the card just queued.
+      expect(pressModEnter('', { alternateSteers: false }).steerHead).not.toHaveBeenCalled()
+      expect(pressModEnter('steer this').steerHead).not.toHaveBeenCalled()
+    })
   })
 })

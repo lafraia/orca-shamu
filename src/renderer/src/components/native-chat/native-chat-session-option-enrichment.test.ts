@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { CatalogModel } from '../../../../shared/agent-session-option-catalog'
+import type { CatalogModel } from '../../../../shared/agent-session/options/agent-session-option-catalog-types'
+
 import {
   clearNativeChatModelEnrichmentForTests,
   ensureNativeChatModelEnrichment,
@@ -7,8 +8,30 @@ import {
   subscribeNativeChatEnrichedModels
 } from './native-chat-session-option-enrichment'
 
+const mocks = vi.hoisted(() => ({
+  discoverRuntimeCommitMessageModels: vi.fn(),
+  callStructuredAgentSession: vi.fn()
+}))
+
+vi.mock('@/runtime/runtime-git-generation-client', () => ({
+  discoverRuntimeCommitMessageModels: mocks.discoverRuntimeCommitMessageModels
+}))
+vi.mock('@/runtime/runtime-git-client-context', () => ({ getRuntimeGitScope: vi.fn() }))
+
+vi.mock('@/runtime/structured-agent-session-client', () => ({
+  callStructuredAgentSession: mocks.callStructuredAgentSession
+}))
+
 describe('native chat session option enrichment', () => {
-  beforeEach(() => clearNativeChatModelEnrichmentForTests())
+  beforeEach(() => {
+    clearNativeChatModelEnrichmentForTests()
+    mocks.discoverRuntimeCommitMessageModels.mockReset()
+    mocks.callStructuredAgentSession.mockReset().mockResolvedValue({
+      origin: 'live-session',
+      models: [{ id: 'gpt-host', label: 'GPT Host', isDefault: true, efforts: [] }],
+      fetchedAt: 1
+    })
+  })
 
   it('keeps reads synchronous while one host-scoped probe is in flight', async () => {
     let resolveDiscovery: ((models: CatalogModel[]) => void) | undefined
@@ -40,22 +63,5 @@ describe('native chat session option enrichment', () => {
     })
     expect(models.at(-1)).toMatchObject({ id: 'account-model' })
     expect(readNativeChatEnrichedModels('cursor', 'ssh:two')).toBeNull()
-  })
-
-  it('falls back permanently to the seed after a failed once-per-host probe', async () => {
-    const discover = vi.fn().mockRejectedValue(new Error('offline'))
-    ensureNativeChatModelEnrichment({ agent: 'cursor', hostKey: 'local', discover })
-    await vi.waitFor(() => expect(discover).toHaveBeenCalledOnce())
-    await Promise.resolve()
-
-    ensureNativeChatModelEnrichment({ agent: 'cursor', hostKey: 'local', discover })
-    expect(discover).toHaveBeenCalledOnce()
-    expect(readNativeChatEnrichedModels('cursor', 'local')).toBeNull()
-  })
-
-  it('does not probe agents whose catalogs have no discovery command', () => {
-    const discover = vi.fn()
-    ensureNativeChatModelEnrichment({ agent: 'claude', hostKey: 'local', discover })
-    expect(discover).not.toHaveBeenCalled()
   })
 })

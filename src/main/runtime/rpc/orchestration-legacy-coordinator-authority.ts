@@ -1,4 +1,6 @@
-import type { OrcaRuntimeService, OrchestrationCompatibilityCallerAuthority } from '../orca-runtime'
+import type { OrcaRuntimeService } from '../orca-runtime'
+import type { OrchestrationCompatibilityCallerAuthority } from '../orchestration/terminal-authority/orchestration-compatibility-authority'
+import type { OrchestrationDb } from '../orchestration/db'
 import type { LegacyCompatibilityPrincipalRow } from '../orchestration/types'
 import type { LegacyCoordinatorAuthorityProof, RpcRequest } from './core'
 import {
@@ -20,8 +22,12 @@ export class LegacyCoordinatorAuthority {
   ): LegacyCoordinatorAuthorityProof | undefined {
     const db = this.runtime.getOrchestrationDb()
     const adoption = db.getLegacyAdoption()
-    const requestedRun = requestedRunId ?? adoption?.adopted_run_id
-    if (!adoption || requestedRun !== adoption.adopted_run_id) {
+    if (!adoption) {
+      return undefined
+    }
+    // Omitted Run means caller binding first; only unbound callers may fall back to the adopted Run.
+    const requestedRun = requestedRunId ?? boundRunId(db, request) ?? adoption.adopted_run_id
+    if (requestedRun !== adoption.adopted_run_id) {
       return undefined
     }
     const candidate = db.resolveLegacyCoordinatorCandidate({
@@ -30,22 +36,29 @@ export class LegacyCoordinatorAuthority {
       paneKey: request.orchestrationCompatibilityEvidence?.paneKey
     })
     if (!candidate) {
-      if (request.orchestrationCompatibilityEvidence) {
-        const caller = this.runtime.verifyOrchestrationCompatibilityCaller(
-          request.orchestrationCompatibilityEvidence
-        )
-        const run = db.getRun(adoption.adopted_run_id)
-        if (
-          caller &&
-          run?.coordinator_handle === caller.terminalHandle &&
-          run.coordinator_pane_key &&
-          equivalentLegacyPaneKey(run.coordinator_pane_key, caller.paneKey)
-        ) {
-          return undefined
-        }
-        throw legacyCoordinatorReadOnly()
+      const evidence = request.orchestrationCompatibilityEvidence
+      if (!evidence) {
+        return undefined
       }
-      return undefined
+      const run = db.getRun(adoption.adopted_run_id)
+      const principal = db.getLegacyCoordinatorPrincipal(adoption.adopted_run_id)
+      // An unclaimed adopted Run has no coordinator to fence, including a revoked principal.
+      if (!run?.coordinator_pane_key && principal?.status !== 'committed') {
+        return undefined
+      }
+      const caller = this.runtime.verifyOrchestrationCompatibilityCaller(evidence)
+      // Trusted DB binding admits its owner even where attestation is unavailable.
+      if (run && (ownsRunBinding(run, caller) || ownsRunBinding(run, evidence))) {
+        return undefined
+      }
+      // Fence only known legacy coordinators; other callers need the honest downstream error, not unusable takeover guidance.
+      if (
+        !evidence.terminalHandle ||
+        !db.isLegacyCoordinatorHandle(adoption.adopted_run_id, evidence.terminalHandle)
+      ) {
+        return undefined
+      }
+      throw legacyCoordinatorReadOnly()
     }
     const existing = db.getLegacyCoordinatorPrincipal(adoption.adopted_run_id)
     const proofCandidate = existing
@@ -167,4 +180,21 @@ export class LegacyCoordinatorAuthority {
       principal.process_incarnation === attestation.processIncarnation
     )
   }
+}
+
+function ownsRunBinding(
+  run: { coordinator_handle: string | null; coordinator_pane_key: string | null },
+  identity: { terminalHandle?: string; paneKey?: string } | null
+): boolean {
+  return Boolean(
+    identity?.terminalHandle &&
+    run.coordinator_pane_key &&
+    run.coordinator_handle === identity.terminalHandle &&
+    equivalentLegacyPaneKey(run.coordinator_pane_key, identity.paneKey)
+  )
+}
+
+function boundRunId(db: OrchestrationDb, request: RpcRequest): string | undefined {
+  const paneKey = request.orchestrationCompatibilityEvidence?.paneKey
+  return paneKey ? db.getCurrentRunForPane(paneKey)?.id : undefined
 }

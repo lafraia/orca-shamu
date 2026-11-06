@@ -1,29 +1,35 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DiffComment } from '../../../src/shared/types'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import type { DiffComment } from '../../../src/shared/diff-comment-types'
 import type { RpcClient } from '../transport/rpc-client'
+import type { RpcResponse } from '../transport/types'
 import type { ReviewScreenState } from './mobile-diff-review-screen-model'
-import {
-  isMobileNativeChatInputStale,
-  markMobileNativeChatInputStale,
-  resetMobileNativeChatStaleInputForTests
-} from './mobile-native-chat-stale-input'
+import type { ReviewSheetIntents } from './mobile-diff-review-sheets'
+import { resetMobileNativeChatStaleInputForTests } from './native-chat/mobile-native-chat-stale-input'
 import { useMobileDiffReviewSendActions } from './use-mobile-diff-review-send-actions'
 
-type SendActions = ReturnType<typeof useMobileDiffReviewSendActions>
-
-vi.mock('../platform/haptics', () => ({ triggerSuccess: vi.fn() }))
-vi.mock('expo-clipboard', () => ({ setStringAsync: vi.fn().mockResolvedValue(undefined) }))
-
-function sendResponse(accepted: boolean) {
+function requestPortRpcClient(sendRequest: RpcClient['sendRequest']): RpcClient {
   return {
-    id: 'send',
-    ok: true as const,
-    result: { send: { accepted } },
-    _meta: { runtimeId: 'runtime' }
+    sendRequest,
+    subscribe: () => () => {},
+    updateTerminalSubscriptionViewport: () => {},
+    getState: () => 'connected',
+    getReconnectAttempt: () => 0,
+    getLastConnectedAt: () => null,
+    onStateChange: () => () => {},
+    notifyForeground: () => {},
+    close: () => {}
   }
 }
+
+type SendActions = ReturnType<typeof useMobileDiffReviewSendActions>
+type SendActionArgs = Parameters<typeof useMobileDiffReviewSendActions>[0]
+
+vi.mock('../platform/haptics', () => ({ triggerSuccess: vi.fn() }))
+// Return the pasteboard’s real success boolean; undefined would exercise only refusal unnoticed.
+const clipboardMock = vi.hoisted(() => ({ setStringAsync: vi.fn() }))
+vi.mock('expo-clipboard', () => clipboardMock)
 
 const COMMENT: DiffComment = {
   id: 'comment-1',
@@ -35,9 +41,57 @@ const COMMENT: DiffComment = {
   side: 'modified'
 }
 
-const READY: ReviewScreenState = {
+const LAUNCH_CAPABILITIES = [
+  'agent.launch.v2',
+  'agent.launch.replay.v1',
+  'agent.launch.replay-required.v1'
+]
+
+function rpcReply(result: unknown) {
+  return { id: 'rpc', ok: true as const, result, _meta: { runtimeId: 'r' } }
+}
+
+function launchedReply(promptOutcome: 'handed-to-terminal' | 'not-delivered', warning?: string) {
+  return rpcReply({
+    outcome: { kind: 'terminal', handle: 'term-1' },
+    worktreeId: 'wt-1',
+    receipt: { mode: 'terminal', preferred: 'terminal', reason: 'user_default', detail: 'd' },
+    prompt: { delivery: 'submit', outcome: promptOutcome },
+    ...(warning ? { warning } : {})
+  })
+}
+
+function launchClient(
+  promptOutcome: 'handed-to-terminal' | 'not-delivered',
+  launchReply: () => Promise<RpcResponse> = async () => launchedReply(promptOutcome)
+) {
+  const sendRequest = vi.fn(async (method: string, _params?: unknown): Promise<RpcResponse> => {
+    if (method === 'repo.list') {
+      return rpcReply({ repos: [{ id: 'wt-1' }] })
+    }
+    if (method === 'settings.get') {
+      return rpcReply({ settings: { defaultTuiAgent: 'codex' } })
+    }
+    if (method === 'preflight.detectAgents') {
+      return rpcReply(['codex'])
+    }
+    if (method === 'agent.launchReplay') {
+      return launchReply()
+    }
+    throw new Error(`Unexpected request: ${method}`)
+  })
+  return { client: requestPortRpcClient(sendRequest), sendRequest }
+}
+
+const READY: Extract<ReviewScreenState, { kind: 'ready' }> = {
   kind: 'ready',
-  status: { entries: [], conflictOperation: 'none' },
+  status: {
+    entries: [],
+    conflictOperation: 'unknown',
+    branch: undefined,
+    head: undefined,
+    upstreamStatus: undefined
+  },
   branchCompare: null,
   comments: [COMMENT],
   reviewState: { version: 1, files: {} }
@@ -47,15 +101,27 @@ describe('useMobileDiffReviewSendActions', () => {
   let renderer: ReactTestRenderer | null = null
   let actions: SendActions | null = null
   let mountedClient: RpcClient | null = null
-  let setActionError: ReturnType<typeof vi.fn>
-  let setSendSheet: ReturnType<typeof vi.fn>
-  let saveCommentsAndReviewState: ReturnType<typeof vi.fn>
+  let setActionError: Mock<SendActionArgs['setActionError']>
+  let sheets: {
+    openSheet: Mock<ReviewSheetIntents['openSheet']>
+    openSheetWhenIdle: Mock<ReviewSheetIntents['openSheetWhenIdle']>
+    closeSheet: Mock<ReviewSheetIntents['closeSheet']>
+    updateSendSheet: Mock<ReviewSheetIntents['updateSendSheet']>
+  }
+  let saveCommentsAndReviewState: Mock<SendActionArgs['saveCommentsAndReviewState']>
+  let screenState: ReviewScreenState = READY
 
   beforeEach(() => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    screenState = READY
+    clipboardMock.setStringAsync.mockReset().mockResolvedValue(true)
     resetMobileNativeChatStaleInputForTests()
     setActionError = vi.fn()
-    setSendSheet = vi.fn()
+    sheets = {
+      openSheet: vi.fn(),
+      openSheetWhenIdle: vi.fn(),
+      closeSheet: vi.fn(),
+      updateSendSheet: vi.fn()
+    }
     saveCommentsAndReviewState = vi.fn().mockResolvedValue(undefined)
   })
 
@@ -70,10 +136,11 @@ describe('useMobileDiffReviewSendActions', () => {
     actions = useMobileDiffReviewSendActions({
       client: mountedClient,
       connState: 'connected',
+      hostCapabilities: LAUNCH_CAPABILITIES,
       worktreeId: 'wt-1',
-      screenState: READY,
+      screenState,
       setActionError,
-      setSendSheet,
+      sheets,
       saveCommentsAndReviewState
     })
     return null
@@ -81,142 +148,75 @@ describe('useMobileDiffReviewSendActions', () => {
 
   async function mount(client: RpcClient): Promise<void> {
     mountedClient = client
-    const original = console.error
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation((...args) => {
-      if (typeof args[0] === 'string' && args[0].includes('react-test-renderer is deprecated')) {
-        return
-      }
-      original(...args)
+    await act(async () => {
+      renderer = create(createElement(Harness))
     })
-    try {
-      await act(async () => {
-        renderer = create(createElement(Harness))
-      })
-    } finally {
-      consoleSpy.mockRestore()
-    }
   }
 
-  it('heals a marked terminal BEFORE submitting the notes', async () => {
-    const sendRequest = vi.fn().mockResolvedValue(sendResponse(true))
-    await mount({ sendRequest } as unknown as RpcClient)
-    markMobileNativeChatInputStale('terminal-1')
-
+  it('starts one agent for a double tap and keeps notes written while it starts', async () => {
+    let answerLaunch: (reply: RpcResponse) => void = () => {}
+    const { client, sendRequest } = launchClient(
+      'handed-to-terminal',
+      () =>
+        new Promise<RpcResponse>((resolve) => {
+          answerLaunch = resolve
+        })
+    )
+    await mount(client)
+    let first: Promise<void> | undefined
     await act(async () => {
-      await actions?.sendPromptToTerminal('terminal-1', [COMMENT])
+      first = actions?.createTerminalAndSend([COMMENT])
+      await actions?.createTerminalAndSend([COMMENT])
     })
-
-    expect(sendRequest).toHaveBeenCalledTimes(2)
-    // Order matters: the Ctrl+U clear must land before the enter-carrying write,
-    // or the orphaned paste is submitted with the notes.
-    expect(sendRequest.mock.calls[0]?.[1]).toMatchObject({
-      terminal: 'terminal-1',
-      text: '\x15',
-      enter: false
+    expect(setActionError).toHaveBeenLastCalledWith('Starting an agent...')
+    const written: DiffComment = { ...COMMENT, id: 'comment-2', body: 'written meanwhile' }
+    screenState = { ...READY, comments: [COMMENT, written] }
+    await act(async () => {
+      renderer?.update(createElement(Harness))
     })
-    expect(sendRequest.mock.calls[1]?.[1]).toMatchObject({ terminal: 'terminal-1', enter: true })
-    // The second call is the notes themselves, not another clear.
-    expect(String(sendRequest.mock.calls[1]?.[1]?.text)).toContain('rename this')
-    expect(isMobileNativeChatInputStale('terminal-1')).toBe(false)
-    expect(setActionError).toHaveBeenCalledWith('Review notes sent')
+    await act(async () => {
+      answerLaunch(launchedReply('handed-to-terminal'))
+      await first
+    })
+    expect(
+      sendRequest.mock.calls.filter(([method]) => method === 'agent.launchReplay')
+    ).toHaveLength(1)
+    expect(saveCommentsAndReviewState).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ id: 'comment-1', sentAt: expect.any(Number) }),
+        expect.not.objectContaining({ sentAt: expect.anything() })
+      ],
+      READY.reviewState
+    )
+    expect(saveCommentsAndReviewState.mock.calls[0]?.[0]?.[1]?.id).toBe('comment-2')
+    expect(setActionError).toHaveBeenLastCalledWith('Review notes sent')
   })
 
-  it('does not submit when the heal reports the line is not safe', async () => {
-    const sendRequest = vi.fn().mockResolvedValue(sendResponse(false))
-    await mount({ sendRequest } as unknown as RpcClient)
-    markMobileNativeChatInputStale('terminal-1')
-
-    let error: unknown
+  // The save rolls back to the screen it was created with, so a stale one would drop newer notes.
+  it('marks the notes sent through the save of the latest render, not the one from the tap', async () => {
+    let answerLaunch: (reply: RpcResponse) => void = () => {}
+    const { client } = launchClient(
+      'handed-to-terminal',
+      () =>
+        new Promise<RpcResponse>((resolve) => {
+          answerLaunch = resolve
+        })
+    )
+    await mount(client)
+    let first: Promise<void> | undefined
     await act(async () => {
-      error = await actions?.sendPromptToTerminal('terminal-1', [COMMENT]).catch((err) => err)
+      first = actions?.createTerminalAndSend([COMMENT])
     })
-
-    expect(error).toBeInstanceOf(Error)
-    expect((error as Error).message).toBe('Failed to send notes')
-    // Only the failed clear — never the notes.
-    expect(sendRequest).toHaveBeenCalledTimes(1)
-    expect(sendRequest.mock.calls[0]?.[1]).toMatchObject({ text: '\x15', enter: false })
-    expect(saveCommentsAndReviewState).not.toHaveBeenCalled()
-    expect(setActionError).not.toHaveBeenCalled()
-    expect(setSendSheet).not.toHaveBeenCalled()
-    // Marker survives for the next attempt.
-    expect(isMobileNativeChatInputStale('terminal-1')).toBe(true)
-  })
-
-  it('keeps the marker and skips the notes when the clear throws', async () => {
-    const sendRequest = vi.fn().mockRejectedValue(new Error('offline'))
-    await mount({ sendRequest } as unknown as RpcClient)
-    markMobileNativeChatInputStale('terminal-1')
-
-    let error: unknown
+    const tapTimeSave = saveCommentsAndReviewState
+    saveCommentsAndReviewState = vi.fn().mockResolvedValue(undefined)
     await act(async () => {
-      error = await actions?.sendPromptToTerminal('terminal-1', [COMMENT]).catch((err) => err)
+      renderer?.update(createElement(Harness))
     })
-
-    expect((error as Error).message).toBe('Failed to send notes')
-    expect(sendRequest).toHaveBeenCalledTimes(1)
-    expect(saveCommentsAndReviewState).not.toHaveBeenCalled()
-    expect(isMobileNativeChatInputStale('terminal-1')).toBe(true)
-  })
-
-  it('sends an unmarked terminal with no extra RPC', async () => {
-    const sendRequest = vi.fn().mockResolvedValue(sendResponse(true))
-    await mount({ sendRequest } as unknown as RpcClient)
-
     await act(async () => {
-      await actions?.sendPromptToTerminal('terminal-1', [COMMENT])
+      answerLaunch(launchedReply('handed-to-terminal'))
+      await first
     })
-
-    expect(sendRequest).toHaveBeenCalledTimes(1)
-    expect(sendRequest.mock.calls[0]?.[0]).toBe('terminal.send')
-    expect(sendRequest.mock.calls[0]?.[1]).toMatchObject({ terminal: 'terminal-1', enter: true })
-    expect(saveCommentsAndReviewState).toHaveBeenCalledTimes(1)
-    expect(setActionError).toHaveBeenCalledWith('Review notes sent')
-    expect(setSendSheet).toHaveBeenCalledWith(null)
-  })
-
-  it('only heals the terminal that was marked', async () => {
-    const sendRequest = vi.fn().mockResolvedValue(sendResponse(true))
-    await mount({ sendRequest } as unknown as RpcClient)
-    markMobileNativeChatInputStale('terminal-other')
-
-    await act(async () => {
-      await actions?.sendPromptToTerminal('terminal-1', [COMMENT])
-    })
-
-    expect(sendRequest).toHaveBeenCalledTimes(1)
-    expect(isMobileNativeChatInputStale('terminal-other')).toBe(true)
-  })
-
-  it('still reports a rejected terminal.send after a successful heal', async () => {
-    const sendRequest = vi
-      .fn()
-      .mockResolvedValueOnce(sendResponse(true))
-      .mockResolvedValueOnce(sendResponse(false))
-    await mount({ sendRequest } as unknown as RpcClient)
-    markMobileNativeChatInputStale('terminal-1')
-
-    let error: unknown
-    await act(async () => {
-      error = await actions?.sendPromptToTerminal('terminal-1', [COMMENT]).catch((err) => err)
-    })
-
-    expect((error as Error).message).toBe('Terminal input is locked')
-    expect(saveCommentsAndReviewState).not.toHaveBeenCalled()
-  })
-
-  it('reports a failed terminal.send response', async () => {
-    const sendRequest = vi
-      .fn()
-      .mockResolvedValue({ id: 'send', ok: false, error: { message: 'pane gone' } })
-    await mount({ sendRequest } as unknown as RpcClient)
-
-    let error: unknown
-    await act(async () => {
-      error = await actions?.sendPromptToTerminal('terminal-1', [COMMENT]).catch((err) => err)
-    })
-
-    expect((error as Error).message).toBe('pane gone')
-    expect(saveCommentsAndReviewState).not.toHaveBeenCalled()
+    expect(tapTimeSave).not.toHaveBeenCalled()
+    expect(saveCommentsAndReviewState).toHaveBeenCalledOnce()
   })
 })

@@ -2,9 +2,10 @@ import { branchName } from '@/lib/git-utils'
 import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-identity'
 import type { AppState } from '@/store/types'
 import type { DashboardCardReview } from '../../../../shared/dashboard-snapshot'
-import { hostedReviewInfoFromGitHubPRInfo } from '../../../../shared/hosted-review-github'
-import { isPositiveHostedReviewNumber } from '../../../../shared/hosted-review'
-import type { Repo, Worktree, WorkspaceStatusDefinition } from '../../../../shared/types'
+import { hostedReviewInfoFromGitHubPRInfo } from '../../../../shared/source-control/hosted-review/hosted-review-github'
+import { isPositiveHostedReviewNumber } from '../../../../shared/source-control/hosted-review/hosted-review-contracts'
+import type { Repo } from '../../../../shared/repo-types'
+import type { WorkspaceStatusDefinition, Worktree } from '../../../../shared/worktree/types'
 import {
   DEFAULT_WORKSPACE_STATUSES,
   getWorkspaceStatus
@@ -12,8 +13,8 @@ import {
 import {
   canUseParentPrChecksGitHubPRCacheEntry,
   getParentPrChecksGitHubPRCacheEntry
-} from '../right-sidebar/parent-pr-checks-github-pr-cache'
-import { canUseParentPrChecksHostedReviewCacheEntry } from '../right-sidebar/parent-pr-checks-hosted-review-cache'
+} from '../right-sidebar/hosted-review/folder-checks/parent-pr-checks-github-pr-cache'
+import { canUseParentPrChecksHostedReviewCacheEntry } from '../right-sidebar/hosted-review/folder-checks/parent-pr-checks-hosted-review-cache'
 
 export type DashboardCardContextState = Partial<
   Pick<AppState, 'hostedReviewCache' | 'prCache' | 'settings' | 'workspaceStatuses'>
@@ -37,10 +38,10 @@ function hasLinkedReview(worktree: Worktree): boolean {
 
 function resolveReview(
   state: DashboardCardContextState,
-  repo: Repo,
+  repo: Repo | null,
   worktree: Worktree
 ): DashboardCardReview | undefined {
-  if (!state.hostedReviewCache || !state.prCache || repo.kind === 'folder') {
+  if (!repo || !state.hostedReviewCache || !state.prCache || repo.kind === 'folder') {
     return undefined
   }
   const branch = branchName(worktree.branch)
@@ -77,7 +78,7 @@ function resolveReview(
 
 export function resolveDashboardCardContext(
   state: DashboardCardContextState,
-  repo: Repo,
+  repo: Repo | null,
   worktree: Worktree
 ): DashboardCardContext {
   const statuses =
@@ -85,10 +86,11 @@ export function resolveDashboardCardContext(
       ? state.workspaceStatuses
       : DEFAULT_WORKSPACE_STATUSES
   const workspaceStatusId = getWorkspaceStatus(worktree, statuses)
+  const review = resolveReview(state, repo, worktree)
   return {
     workspaceStatus:
       statuses.find((status) => status.id === workspaceStatusId) ?? DEFAULT_WORKSPACE_STATUSES[0],
-    review: resolveReview(state, repo, worktree),
-    hasReview: hasLinkedReview(worktree)
+    review,
+    hasReview: hasLinkedReview(worktree) || review !== undefined
   }
 }

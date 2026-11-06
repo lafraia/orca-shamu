@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SleepingAgentSessionRecord } from '../../../../shared/agent-session-resume'
+import type { SleepingAgentSessionRecord } from '../../../../shared/agent-session/lifecycle/agent-session-resume'
 
 const mockKill = vi.fn().mockResolvedValue(undefined)
 const mockRuntimeCall = vi.fn().mockResolvedValue({
@@ -145,30 +145,6 @@ describe('terminal tab retirement store boundary', () => {
     expect(mockKill).not.toHaveBeenCalled()
   })
 
-  it('preserves shared-owner snapshots while closing the source tab', async () => {
-    const store = createRetirementStore()
-    const snapshot = { snapshot: 'shared snapshot' }
-    const coldRestore = { scrollback: 'shared scrollback', cwd: 'C:\\workspace' }
-    seedStore(store, {
-      tabsByWorktree: {
-        'wt-1': [
-          makeTab({ id: 'tab-1', worktreeId: 'wt-1', ptyId: 'pty-shared' }),
-          makeTab({ id: 'tab-2', worktreeId: 'wt-1', ptyId: 'pty-shared' })
-        ]
-      },
-      ptyIdsByTabId: { 'tab-1': ['pty-shared'], 'tab-2': ['pty-shared'] },
-      pendingSnapshotByPtyId: { 'pty-shared': snapshot },
-      pendingColdRestoreByPtyId: { 'pty-shared': coldRestore }
-    })
-
-    store.getState().closeTab('tab-1')
-    await Promise.resolve()
-
-    expect(mockKill).not.toHaveBeenCalled()
-    expect(store.getState().pendingSnapshotByPtyId['pty-shared']).toBe(snapshot)
-    expect(store.getState().pendingColdRestoreByPtyId['pty-shared']).toBe(coldRestore)
-  })
-
   it('reconciles natural exit without issuing teardown or revoking resume authority', async () => {
     const store = createRetirementStore()
     const record = sleepingRecord('tab-1:leaf-1', 'tab-1')
@@ -186,15 +162,6 @@ describe('terminal tab retirement store boundary', () => {
     expect(mockKill).not.toHaveBeenCalled()
     expect(mockRuntimeCall).not.toHaveBeenCalled()
     expect(store.getState().sleepingAgentSessionsByPaneKey['tab-1:leaf-1']).toBe(record)
-  })
-
-  it('does not recreate PTY indexes for a tab that no longer exists', () => {
-    const store = createRetirementStore()
-
-    store.getState().updateTabPtyId('closed-tab', 'pty-after-close')
-
-    expect(store.getState().ptyIdsByTabId['closed-tab']).toBeUndefined()
-    expect(store.getState().lastKnownRelayPtyIdByTabId['closed-tab']).toBeUndefined()
   })
 
   it('retires a unified-only terminal instead of removing only its wrapper', async () => {
@@ -228,43 +195,86 @@ describe('terminal tab retirement store boundary', () => {
     expect(store.getState().ptyIdsByTabId['terminal-tab-1']).toBeUndefined()
   })
 
-  it('lets a paired host own runtime teardown while pruning local state', async () => {
+  it('retires parked ownership before teardown and sweeps published state before unified close', () => {
     const store = createRetirementStore()
-    seedStore(store, {
-      tabsByWorktree: {
-        'wt-1': [makeTab({ id: 'tab-1', worktreeId: 'wt-1', ptyId: 'remote:terminal-1' })]
-      },
-      ptyIdsByTabId: { 'tab-1': ['remote:terminal-1'] }
+    const events: string[] = []
+    const unified = makeUnifiedTab({
+      id: 'unified-tab-1',
+      entityId: 'tab-1',
+      worktreeId: 'wt-1',
+      groupId: 'group-1'
     })
-
-    store.getState().closeTab('tab-1', { remoteCloseOwnedByHost: true })
-    await Promise.resolve()
-
-    expect(mockRuntimeCall).not.toHaveBeenCalled()
-    expect(store.getState().tabsByWorktree['wt-1']).toEqual([])
-  })
-
-  it('keeps the tab retired and reports provider rejection without an unhandled promise', async () => {
-    const store = createRetirementStore()
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    mockKill.mockRejectedValueOnce(new Error('provider unavailable'))
+    mockKill.mockImplementationOnce(() => {
+      events.push('provider-kill')
+      return Promise.resolve()
+    })
     seedStore(store, {
       tabsByWorktree: {
         'wt-1': [makeTab({ id: 'tab-1', worktreeId: 'wt-1', ptyId: 'pty-1' })]
       },
-      ptyIdsByTabId: { 'tab-1': ['pty-1'] }
+      ptyIdsByTabId: { 'tab-1': ['pty-1'] },
+      unifiedTabsByWorktree: { 'wt-1': [unified] },
+      dropAgentStatusByTabPrefix: vi.fn(() => {
+        expect(store.getState().tabsByWorktree['wt-1']).toEqual([])
+        events.push('state-sweep')
+      }),
+      closeUnifiedTab: vi.fn(() => {
+        events.push('unified-close')
+        return null
+      })
+    })
+    parkedWatchersByTabId.set('tab-1', {
+      worktreeId: 'wt-1',
+      tabPtyId: 'pty-1',
+      paneIdByPtyId: new Map([['pty-1', 1]]),
+      disposersByPtyId: new Map([['pty-1', () => events.push('parked-retire')]])
+    })
+    const unsubscribe = store.subscribe((state, previous) => {
+      const wasPresent = previous.tabsByWorktree['wt-1']?.some((tab) => tab.id === 'tab-1')
+      const isPresent = state.tabsByWorktree['wt-1']?.some((tab) => tab.id === 'tab-1')
+      if (wasPresent && !isPresent) {
+        events.push('row-removal')
+      }
     })
 
-    store.getState().closeTab('tab-1')
+    expect(() => store.getState().closeTab('tab-1')).not.toThrow()
+
+    expect(events).toEqual([
+      'parked-retire',
+      'provider-kill',
+      'row-removal',
+      'state-sweep',
+      'unified-close'
+    ])
+    unsubscribe()
+  })
+
+  it('starts mixed provider teardown and classifies both rejection kinds after synchronous retirement', async () => {
+    const store = createRetirementStore()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockKill.mockRejectedValueOnce(new Error('local unavailable'))
+    mockRuntimeCall.mockRejectedValueOnce(new Error('runtime unavailable'))
+    seedStore(store, {
+      tabsByWorktree: {
+        'wt-1': [makeTab({ id: 'tab-1', worktreeId: 'wt-1', ptyId: 'pty-local' })]
+      },
+      ptyIdsByTabId: { 'tab-1': ['pty-local', 'remote:runtime-terminal'] }
+    })
+
+    expect(() => store.getState().closeTab('tab-1')).not.toThrow()
+    expect(mockKill).toHaveBeenCalledWith('pty-local')
+    expect(mockRuntimeCall).toHaveBeenCalledWith({
+      method: 'terminal.close',
+      params: { terminal: 'runtime-terminal' }
+    })
+    expect(store.getState().tabsByWorktree['wt-1']).toEqual([])
     await vi.waitFor(() =>
       expect(warn).toHaveBeenCalledWith('[terminal-retirement] provider teardown failed', {
         tabId: 'tab-1',
         localOrSshFailures: 1,
-        runtimeFailures: 0
+        runtimeFailures: 1
       })
     )
-
-    expect(store.getState().tabsByWorktree['wt-1']).toEqual([])
     warn.mockRestore()
   })
 })

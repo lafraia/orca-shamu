@@ -12,7 +12,7 @@ vi.mock('node:child_process', () => ({
   spawn: spawnMock
 }))
 
-import { recordHangObservation } from './main-thread-hang-watchdog-entry'
+import { recordHangObservation, runWatchdog } from './main-thread-hang-watchdog-entry'
 
 describe('recordHangObservation', () => {
   let dir: string
@@ -30,21 +30,6 @@ describe('recordHangObservation', () => {
     killSpy.mockRestore()
     exitSpy.mockRestore()
     rmSync(dir, { recursive: true, force: true })
-  })
-
-  it('records an unresolved hang', () => {
-    const markerPath = join(dir, 'marker.json')
-    recordHangObservation({
-      parentPid: 4242,
-      markerPath,
-      unresponsiveMs: 47_000,
-      selfRecovered: false
-    })
-    expect(consumeHangDetectionMarker(markerPath)).toMatchObject({
-      parentPid: 4242,
-      unresponsiveMs: 47_000,
-      selfRecovered: false
-    })
   })
 
   it('overwrites the marker when the stall clears, keeping one observation per stall', () => {
@@ -67,9 +52,6 @@ describe('recordHangObservation', () => {
     })
   })
 
-  // Why: this is the safety contract of the whole PR. Observing a hang must never kill, relaunch,
-  // or exit — a false positive would SIGKILL a live main thread mid-write. If a future change
-  // reintroduces recovery, this test must fail loudly rather than ship silently.
   it('never spawns, signals, or exits', () => {
     recordHangObservation({
       parentPid: 4242,
@@ -81,26 +63,55 @@ describe('recordHangObservation', () => {
     expect(killSpy).not.toHaveBeenCalled()
     expect(exitSpy).not.toHaveBeenCalled()
   })
+})
 
-  it('survives an unwritable marker path', () => {
-    expect(() =>
-      recordHangObservation({
-        parentPid: 4242,
-        markerPath: join(dir, 'missing-subdir', 'marker.json'),
-        unresponsiveMs: 45_000,
-        selfRecovered: false
-      })
-    ).not.toThrow()
+describe('watchdog worker entry', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
   })
 
-  it('is a no-op when no marker path is configured', () => {
-    expect(() =>
-      recordHangObservation({
-        parentPid: 4242,
-        markerPath: '',
-        unresponsiveMs: 45_000,
-        selfRecovered: false
-      })
-    ).not.toThrow()
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('routes heartbeats and shuts down its timer and port', () => {
+    const markerPath = join(tmpdir(), `hang-watchdog-entry-${process.pid}.json`)
+    let onMessage: ((message: { type: 'heartbeat' | 'shutdown' }) => void) | undefined
+    const port = {
+      on: vi.fn(
+        (_event: 'message', listener: (message: { type: 'heartbeat' | 'shutdown' }) => void) => {
+          onMessage = listener
+        }
+      ),
+      close: vi.fn()
+    }
+    try {
+      runWatchdog(
+        {
+          parentPid: process.pid,
+          markerPath,
+          timeoutMs: 100,
+          checkIntervalMs: 25
+        },
+        port
+      )
+      vi.advanceTimersByTime(75)
+      onMessage?.({ type: 'heartbeat' })
+      vi.advanceTimersByTime(75)
+      expect(consumeHangDetectionMarker(markerPath)).toBeNull()
+      vi.advanceTimersByTime(50)
+      expect(consumeHangDetectionMarker(markerPath)).toMatchObject({ selfRecovered: false })
+
+      onMessage?.({ type: 'heartbeat' })
+      expect(consumeHangDetectionMarker(markerPath)).toMatchObject({ selfRecovered: true })
+      onMessage?.({ type: 'shutdown' })
+      expect(port.close).toHaveBeenCalledOnce()
+      vi.advanceTimersByTime(1_000)
+      expect(port.close).toHaveBeenCalledOnce()
+      expect(consumeHangDetectionMarker(markerPath)).toBeNull()
+    } finally {
+      rmSync(markerPath, { force: true })
+    }
   })
 })

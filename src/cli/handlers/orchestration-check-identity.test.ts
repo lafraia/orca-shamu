@@ -5,7 +5,8 @@ const getTerminalHandleMock = vi.hoisted(() => vi.fn())
 const originalTerminalHandle = process.env.ORCA_TERMINAL_HANDLE
 const originalPaneKey = process.env.ORCA_PANE_KEY
 
-vi.mock('../format', () => ({ printResult: vi.fn() }))
+const printResultMock = vi.hoisted(() => vi.fn())
+vi.mock('../format', () => ({ printResult: printResultMock }))
 vi.mock('../selectors', () => ({ getTerminalHandle: getTerminalHandleMock }))
 
 import { ORCHESTRATION_HANDLERS } from './orchestration'
@@ -13,6 +14,7 @@ import { ORCHESTRATION_HANDLERS } from './orchestration'
 describe('orchestration check identity', () => {
   beforeEach(() => {
     callMock.mockReset().mockResolvedValue({ result: { messages: [], count: 0 } })
+    printResultMock.mockReset()
     getTerminalHandleMock.mockReset()
     delete process.env.ORCA_TERMINAL_HANDLE
     delete process.env.ORCA_PANE_KEY
@@ -31,12 +33,12 @@ describe('orchestration check identity', () => {
     }
   })
 
-  const invokeCheck = (flags: Map<string, string | boolean>) =>
+  const invokeCheck = (flags: Map<string, string | boolean>, json = true) =>
     ORCHESTRATION_HANDLERS['orchestration check']({
       flags,
       client: { call: callMock },
       cwd: '/tmp/repo',
-      json: true
+      json
     } as never)
 
   it('carries the caller pane key when the environment handle may be stale', async () => {
@@ -57,6 +59,15 @@ describe('orchestration check identity', () => {
     )
   })
 
+  it('rejects an empty --terminal instead of consuming the ambient mailbox', async () => {
+    process.env.ORCA_TERMINAL_HANDLE = 'term_coord'
+
+    await expect(
+      invokeCheck(new Map<string, string | boolean>([['terminal', '']]))
+    ).rejects.toMatchObject({ code: 'invalid_argument' })
+    expect(callMock).not.toHaveBeenCalled()
+  })
+
   it('keeps an explicit legacy terminal handle scoped to that handle', async () => {
     process.env.ORCA_TERMINAL_HANDLE = 'term_stale_env'
 
@@ -68,26 +79,6 @@ describe('orchestration check identity', () => {
       expect.objectContaining({
         terminal: 'term_legacy_worker',
         terminalPaneKey: undefined
-      })
-    )
-  })
-
-  it('preserves the pinned legacy --inject check signature', async () => {
-    process.env.ORCA_TERMINAL_HANDLE = 'term_legacy_worker'
-
-    await invokeCheck(
-      new Map<string, string | boolean>([
-        ['unread', true],
-        ['inject', true]
-      ])
-    )
-
-    expect(callMock).toHaveBeenCalledWith(
-      'orchestration.check',
-      expect.objectContaining({
-        terminal: 'term_legacy_worker',
-        unread: true,
-        inject: true
       })
     )
   })

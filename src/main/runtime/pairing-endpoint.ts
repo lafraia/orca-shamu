@@ -1,5 +1,5 @@
 import { isIP } from 'node:net'
-import { PAIRING_ENDPOINT_MAX_CHARACTERS } from '../../shared/mobile-pairing-protocol-limits'
+import { PAIRING_ENDPOINT_MAX_CHARACTERS } from '../../shared/remote-runtime/pairing/mobile-pairing-protocol-limits'
 import { isPairingWildcardHostname, normalizePairingUrl } from '../../shared/network/pairing-url'
 
 export const INVALID_PAIRING_ENDPOINT_GUIDANCE =
@@ -38,6 +38,21 @@ export function resolveAdvertisedPairingEndpoint(
     endpoint.port = parsed.port
   }
   return valid(formatWebSocketUrl(endpoint))
+}
+
+// Classify the normalized advertised hostname, not raw input containing ports, brackets or a scheme.
+export function resolveAdvertisedPairingHostname(
+  advertisedAddress: string | null | undefined
+): string | null {
+  const override = advertisedAddress?.trim()
+  if (!override) {
+    return null
+  }
+  if (override.includes('://')) {
+    const normalized = normalizePairingUrl(override)
+    return normalized ? unbracketIpv6(new URL(normalized).hostname) : null
+  }
+  return parseHostOverride(override)?.hostname ?? null
 }
 
 function resolveFullUrl(value: string): PairingEndpointResolution {

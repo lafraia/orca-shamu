@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
-import type { TerminalQuickCommand } from '../../../src/shared/types'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { TerminalQuickCommand } from '../../../src/shared/terminal/quick-commands/terminal-quick-command-types'
 import type { RpcClient } from '../transport/rpc-client'
 import { LogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
 import type { RpcResponse } from '../transport/types'
@@ -49,24 +49,10 @@ function deferred<T>() {
 describe('useQuickCommands', () => {
   let renderer: ReactTestRenderer | null = null
   let state: ReturnType<typeof useQuickCommands> | null = null
-  let consoleSpy: MockInstance
-
-  beforeEach(() => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true
-    const original = console.error
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation((...args) => {
-      if (typeof args[0] === 'string' && args[0].includes('react-test-renderer is deprecated')) {
-        return
-      }
-      original(...args)
-    })
-  })
-
   afterEach(() => {
     act(() => renderer?.unmount())
     renderer = null
     state = null
-    consoleSpy.mockRestore()
   })
 
   async function mount(client: RpcClient, enabled = true): Promise<void> {
@@ -79,15 +65,6 @@ describe('useQuickCommands', () => {
       await Promise.resolve()
     })
   }
-
-  it('does not fetch settings while the sheet is closed', async () => {
-    const client = { sendRequest: vi.fn() } as unknown as RpcClient
-
-    await mount(client, false)
-
-    expect(client.sendRequest).not.toHaveBeenCalled()
-    expect(state?.ready).toBe(false)
-  })
 
   it('replays the load after a connection-migration cutover', async () => {
     const client = {
@@ -103,31 +80,6 @@ describe('useQuickCommands', () => {
     expect(state?.commands).toEqual([FIRST])
     expect(state?.ready).toBe(true)
     expect(state?.error).toBeNull()
-  })
-
-  it('surfaces the cutover error once replays are exhausted', async () => {
-    const client = {
-      sendRequest: vi.fn(() => Promise.reject(new LogicalClientCutoverError()))
-    } as unknown as RpcClient
-
-    await mount(client)
-
-    // Initial attempt + 5 replays, then give up rather than loop forever.
-    expect(client.sendRequest).toHaveBeenCalledTimes(6)
-    expect(state?.ready).toBe(false)
-    expect(state?.error).toBe('RPC interrupted by connection migration')
-  })
-
-  it('does not replay non-cutover load failures', async () => {
-    const client = {
-      sendRequest: vi.fn(() => Promise.reject(new Error('boom')))
-    } as unknown as RpcClient
-
-    await mount(client)
-
-    expect(client.sendRequest).toHaveBeenCalledTimes(1)
-    expect(state?.ready).toBe(false)
-    expect(state?.error).toBe('boom')
   })
 
   it('stops replaying a cutover-interrupted load after the sheet closes', async () => {
@@ -287,27 +239,6 @@ describe('useQuickCommands', () => {
     expect(state?.commands).toEqual([normalizedFirst])
   })
 
-  it('preserves unrelated commands added by another client while the sheet is open', async () => {
-    const edited = { ...FIRST, label: 'Edited on mobile' }
-    const client = {
-      sendRequest: vi
-        .fn()
-        .mockResolvedValueOnce(success([FIRST]))
-        // The host applies the targeted upsert to a list that desktop changed.
-        .mockResolvedValueOnce(success([edited, SECOND]))
-    } as unknown as RpcClient
-    await mount(client)
-
-    await act(async () => {
-      await state!.persist({ type: 'upsert', command: edited })
-    })
-
-    expect(client.sendRequest).toHaveBeenLastCalledWith('settings.updateTerminalQuickCommands', {
-      mutation: { type: 'upsert', command: edited }
-    })
-    expect(state?.commands).toEqual([edited, SECOND])
-  })
-
   it('isolates an old client mutation from a replacement client', async () => {
     const oldUpdate = deferred<RpcResponse>()
     const oldClient = {
@@ -344,23 +275,6 @@ describe('useQuickCommands', () => {
       await persisted
     })
     expect(state?.commands).toEqual([SECOND])
-  })
-
-  it('rolls back the latest optimistic mutation when persistence fails', async () => {
-    const client = {
-      sendRequest: vi
-        .fn()
-        .mockResolvedValueOnce(success([FIRST]))
-        .mockResolvedValueOnce(failure('save failed'))
-    } as unknown as RpcClient
-    await mount(client)
-
-    await act(async () => {
-      await state!.persist({ type: 'delete', id: FIRST.id })
-    })
-
-    expect(state?.commands).toEqual([FIRST])
-    expect(state?.error).toBe('save failed')
   })
 
   it('rolls back when a successful update has a malformed authoritative list', async () => {

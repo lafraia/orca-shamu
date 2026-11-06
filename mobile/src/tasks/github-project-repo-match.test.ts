@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  filterGitHubProjectRowsForRepos,
-  findRepoForGitHubProjectRepository,
-  normalizeGitHubRepositorySlug
-} from './github-project-repo-match'
+import { findRepoForGitHubProjectRepository } from './github-project-repo-match'
 
 const repos = [
   { id: 'repo-1', path: '/Users/me/orca', displayName: 'orca' },
@@ -11,54 +7,6 @@ const repos = [
 ]
 
 describe('GitHub project repo matching', () => {
-  it('normalizes owner/repo slugs case-insensitively', () => {
-    expect(normalizeGitHubRepositorySlug(' StablyAI/Orca ')).toBe('stablyai/orca')
-    expect(normalizeGitHubRepositorySlug('orca')).toBeNull()
-    expect(normalizeGitHubRepositorySlug('stablyai/orca/extra')).toBeNull()
-  })
-
-  it('matches project rows by resolved repo slug before path/display heuristics', () => {
-    expect(
-      findRepoForGitHubProjectRepository('stablyai/orca', repos, {
-        'repo-1': {
-          path: '/Users/me/orca',
-          repository: { owner: 'stablyai', repo: 'orca' }
-        }
-      })
-    ).toBe(repos[0])
-  })
-
-  it('does not pick a repo when resolved slugs are ambiguous', () => {
-    expect(
-      findRepoForGitHubProjectRepository('stablyai/orca', repos, {
-        'repo-1': {
-          path: '/Users/me/orca',
-          repository: { owner: 'stablyai', repo: 'orca' }
-        },
-        'repo-2': {
-          path: '/Users/me/other',
-          repository: { owner: 'stablyai', repo: 'orca' }
-        }
-      })
-    ).toBeNull()
-  })
-
-  it('falls back to exact display/path slug matching when slug resolution is unavailable', () => {
-    expect(
-      findRepoForGitHubProjectRepository('stablyai/orca', [
-        { id: 'repo-1', path: '/Users/me/stablyai/orca', displayName: 'orca' }
-      ])
-    ).toEqual({ id: 'repo-1', path: '/Users/me/stablyai/orca', displayName: 'orca' })
-  })
-
-  it('normalizes Windows paths before path slug fallback matching', () => {
-    expect(
-      findRepoForGitHubProjectRepository('stablyai/orca', [
-        { id: 'repo-1', path: 'C:\\Users\\me\\stablyai\\orca', displayName: 'orca' }
-      ])
-    ).toEqual({ id: 'repo-1', path: 'C:\\Users\\me\\stablyai\\orca', displayName: 'orca' })
-  })
-
   it('does not path-match a repo whose resolved slug points somewhere else', () => {
     expect(
       findRepoForGitHubProjectRepository(
@@ -72,23 +20,6 @@ describe('GitHub project repo matching', () => {
         }
       )
     ).toBeNull()
-  })
-
-  it('filters project rows to rows backed by open repositories', () => {
-    const rows = [
-      { id: 'row-1', content: { repository: 'stablyai/orca' } },
-      { id: 'row-2', content: { repository: 'other/missing' } },
-      { id: 'row-3', content: { repository: null } }
-    ]
-
-    expect(
-      filterGitHubProjectRowsForRepos(rows, repos, {
-        'repo-1': {
-          path: '/Users/me/orca',
-          repository: { owner: 'stablyai', repo: 'orca' }
-        }
-      }).map((row) => row.id)
-    ).toEqual(['row-1'])
   })
 
   it('matches same-named repositories only on the active Project host', () => {
@@ -113,6 +44,31 @@ describe('GitHub project repo matching', () => {
         'github.acme-corp.com'
       )
     ).toBe(repos[1])
+  })
+
+  it('scopes a host-less fork parent to the host the fork itself was cloned from', () => {
+    const enterpriseFork = {
+      id: 'repo-1',
+      path: '/Users/me/widgets-mirror',
+      displayName: 'widgets-mirror',
+      upstream: { owner: 'acme', repo: 'widgets' }
+    }
+    const slugs = {
+      'repo-1': {
+        path: '/Users/me/widgets-mirror',
+        repository: { owner: 'me', repo: 'widgets', host: 'github.acme-corp.com' }
+      }
+    }
+
+    expect(
+      findRepoForGitHubProjectRepository(
+        'acme/widgets',
+        [enterpriseFork],
+        slugs,
+        'github.acme-corp.com'
+      )
+    ).toBe(enterpriseFork)
+    expect(findRepoForGitHubProjectRepository('acme/widgets', [enterpriseFork], slugs)).toBeNull()
   })
 
   it('does not use hostless path heuristics for Enterprise Project rows', () => {

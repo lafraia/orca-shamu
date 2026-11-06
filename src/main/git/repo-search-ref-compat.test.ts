@@ -4,12 +4,17 @@ const { gitExecFileAsyncMock } = vi.hoisted(() => ({
   gitExecFileAsyncMock: vi.fn()
 }))
 
-vi.mock('./runner', () => ({
-  gitExecFileAsync: gitExecFileAsyncMock,
+vi.mock('./command-runner/git-exec-file', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  gitExecFileAsync: gitExecFileAsyncMock
+}))
+
+vi.mock('./command-runner/git-exec-file-sync', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   gitExecFileSync: vi.fn()
 }))
 
-import { clearGitCapabilityStateForTests } from './git-capability-state'
+import { clearGitCapabilityStateForTests } from './command-runner/git-capability-state'
 import { searchBaseRefs } from './repo'
 
 describe('searchBaseRefs git compatibility', () => {
@@ -23,7 +28,7 @@ describe('searchBaseRefs git compatibility', () => {
       if (args[0] === 'remote') {
         return { stdout: 'origin\n', stderr: '' }
       }
-      if (args.includes('--exclude=refs/remotes/**/HEAD')) {
+      if (args.some((arg) => arg.startsWith('--exclude=refs/remotes/'))) {
         throw Object.assign(new Error("unknown option `exclude'"), {
           stderr: "error: unknown option `exclude'"
         })
@@ -43,9 +48,15 @@ describe('searchBaseRefs git compatibility', () => {
       (call) => (call[0] as string[])[0] === 'for-each-ref'
     )
     expect(forEachRefCalls).toHaveLength(3)
-    expect(forEachRefCalls[0][0]).toContain('--exclude=refs/remotes/**/HEAD')
-    expect(forEachRefCalls[1][0]).not.toContain('--exclude=refs/remotes/**/HEAD')
+    expect(
+      (forEachRefCalls[0][0] as string[]).some((arg) => arg.startsWith('--exclude=refs/remotes/'))
+    ).toBe(true)
+    expect(
+      (forEachRefCalls[1][0] as string[]).some((arg) => arg.startsWith('--exclude=refs/remotes/'))
+    ).toBe(false)
     expect(forEachRefCalls[1][0]).toContain('--count=104')
-    expect(forEachRefCalls[2][0]).not.toContain('--exclude=refs/remotes/**/HEAD')
+    expect(
+      (forEachRefCalls[2][0] as string[]).some((arg) => arg.startsWith('--exclude=refs/remotes/'))
+    ).toBe(false)
   })
 })

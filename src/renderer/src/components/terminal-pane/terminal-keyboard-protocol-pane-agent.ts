@@ -1,4 +1,4 @@
-import type { TuiAgent } from '../../../../shared/types'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 
 type PaneKeyboardProtocolStartup = {
   launchAgent?: TuiAgent

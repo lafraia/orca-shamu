@@ -1,6 +1,9 @@
-import type { AgentProviderSessionMetadata } from './agent-session-resume'
-import type { AgentType, NativeChatMessage } from './native-chat-types'
+import type { AgentProviderSessionMetadata } from './agent-session/lifecycle/agent-session-resume'
+import type { AgentType } from './agent-status/contracts/agent-status-types'
+import type { NativeChatMessage } from './native-chat/native-chat-types'
+import type { OrchestrationFleetWorker } from './orchestration-fleet-projection'
 import type { RuntimeTerminalRead, RuntimeTerminalState } from './runtime-types'
+import type { PtyLivenessVerdict } from './terminal/pty/lifecycle/pty-liveness-verdict'
 
 export const ORCHESTRATION_WORKER_READ_SOURCES = ['auto', 'transcript', 'terminal'] as const
 export type OrchestrationWorkerReadSource = (typeof ORCHESTRATION_WORKER_READ_SOURCES)[number]
@@ -8,6 +11,7 @@ export type OrchestrationWorkerReadSource = (typeof ORCHESTRATION_WORKER_READ_SO
 export const ORCHESTRATION_WORKER_READ_FALLBACK_REASONS = [
   'provider_unsupported',
   'session_not_reported',
+  'transcript_empty',
   'transcript_missing',
   'transcript_unreadable',
   'transcript_parse_failed',
@@ -19,6 +23,10 @@ export type OrchestrationWorkerReadFallbackReason =
 export type ExactWorkerProviderSession = {
   paneKey: string
   processIncarnation: string
+  /** Accepted transport authority for the PTY; null is the local runtime. */
+  connectionId?: string | null
+  /** Attested distro for a local PTY whose hook session arrived over WSL. */
+  wslDistro?: string
   agent: AgentType
   providerSession: AgentProviderSessionMetadata
   observedAt: number
@@ -41,9 +49,17 @@ export type OrchestrationWorkerReadTranscriptResult = {
   status: {
     worker: string
     terminal: RuntimeTerminalState
+    liveness?: PtyLivenessVerdict['status']
   }
+  /** Fleet agent verdict for this Dispatch; absent from hosts that predate it. */
+  projection?: OrchestrationFleetWorker | null
   fallbackReason: null
+  sourceExact?: boolean
+  contentComplete?: boolean
+  clipping?: string[]
   warnings: string[]
+  // The live PTY was released; output comes from the frozen archive source.
+  archived?: boolean
 }
 
 export type OrchestrationWorkerReadTerminalResult = {
@@ -55,9 +71,17 @@ export type OrchestrationWorkerReadTerminalResult = {
   status: {
     worker: string
     terminal: RuntimeTerminalState
+    liveness?: PtyLivenessVerdict['status']
   }
+  /** Fleet agent verdict for this Dispatch; absent from hosts that predate it. */
+  projection?: OrchestrationFleetWorker | null
   fallbackReason: OrchestrationWorkerReadFallbackReason | null
+  sourceExact?: boolean
+  contentComplete?: boolean
+  clipping?: string[]
   warnings: string[]
+  // The live PTY was released; output comes from the frozen archive source.
+  archived?: boolean
 }
 
 export type OrchestrationWorkerReadResult =

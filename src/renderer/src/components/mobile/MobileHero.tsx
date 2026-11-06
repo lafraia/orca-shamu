@@ -1,12 +1,13 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Copy } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import type { MobileNetworkInterface } from '../settings/mobile-network-interface-selection'
+import type { MobileNetworkInterface } from '../settings/mobile/pairing/mobile-network-interface-selection'
 import { AndroidLogo, IosBrandIcon } from './MobileBrandIcons'
-import { getChannelTagline, type InstallCopy, type IosChannel } from './mobile-platform-copy'
-import type { MobilePairingConnectionMode } from '../../../../shared/mobile-pairing-connection-mode'
-import type { MobileRelayMintFailure } from '../../../../shared/mobile-relay-mint-failure'
+import type { InstallCopy } from './mobile-platform-copy'
+import type { MobilePairingConnectionMode } from '../../../../shared/remote-runtime/pairing/mobile-pairing-connection-mode'
+import type { MobileRelayMintFailure } from '../../../../shared/remote-runtime/relay/mobile-relay-mint-failure'
 import { MobileHeroPairingStep } from './MobileHeroPairingStep'
+import { MobileAndroidInstallHelp } from './MobileAndroidInstallHelp'
 export { HeroIntro } from './MobileHeroIntro'
 export { HeroPaired, type PairedDevice } from './MobileHeroPairedDevices'
 import { translate } from '@/i18n/i18n'
@@ -20,11 +21,11 @@ type HeroFlowProps = {
   onPlatformChange: (next: Platform) => void
   installQrUrl: string | null
   installCopy: InstallCopy
-  iosChannel: IosChannel
-  onIosChannelChange: (next: IosChannel) => void
+  onOpenAndroidInstallGuide: () => void
   onOpenInstallUrl: () => void
   onCopyInstallUrl: () => void
   pairQrDataUrl: string | null
+  pairQrSize?: number | null
   pairingUrl: string | null
   pairingQrError: boolean
   relayMintFailure: MobileRelayMintFailure | null
@@ -38,8 +39,12 @@ type HeroFlowProps = {
   canGeneratePairing: boolean
   onCopyPairingCode: () => void
   networkInterfaces: readonly MobileNetworkInterface[]
+  customAddresses: readonly string[]
   selectedAddress: string | undefined
+  selectedAddressIsCustom: boolean
   onSelectedAddressChange: (address: string) => void
+  onCustomAddressSelect: (address: string) => void
+  onCustomAddressRemove: (address: string) => void
   beforeCustomAddressChange: (address: string) => Promise<boolean>
   onRefreshNetworkInterfaces: () => void
   refreshingNetworkInterfaces: boolean
@@ -54,11 +59,11 @@ export function HeroFlow({
   onPlatformChange,
   installQrUrl,
   installCopy,
-  iosChannel,
-  onIosChannelChange,
+  onOpenAndroidInstallGuide,
   onOpenInstallUrl,
   onCopyInstallUrl,
   pairQrDataUrl,
+  pairQrSize = null,
   pairingUrl,
   pairingQrError,
   relayMintFailure,
@@ -72,8 +77,12 @@ export function HeroFlow({
   canGeneratePairing,
   onCopyPairingCode,
   networkInterfaces,
+  customAddresses,
   selectedAddress,
+  selectedAddressIsCustom,
   onSelectedAddressChange,
+  onCustomAddressSelect,
+  onCustomAddressRemove,
   beforeCustomAddressChange,
   onRefreshNetworkInterfaces,
   refreshingNetworkInterfaces,
@@ -125,12 +134,12 @@ export function HeroFlow({
                 </span>
               </div>
               <h2 className="mp-h2">
-                {translate('auto.components.mobile.MobileHero.0d9b33299e', 'Get the app.')}
+                {translate('auto.components.mobile.MobileHero.0d9b33299e', 'Download the app.')}
               </h2>
               <p className="mp-lead-sm">
                 {translate(
                   'auto.components.mobile.MobileHero.e75647ace0',
-                  'Scan the QR with your phone or open the install link to grab Orca Mobile.'
+                  "Scan this download QR with your phone's camera. Already have Orca Mobile? Continue to step 2 for the pairing QR."
                 )}
               </p>
               <div className="mp-tab-toggle">
@@ -153,36 +162,6 @@ export function HeroFlow({
                   {translate('auto.components.mobile.MobileHero.ac1eb64952', 'Android')}
                 </button>
               </div>
-              {platform === 'ios' ? (
-                <div
-                  className="mp-channel-toggle"
-                  role="radiogroup"
-                  aria-label={translate(
-                    'auto.components.mobile.MobileHero.channel.group',
-                    'Release channel'
-                  )}
-                >
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={iosChannel === 'preview'}
-                    className={cn(iosChannel === 'preview' && 'is-active')}
-                    onClick={() => onIosChannelChange('preview')}
-                  >
-                    {translate('auto.components.mobile.MobileHero.channel.preview', 'Preview')}
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={iosChannel === 'stable'}
-                    className={cn(iosChannel === 'stable' && 'is-active')}
-                    onClick={() => onIosChannelChange('stable')}
-                  >
-                    {translate('auto.components.mobile.MobileHero.channel.stable', 'Stable')}
-                  </button>
-                  <span className="mp-channel-tagline">{getChannelTagline(iosChannel)}</span>
-                </div>
-              ) : null}
               <div className="mp-inline-actions">
                 <button type="button" className="mp-ghost-action" onClick={onOpenInstallUrl}>
                   {installCopy.ctaLabel}
@@ -192,6 +171,9 @@ export function HeroFlow({
                   {translate('auto.components.mobile.MobileHero.aa97420ba4', 'Copy install link')}
                 </button>
               </div>
+              {platform === 'android' ? (
+                <MobileAndroidInstallHelp onOpenGuide={onOpenAndroidInstallGuide} />
+              ) : null}
             </div>
             <div className="mp-qr mp-qr-large">
               {installQrUrl ? (
@@ -214,6 +196,7 @@ export function HeroFlow({
         >
           <MobileHeroPairingStep
             pairQrDataUrl={pairQrDataUrl}
+            pairQrSize={pairQrSize}
             pairingUrl={pairingUrl}
             pairingQrError={pairingQrError}
             relayMintFailure={relayMintFailure}
@@ -227,8 +210,12 @@ export function HeroFlow({
             canGeneratePairing={canGeneratePairing}
             onCopyPairingCode={onCopyPairingCode}
             networkInterfaces={networkInterfaces}
+            customAddresses={customAddresses}
             selectedAddress={selectedAddress}
+            selectedAddressIsCustom={selectedAddressIsCustom}
             onSelectedAddressChange={onSelectedAddressChange}
+            onCustomAddressSelect={onCustomAddressSelect}
+            onCustomAddressRemove={onCustomAddressRemove}
             beforeCustomAddressChange={beforeCustomAddressChange}
             onRefreshNetworkInterfaces={onRefreshNetworkInterfaces}
             refreshingNetworkInterfaces={refreshingNetworkInterfaces}

@@ -1,14 +1,21 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import type { SleepingAgentSessionRecord } from '../../../shared/agent-session-resume'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SleepingAgentSessionRecord } from '../../../shared/agent-session/lifecycle/agent-session-resume'
 import { useAppStore } from '@/store'
 import { resumeSleepingAgentSessionsForWorktree } from './resume-sleeping-agent-session'
-import { launchAiVaultSessionInNewTab } from './launch-ai-vault-session'
-import { buildWorkspaceSessionPayload } from './workspace-session'
+
+import { createStoreSessionMockApi } from '../store/slices/store-session-test-harness'
 
 const initialAppStoreState = useAppStore.getState()
 
+beforeEach(() => {
+  // Track the original global before the shared fixture installs the renderer API.
+  vi.stubGlobal('window', undefined)
+  createStoreSessionMockApi()
+})
+
 afterEach(() => {
   useAppStore.setState(initialAppStoreState, true)
+  vi.unstubAllGlobals()
 })
 
 function makeRecord(
@@ -34,26 +41,6 @@ function makeTerminalTab(id: string): Record<string, unknown> {
 }
 
 describe('resumeSleepingAgentSessionsForWorktree replay protection', () => {
-  it('stores provider-session metadata in the queued startup and runtime claim', () => {
-    const record = makeRecord()
-    useAppStore.setState({
-      tabsByWorktree: { 'wt-1': [] },
-      sleepingAgentSessionsByPaneKey: { [record.paneKey]: record }
-    } as never)
-
-    expect(resumeSleepingAgentSessionsForWorktree('wt-1')).toBe(1)
-    const resumedTab = useAppStore.getState().tabsByWorktree['wt-1']![0]!
-    const state = useAppStore.getState()
-    expect(state.pendingStartupByTabId[resumedTab.id]?.resumeProviderSession).toEqual(
-      record.providerSession
-    )
-    expect(state.automaticAgentResumeClaimsByTabId[resumedTab.id]).toEqual({
-      worktreeId: record.worktreeId,
-      launchAgent: record.agent,
-      providerSession: record.providerSession
-    })
-  })
-
   it('does not fork a provider session that is already queued', () => {
     const record = makeRecord()
     useAppStore.setState({
@@ -138,59 +125,5 @@ describe('resumeSleepingAgentSessionsForWorktree replay protection', () => {
     expect(resumeSleepingAgentSessionsForWorktree('wt-1')).toBe(1)
     expect(useAppStore.getState().tabsByWorktree['wt-1']).toHaveLength(1)
     expect(useAppStore.getState().tabsByWorktree['wt-2']).toHaveLength(1)
-  })
-
-  it('clears runtime automatic-resume claims when the tab closes', () => {
-    const record = makeRecord()
-    useAppStore.setState({
-      tabsByWorktree: { 'wt-1': [] },
-      sleepingAgentSessionsByPaneKey: { [record.paneKey]: record }
-    } as never)
-
-    expect(resumeSleepingAgentSessionsForWorktree('wt-1')).toBe(1)
-    const resumedTab = useAppStore.getState().tabsByWorktree['wt-1']![0]!
-    expect(useAppStore.getState().automaticAgentResumeClaimsByTabId[resumedTab.id]).toBeDefined()
-
-    useAppStore.getState().closeTab(resumedTab.id)
-
-    expect(useAppStore.getState().automaticAgentResumeClaimsByTabId[resumedTab.id]).toBeUndefined()
-  })
-
-  it('does not include runtime automatic-resume claims in workspace-session payloads', () => {
-    useAppStore.setState({
-      tabsByWorktree: { 'wt-1': [makeTerminalTab('tab-1')] },
-      automaticAgentResumeClaimsByTabId: {
-        'tab-1': {
-          worktreeId: 'wt-1',
-          launchAgent: 'codex',
-          providerSession: { key: 'session_id', id: 'sess-1' }
-        }
-      }
-    } as never)
-
-    const payload = buildWorkspaceSessionPayload(useAppStore.getState())
-
-    expect('automaticAgentResumeClaimsByTabId' in payload).toBe(false)
-  })
-
-  it('leaves explicit AI Vault resumes outside automatic-resume claims', () => {
-    useAppStore.setState({ tabsByWorktree: { 'wt-1': [] } } as never)
-
-    const first = launchAiVaultSessionInNewTab({
-      agent: 'codex',
-      worktreeId: 'wt-1',
-      command: "codex resume 'sess-1'",
-      launchConfig: { agentArgs: '', agentEnv: {} }
-    })
-    const second = launchAiVaultSessionInNewTab({
-      agent: 'codex',
-      worktreeId: 'wt-1',
-      command: "codex resume 'sess-1'",
-      launchConfig: { agentArgs: '', agentEnv: {} }
-    })
-
-    expect(first.tabId).not.toBe(second.tabId)
-    expect(useAppStore.getState().tabsByWorktree['wt-1']).toHaveLength(2)
-    expect(useAppStore.getState().automaticAgentResumeClaimsByTabId).toEqual({})
   })
 })

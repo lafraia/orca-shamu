@@ -1,9 +1,13 @@
-import { StyleSheet } from 'react-native'
+import { StyleSheet, type TextStyle } from 'react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet, themedStyles } from '../theme/themed-styles'
 
-export const styles = StyleSheet.create({
+/** Lifts the 13pt base to 14pt body text for documents (file preview, PR bodies); headings scale with it. */
+export const MOBILE_MARKDOWN_DOCUMENT_SCALE = 14 / 13
+
+export const styles = themedStyleSheet(() => ({
   root: {
-    gap: spacing.sm
+    gap: spacing.md
   },
   paragraph: {
     fontSize: 13,
@@ -39,7 +43,7 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textPrimary,
     backgroundColor: colors.bgRaised,
-    borderRadius: radii.row,
+    borderRadius: radii.mark,
     paddingHorizontal: 4
   },
   inlineCodeLink: {
@@ -49,7 +53,12 @@ export const styles = StyleSheet.create({
   quote: {
     borderLeftWidth: 2,
     borderLeftColor: colors.borderSubtle,
-    paddingLeft: spacing.sm
+    borderTopRightRadius: radii.surface,
+    borderBottomRightRadius: radii.surface,
+    backgroundColor: colors.bgPanel,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm
   },
   quoteText: {
     fontSize: 13,
@@ -60,25 +69,87 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.bgRaised,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
-    padding: spacing.sm
+    borderRadius: radii.surface,
+    overflow: 'hidden'
+  },
+  codeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    minHeight: 32,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle
   },
   codeLanguage: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
+    flexShrink: 1,
+    fontSize: typography.metaSize,
+    color: colors.textSecondary,
     textTransform: 'uppercase'
   },
+  codeBody: {
+    flexDirection: 'row',
+    paddingVertical: spacing.sm
+  },
+  codeLineNumbers: {
+    paddingHorizontal: spacing.sm,
+    color: colors.textMuted,
+    textAlign: 'right'
+  },
+  codeLines: {
+    paddingRight: spacing.md
+  },
+  codeLinesWrapped: {
+    flex: 1,
+    paddingLeft: spacing.md
+  },
+  codeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs
+  },
+  codeWrapButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.control
+  },
+  codeWrapButtonOn: {
+    backgroundColor: colors.translucentFill
+  },
+
   codeText: {
     fontFamily: typography.monoFamily,
     fontSize: 12,
     lineHeight: 17,
     color: colors.textPrimary
   },
+  imageParagraph: {
+    gap: spacing.sm
+  },
+  details: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.surface,
+    overflow: 'hidden'
+  },
+  detailsSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.bgRaised
+  },
+  detailsSummaryText: { fontWeight: '600', flexShrink: 1 },
+  detailsBody: { padding: spacing.sm, gap: spacing.md },
   imageFrame: {
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
+    borderRadius: radii.surface,
     backgroundColor: colors.bgRaised,
     overflow: 'hidden',
     padding: spacing.sm
@@ -89,11 +160,15 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary
   },
+  tableScroll: {
+    minWidth: '100%'
+  },
   table: {
+    flexGrow: 1,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
+    borderRadius: radii.surface,
     overflow: 'hidden',
     backgroundColor: colors.bgPanel
   },
@@ -101,25 +176,21 @@ export const styles = StyleSheet.create({
     flexDirection: 'row'
   },
   tableCell: {
-    minWidth: 112,
-    maxWidth: 220,
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: colors.borderSubtle,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     fontSize: 12,
     lineHeight: 17,
-    color: colors.textPrimary
+    color: colors.textPrimary,
+    // Every row grows its cells from the same widths, so a short table fills the message aligned.
+    flexGrow: 1,
+    flexShrink: 0
   },
   tableHeader: {
     fontWeight: '700',
     backgroundColor: colors.bgRaised
-  },
-  tableTruncated: {
-    padding: spacing.sm,
-    fontSize: 12,
-    color: colors.textMuted
   },
   list: {
     gap: spacing.xs
@@ -130,21 +201,68 @@ export const styles = StyleSheet.create({
     gap: spacing.sm
   },
   listMarker: {
-    width: 22,
+    // A floor, not a width: "10." would wrap inside a fixed 22.
+    minWidth: 22,
     fontSize: 13,
     lineHeight: 19,
     color: colors.textSecondary,
     fontFamily: typography.monoFamily
   },
-  listText: {
+  listItemBody: {
     flex: 1,
     minWidth: 0,
+    gap: spacing.xs
+  },
+  listText: {
     fontSize: 13,
     lineHeight: 19,
     color: colors.textPrimary
   },
+  footnoteReference: {
+    color: colors.textSecondary
+  },
   rule: {
+    marginVertical: spacing.xs,
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.borderSubtle
   }
-})
+}))
+
+/** A style's size and line height under the reader's zoom; null at 1x, where the sheet holds. */
+export function scaledMarkdownText(
+  style: { fontSize: number; lineHeight: number },
+  textScale: number
+): { fontSize: number; lineHeight: number } | null {
+  return textScale !== 1
+    ? { fontSize: style.fontSize * textScale, lineHeight: style.lineHeight * textScale }
+    : null
+}
+
+export type MarkdownTone = {
+  text: TextStyle | null
+  secondary: TextStyle | null
+  link: TextStyle | null
+  inlineCode: TextStyle | null
+}
+
+/** Colours and weight over the styles above, for one surface. The default tone overrides nothing. */
+export const MARKDOWN_TONES: Record<'default' | 'userMessage' | 'strong' | 'muted', MarkdownTone> =
+  {
+    default: { text: null, secondary: null, link: null, inlineCode: null },
+    // A card's title: the question an agent asks.
+    strong: { text: { fontWeight: '600' }, secondary: null, link: null, inlineCode: null },
+    // Settled text beside a receipt's muted answer.
+    muted: themedStyles(() => ({
+      text: { color: colors.textMuted },
+      secondary: null,
+      link: null,
+      inlineCode: null
+    })),
+    // Desktop's user bubble only strengthens the text; links and code keep their chat colors.
+    userMessage: themedStyles(() => ({
+      text: { color: colors.chatForegroundStrong },
+      secondary: null,
+      link: null,
+      inlineCode: null
+    }))
+  }

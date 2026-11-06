@@ -1,16 +1,19 @@
 import type { Page } from '@stablyai/playwright-test'
 import type { RuntimeTerminalRead } from '../../../src/shared/runtime-types'
-import { TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY } from '../../../src/shared/protocol-version'
+import '../../../src/shared/protocol-version'
+import { TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY } from '../../../src/shared/terminal/runtime-policy/terminal-runtime-capabilities'
 import {
   toHostSessionTabId,
   toWebTerminalSurfaceTabId
-} from '../../../src/shared/terminal-surface-id'
+} from '../../../src/shared/workspace-layout/terminal-surface-id'
 import {
   readPairedRetentionSample,
   startRendererLagProbe
 } from '../paired-runtime-retention-metrics'
 import { expect } from './orca-app'
+import { verifyHiddenPairedTerminalOutputSuppression } from './paired-terminal-hidden-output-oracle'
 import { createPairedTerminalParkingFixture } from './paired-terminal-parking-fixture'
+import { verifyPairedTerminalTitleFanout } from './paired-terminal-title-fanout-oracle'
 import { getTerminalContent, waitForActivePanePtyId } from './terminal'
 
 const TARGET_WORKTREE_COUNT = 6
@@ -133,17 +136,8 @@ export async function runPairedTerminalParkingOracle(
     }
     await expectHostTerminalsUnmounted(options.hostPage, seed.fallbackWorktreeId, remoteTabs)
 
-    await page.evaluate(() => window.__store?.getState().setActiveView('tasks'))
-    await expect
-      .poll(
-        () =>
-          page.evaluate(
-            (ids) => ids.filter((id) => window.__paneManagers?.has(id)).length,
-            remoteTabs.map((tab) => tab.tabId)
-          ),
-        { timeout: 10_000 }
-      )
-      .toBe(TARGET_WORKTREE_COUNT)
+    const hiddenFloodTokens = await verifyHiddenPairedTerminalOutputSuppression(page, remoteTabs)
+    await verifyPairedTerminalTitleFanout(page, remoteTabs)
     const baseline = await readPairedRetentionSample(
       page,
       remoteTabs.map((tab) => tab.tabId)
@@ -206,9 +200,7 @@ export async function runPairedTerminalParkingOracle(
     expect(after.bufferCells).toBeLessThanOrEqual(baseline.bufferCells * MAX_RETAINED_CELL_FRACTION)
     expect(after.mountedTargetManagers).toBe(1)
     expect(maxLagMs).toBeLessThan(MAX_EVICTION_LAG_MS)
-    if (baseline.heapBytes !== null && after.heapBytes !== null) {
-      expect(after.heapBytes).toBeLessThanOrEqual(baseline.heapBytes + MAX_HEAP_GROWTH_BYTES)
-    }
+    expect(after.heapBytes).toBeLessThanOrEqual(baseline.heapBytes + MAX_HEAP_GROWTH_BYTES)
 
     const evicted = await page.evaluate(
       (tabs) => tabs.find((tab) => !window.__paneManagers?.has(tab.tabId)) ?? null,
@@ -217,6 +209,8 @@ export async function runPairedTerminalParkingOracle(
     if (!evicted) {
       throw new Error('Ordinary parking did not unmount a paired terminal')
     }
+    const hiddenFloodToken =
+      hiddenFloodTokens[remoteTabs.findIndex((tab) => tab.tabId === evicted.tabId)]
     const parkedMarker = `WHILE_PARKED_${Date.now()}`
     await callRuntime(page, 'terminal.send', {
       terminal: evicted.terminal,
@@ -248,11 +242,18 @@ export async function runPairedTerminalParkingOracle(
     await restored.click()
     expect(await waitForActivePanePtyId(page, 30_000)).toBe(evicted.originalPtyId)
     await expect
-      .poll(() => getTerminalContent(page, 1_000_000), { timeout: 30_000 })
-      .toContain(`fill-${evicted.marker}-4000-`)
-    await expect
-      .poll(() => getTerminalContent(page, 1_000_000), { timeout: 30_000 })
-      .toContain(`LIVE:${parkedMarker}`)
+      .poll(
+        async () => {
+          const content = await getTerminalContent(page, 1_000_000)
+          return [
+            `flood-${hiddenFloodToken}-3999-`,
+            `FLOODED:${hiddenFloodToken}`,
+            `LIVE:${parkedMarker}`
+          ].map((marker) => content.split(marker).length - 1)
+        },
+        { timeout: 30_000 }
+      )
+      .toEqual([1, 1, 1])
     const liveMarker = `AFTER_RETENTION_${Date.now()}`
     await callRuntime(page, 'terminal.send', {
       terminal: evicted.terminal,
