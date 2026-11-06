@@ -18,7 +18,7 @@ const bots: ProjectChannel[] = [
   },
   {
     id: 'regular-unread',
-    name: 'Dev: Vagalume',
+    name: 'Development assistant',
     identity: { color: 'pink', animated: false, shape: 'star' },
     mainMemberId: null,
     members: [],
@@ -28,7 +28,7 @@ const bots: ProjectChannel[] = [
   },
   {
     id: 'already-read',
-    name: 'Orlando em Detalhes',
+    name: 'Research and planning',
     identity: { color: 'blue', animated: false },
     mainMemberId: null,
     members: [],
@@ -43,7 +43,21 @@ export const unreadAvatars = defineFixture({
   setup: () => {
     useBotUnread.setState({ counts: { 'pinned-unread': 2, 'regular-unread': 1 }, pending: [] })
   },
-  render: () => (
+  render: () => renderRows('pinned-unread')
+})
+
+export const selectedBot = defineFixture({
+  ...unreadAvatars,
+  render: () => renderRows('regular-unread')
+})
+
+export const narrow = defineFixture({
+  ...selectedBot,
+  width: 240
+})
+
+function renderRows(selectedId: string): React.JSX.Element {
+  return (
     <div className="bg-worktree-sidebar p-2">
       <BotSidebarDrag>
         {bots.map((channel) => (
@@ -51,11 +65,11 @@ export const unreadAvatars = defineFixture({
             key={channel.id}
             channel={channel}
             sections={[]}
-            selected={channel.pinned === true}
+            selected={channel.id === selectedId}
             onSection={() => {}}
           />
         ))}
       </BotSidebarDrag>
     </div>
   )
-})
+}
