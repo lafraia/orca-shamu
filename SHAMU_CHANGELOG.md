@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Invalidate Vault operations when panel visibility commits, keeping render work free of ref mutations and preventing late results after closure.
 - Scope bot navigation and prompt preparation to the Shamu client, preserve upstream composer drafts without the optional bot bridge, and register bot CLI dispatch and host ownership. Align startup and release fixtures with the current APIs and test runner.
 - Keep shared bot communication and routine sorting compatible with mobile Hermes, include Shamu dependencies in native composite typechecks and restore the fingerprint job's checkout before action cleanup.
 - Repair the upstream CI workflow's dangling timeout-check reference and support the first fork sync when trusted default-branch reporting tools or benchmark baselines do not yet exist. Keep unavailable benchmark comparisons explicit.
@@ -55,7 +56,10 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Pull requests
 
-Initial Shamu development and the `lafraia/upstream-v1.4.250` integration remain local. Add the actual merged Shamu PR links here as they become available. Do not treat local commits or preview tags as merged PRs or published releases.
+- [#3](https://github.com/lafraia/orca-shamu/pull/3): import the unmodified stable Orca v1.4.251 source.
+- [#2](https://github.com/lafraia/orca-shamu/pull/2): integrate Shamu's bots, memory, Vault and conversation features on that base.
+
+Local preview tags are development checkpoints, not published distributions.
 
 ## Local preview history
 

@@ -1,5 +1,5 @@
 import { translate } from '@/i18n/i18n'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { LockKeyhole, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,7 +51,6 @@ export function VaultPanel({
   const lifetime = useRef(0)
   const pending = useRef(false)
   const visible = useRef(open)
-  visible.current = open
   const invalidate = useCallback(() => {
     load.current++
     lifetime.current++
@@ -83,11 +82,11 @@ export function VaultPanel({
       }
     }
   }, [api, botId, clearForms])
-  useEffect(() => {
+  useLayoutEffect(() => {
+    visible.current = open
     if (!open) {
       return
     }
-    visible.current = true
     pending.current = false
     setBusy(false)
     setSnapshot(null)
