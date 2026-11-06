@@ -14,7 +14,6 @@ import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
 import type { NativeChatResourceReference } from '../../../../shared/native-chat/native-chat-resource-reference'
 import { hostWorktreeTarget } from '../../../../shared/worktree/host-qualified-identity'
 import { useShamuClient } from '../shamu/shamu-client-state'
-import { useProjectChannels } from '../project-channels/project-channel-store'
 
 export function openNativeChatResource(reference: NativeChatResourceReference): boolean {
   const connection = useShamuClient.getState()
@@ -91,7 +90,6 @@ export function openNativeChatResource(reference: NativeChatResourceReference): 
   if (activateAndRevealWorkspace(workspaceId, { executionHostId: reference.hostId }) === false) {
     return false
   }
-  useProjectChannels.setState({ mode: 'workspaces' })
   if (state.floatingWorkspacePanelOpen) {
     state.setFloatingWorkspacePanelOpen(false)
   }

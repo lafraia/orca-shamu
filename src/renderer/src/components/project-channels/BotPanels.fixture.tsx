@@ -140,6 +140,7 @@ export const drawers = defineFixture({
     }
     useProjectChannels.setState({ snapshot, loaded: true })
     window.api.projectChannels = {
+      projectCatalog: async () => ({ entries: [] }),
       read: async () => snapshot,
       write: async (value) => value,
       ensureConversation: async () => snapshot,

@@ -20,7 +20,6 @@ export function isBotChatViewed(botId: string, member: ProjectChannelMember): bo
   const bots = useProjectChannels.getState()
   return (
     (state.activeView === 'project-chat' &&
-      bots.mode === 'projects' &&
       bots.selectedId === botId &&
       !bots.editor &&
       useBotUnread.getState().openChatId === botId &&

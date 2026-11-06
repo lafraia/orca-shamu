@@ -15,7 +15,7 @@ Shamu uses its own bundle ID, Keychain service and application profile. No produ
 
 ## Use
 
-The top navigation uses **Bots** with a bot icon. Bots have a saved name and optional instructions, independent of any existing conversation. Workspaces retain Orca's existing project terminology.
+The main sidebar shows a collapsible **Bots** entry above **Projects**, with a bot icon and a **New bot** action. Bots and projects share the same navigation. Bots have a saved name and optional instructions, independent of any existing conversation. Workspaces retain Orca's existing project terminology.
 
 1. Choose **New bot**, enter a name and optional instructions, choose a color or upload an image, then **Create bot**. The bot opens its own native Chat immediately, with the standard model, permissions, attachments and history controls. No existing conversation is required. Opening an existing empty bot provisions its chat the same way.
 2. Each bot gets a permanent folder workspace in **Bots** on the primary Orca, stored at `~/orca/bots/bot-<stable-id>`. **Workspace** opens its original tab. Returning to a bot reuses the same session, history and native draft.
@@ -31,6 +31,12 @@ For promoted shared conversations, unmentioned messages go to the default partic
 The main participant's loaded history appears as **Earlier conversation**. **Load earlier conversation** pages older native history without losing its user questions. Other participants' prior history is not imported. New replies enter the shared chat only when the native turn can be attributed to a send from that channel; messages sent directly in the original tab remain there.
 
 **Open chat** returns to the original tab and its execution host. Unlinking a conversation does not stop its process or erase history. Removing the final link keeps the bot and its instructions saved. Closing a source tab can make it unavailable to the project; the project retains its existing messages. Terminal-backed agents must first use the existing **Continue with Chat Agent** flow.
+
+## Linked projects
+
+Bot settings can link projects, folder workspaces or groups already registered in the primary Orca, including unrelated filesystem folders. Links retain the server, execution host, target kind and catalog identity; they do not move projects or replace the bot’s permanent folder, session, history or draft. A project may be linked to several bots. Unlinking removes only that association.
+
+Each explicit Shamu send resolves links from the current primary catalog, using current names and paths. Linked groups follow current logical membership and registered physical descendants on their owning host. Linked folder workspaces include registered descendants of that folder. Bot-owned folders are excluded from the project picker. Missing or foreign-server links remain saved and are reported as unavailable, without substituting another project. A bounded inventory accompanies the existing bot context for chat, CLI sends, bot consultations and routines. The provider is instructed to read project instructions and route work through the owning Orca host, retaining the existing session permissions. Links do not index file contents or grant filesystem access. Add new directories through Projects using Orca’s existing admission and discovery flow.
 
 ## Data and recovery
 

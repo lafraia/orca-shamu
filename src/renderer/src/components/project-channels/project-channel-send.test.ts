@@ -43,6 +43,7 @@ describe('shared channel send admission', () => {
       error: null
     })
     api = {
+      projectCatalog: vi.fn(),
       readUnread: vi.fn(),
       markRead: vi.fn(),
       onUnreadChanged: vi.fn(),

@@ -23,7 +23,7 @@ import {
   type BotCommunicationText
 } from '../../../../shared/bot-communications'
 import type { RuntimeClientTarget } from '../../../../shared/runtime-client-target'
-import { openProjectChannel, useProjectChannels } from '../project-channels/project-channel-store'
+import { openProjectChannel } from '../project-channels/project-channel-store'
 import {
   openProjectChannelSource,
   projectChannelCandidates
@@ -147,7 +147,6 @@ export function BotCommunicationThread({
       )
       if (member) {
         onClose()
-        useProjectChannels.setState({ mode: 'workspaces' })
         openProjectChannelSource(member)
       }
     }

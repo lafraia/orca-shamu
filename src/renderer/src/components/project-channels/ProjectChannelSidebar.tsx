@@ -1,8 +1,11 @@
-import { Bot, Layers, Plus, Settings2 } from 'lucide-react'
+import { Bot, ChevronDown, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { BotSidebarGroups } from './BotSidebarGroups'
 import { botSectionNames } from '../../../../shared/bot-sections'
@@ -13,135 +16,125 @@ import {
   useProjectChannels
 } from './project-channel-store'
 
-export function ProjectNavigationSwitch(): React.JSX.Element | null {
-  const mode = useProjectChannels((state) => state.mode)
+export function ProjectChannelSidebar(): React.JSX.Element | null {
   const enabled = useShamuClient((state) => state.enabled)
-  if (!enabled || !window.api?.projectChannels) {
-    return null
-  }
-  return (
-    <div
-      className="mx-2 mt-2 flex shrink-0 gap-1 rounded-md bg-worktree-sidebar-foreground/5 p-1"
-      role="group"
-      aria-label={translate('projectChannels.navigation', 'Navigation')}
-    >
-      <Button
-        variant={mode === 'projects' ? 'secondary' : 'ghost'}
-        size="xs"
-        className="flex-1"
-        aria-pressed={mode === 'projects'}
-        onClick={() => {
-          useProjectChannels.setState({ mode: 'projects' })
-          useAppStore.setState({ activeView: 'project-chat' })
-        }}
-      >
-        <Bot />
-        {translate('projectChannels.projects', 'Bots')}
-      </Button>
-      <Button
-        variant={mode === 'workspaces' ? 'secondary' : 'ghost'}
-        size="xs"
-        className="flex-1"
-        aria-pressed={mode === 'workspaces'}
-        onClick={() => {
-          useProjectChannels.setState({ mode: 'workspaces' })
-          if (useAppStore.getState().activeView === 'project-chat') {
-            useAppStore.setState({ activeView: 'terminal' })
-          }
-        }}
-      >
-        <Layers />
-        {translate('projectChannels.workspaces', 'Workspaces')}
-      </Button>
-    </div>
-  )
-}
-
-export function ProjectChannelSidebar(): React.JSX.Element {
   const snapshot = useProjectChannels((state) => state.snapshot)
   const selectedId = useProjectChannels((state) => state.selectedId)
   const loaded = useProjectChannels((state) => state.loaded)
   const error = useProjectChannels((state) => state.error)
-  const activeView = useAppStore((state) => state.activeView)
+  const expanded = useProjectChannels((state) => state.sidebarExpanded)
+  const active = useAppStore((state) => state.activeView === 'project-chat')
   const [search, setSearch] = useState('')
+  if (!enabled || !window.api?.projectChannels) {
+    return null
+  }
   const channels = snapshot.channels.filter((channel) =>
     channel.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())
   )
+  const newBotLabel = translate('projectChannels.new', 'New bot')
   return (
-    <nav
-      aria-label={translate('projectChannels.projects', 'Bots')}
-      className="flex min-h-0 flex-1 flex-col px-2 pb-2 pt-3"
-    >
-      <div className="mb-2 flex items-center gap-2">
-        <Input
-          aria-label={translate('projectChannels.search', 'Find bot')}
-          placeholder={translate('projectChannels.search', 'Find bot')}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          density="compact"
-          className="min-w-0"
-        />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={translate('projectChannels.new', 'New bot')}
-          onClick={() => openProjectChannelEditor({})}
-        >
-          <Plus />
-        </Button>
-      </div>
-      {error ? (
-        <div role="alert" className="space-y-2 p-2 text-xs text-destructive">
-          {error}
-          <Button variant="outline" size="xs" onClick={() => void reloadProjectChannels()}>
-            {translate('projectChannels.reload', 'Reload bots')}
-          </Button>
-        </div>
-      ) : null}
-      {!loaded && !error ? (
-        <div
-          aria-busy="true"
-          aria-label={translate('projectChannels.loading', 'Loading bots')}
-          className="space-y-2 px-2 py-3"
-        >
-          {[0, 1, 2].map((key) => (
-            <div key={key} className="h-7 rounded bg-worktree-sidebar-foreground/5" />
-          ))}
-        </div>
-      ) : null}
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
-        <BotSidebarGroups
-          channels={channels}
-          sections={botSectionNames(snapshot.channels, snapshot.sectionOrder).filter(Boolean)}
-          sectionOrder={botSectionNames(
-            snapshot.channels.filter((row) => !row.pinned),
-            snapshot.sectionOrder
-          )}
-          selectedId={selectedId}
-          active={activeView === 'project-chat'}
-        />
-        {loaded && channels.length === 0 ? (
-          <div className="px-2 py-4 text-xs text-muted-foreground">
-            {search ? (
-              translate('projectChannels.noResults', 'No bots found')
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => openProjectChannelEditor({})}>
-                <Plus />
-                {translate('projectChannels.new', 'New bot')}
-              </Button>
-            )}
-          </div>
-        ) : null}
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="mt-2 justify-start"
-        onClick={() => useAppStore.setState({ activeView: 'settings' })}
+    <div className="shrink-0 px-2 pb-1">
+      <Collapsible
+        open={expanded}
+        onOpenChange={(sidebarExpanded) => useProjectChannels.setState({ sidebarExpanded })}
       >
-        <Settings2 />
-        {translate('projectChannels.settings', 'Settings')}
-      </Button>
-    </nav>
+        <div
+          className={cn(
+            'group flex items-center rounded-md text-[13px] font-medium tracking-tight',
+            active
+              ? 'bg-worktree-sidebar-accent text-worktree-sidebar-accent-foreground'
+              : 'text-worktree-sidebar-foreground/60 hover:bg-worktree-sidebar-foreground/8'
+          )}
+        >
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Bot className="size-4 shrink-0" />
+              <span className="flex-1">{translate('projectChannels.projects', 'Bots')}</span>
+              <ChevronDown
+                className={cn(
+                  'size-3.5 transition-transform duration-(--duration-fast) motion-reduce:transition-none',
+                  !expanded && '-rotate-90'
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="mr-1"
+                aria-label={newBotLabel}
+                onClick={() => openProjectChannelEditor({})}
+              >
+                <Plus />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{newBotLabel}</TooltipContent>
+          </Tooltip>
+        </div>
+        <CollapsibleContent animation="height">
+          <nav
+            aria-label={translate('projectChannels.projects', 'Bots')}
+            className="max-h-[min(20rem,35vh)] overflow-y-auto worktree-sidebar-scrollbar pt-1"
+          >
+            {snapshot.channels.length > 0 ? (
+              <Input
+                aria-label={translate('projectChannels.search', 'Find bot')}
+                placeholder={translate('projectChannels.search', 'Find bot')}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                density="compact"
+                className="mb-1"
+              />
+            ) : null}
+            {error ? (
+              <div role="alert" className="space-y-2 p-2 text-xs text-destructive">
+                {error}
+                <Button variant="outline" size="xs" onClick={() => void reloadProjectChannels()}>
+                  {translate('projectChannels.reload', 'Reload bots')}
+                </Button>
+              </div>
+            ) : null}
+            {!loaded && !error ? (
+              <div
+                aria-busy="true"
+                aria-label={translate('projectChannels.loading', 'Loading bots')}
+                className="space-y-2 px-2 py-3"
+              >
+                {[0, 1].map((key) => (
+                  <div key={key} className="h-7 rounded bg-worktree-sidebar-foreground/5" />
+                ))}
+              </div>
+            ) : null}
+            <BotSidebarGroups
+              channels={channels}
+              sections={botSectionNames(snapshot.channels, snapshot.sectionOrder).filter(Boolean)}
+              sectionOrder={botSectionNames(
+                snapshot.channels.filter((row) => !row.pinned),
+                snapshot.sectionOrder
+              )}
+              selectedId={selectedId}
+              active={active}
+            />
+            {loaded && channels.length === 0 ? (
+              <div className="px-2 py-2 text-xs text-muted-foreground">
+                {search ? (
+                  translate('projectChannels.noResults', 'No bots found')
+                ) : (
+                  <Button variant="ghost" size="xs" onClick={() => openProjectChannelEditor({})}>
+                    <Plus />
+                    {newBotLabel}
+                  </Button>
+                )}
+              </div>
+            ) : null}
+          </nav>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   )
 }

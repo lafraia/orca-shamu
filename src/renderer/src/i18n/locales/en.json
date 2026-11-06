@@ -23932,15 +23932,12 @@
     }
   },
   "projectChannels": {
-    "navigation": "Navigation",
     "projects": "Bots",
-    "workspaces": "Workspaces",
     "search": "Find bot",
     "new": "New bot",
     "reload": "Reload bots",
     "loading": "Loading bots",
     "noResults": "No bots found",
-    "settings": "Settings",
     "offline": "Chat unavailable",
     "connecting": "Connecting…",
     "needsAnswer": "Needs your answer",
@@ -23999,6 +23996,19 @@
     "changeSaveError": "Could not save this change. Reload bots before trying again."
   },
   "shamu": {
+    "projects": {
+      "title": "Linked projects",
+      "description": "Choose projects for this bot to follow, wherever their folders are. Linked groups include their current projects.",
+      "link": "Link projects, folders or groups",
+      "search": "Search projects, folders or hosts…",
+      "noResults": "No matching projects. Add projects from the sidebar first.",
+      "group": "Project group",
+      "missing": "Not in the current project catalog",
+      "unlink": "Unlink {{name}}",
+      "loading": "Loading projects",
+      "loadError": "Could not load projects from the primary Orca. Saved links are kept.",
+      "retry": "Retry"
+    },
     "loading": "Connecting to the primary Orca…",
     "description": "Use the sessions and controls of your primary Orca, with both apps open.",
     "stepSettings": "In the primary Orca, open Settings → Remote Orca Servers.",

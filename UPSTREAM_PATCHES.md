@@ -19,3 +19,7 @@ The autocomplete unit tests and hidden `shamu-bot-mentions.spec.ts` and `shamu-r
 Bot mentions, permanent bot chats, shared primary sessions, the Shamu connection bar, live renderer development and independent version metadata are fork features. An upstream popup fix does not remove those features.
 
 Publish only the sanitized report. The original user screenshot contains private conversations and must not be attached to a public issue.
+
+## Fork bot project scope
+
+The unified Bots navigation, persisted bot project links and per-turn project inventory are Shamu features. They reuse upstream folder workspace provisioning, project catalogs, group traversal and execution-host resolution. Keep the upstream single-directory workspace contract and native session ownership when syncing these modules. Project links are separate from linked chat members and do not change filesystem permissions.

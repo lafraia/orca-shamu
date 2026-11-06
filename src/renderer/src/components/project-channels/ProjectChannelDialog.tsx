@@ -20,6 +20,7 @@ import {
 } from '../../../../shared/project-channels'
 import { projectChannelCandidates } from './project-channel-candidates'
 import { BotIdentityFields } from './BotIdentityFields'
+import { BotProjectFields } from './BotProjectFields'
 import { defaultBotIdentity } from '../../../../shared/bot-identity'
 import { BotUnreadHost } from './BotUnreadHost'
 import {
@@ -69,6 +70,7 @@ function ProjectChannelDialog({
   const source = candidates.find((candidate) => candidate.tabId === editor.tabId)
   const [name, setName] = useState(existing?.name ?? source?.name ?? '')
   const [instructions, setInstructions] = useState(existing?.instructions ?? '')
+  const [projects, setProjects] = useState(existing?.projects ?? [])
   const [botId] = useState(existing?.id ?? createBrowserUuid())
   const [identity, setIdentity] = useState(existing?.identity ?? defaultBotIdentity(botId))
   const [members] = useState<ProjectChannelMember[]>(
@@ -86,6 +88,7 @@ function ProjectChannelDialog({
       id,
       name,
       instructions,
+      projects,
       identity,
       home: existing?.home,
       mainMemberId: mainId,
@@ -236,6 +239,7 @@ function ProjectChannelDialog({
               </p>
             </div>
           ) : null}
+          <BotProjectFields value={projects} onChange={setProjects} disabled={busy} />
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}

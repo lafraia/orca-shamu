@@ -2,6 +2,7 @@ import type { BotCommunicationsApi } from './bot-communications'
 import type { ShamuVaultApi } from './shamu-vault'
 import type { BotMentionReceipt, BotMentionRequest } from './bot-mentions'
 import { z } from 'zod'
+import { botProjectKey, botProjectLinkSchema, type BotProjectCatalog } from './bot-projects'
 import { botIdentitySchema } from './bot-identity'
 import { botSectionNameSchema } from './bot-sections'
 import type { BotMemory, BotMemorySnapshot } from './bot-memory'
@@ -56,6 +57,14 @@ export const projectChannelSchema = z
     id,
     name: z.string().trim().min(1).max(80),
     instructions: z.string().trim().max(20_000).optional(),
+    projects: z
+      .array(botProjectLinkSchema)
+      .max(100)
+      .refine(
+        (links) => new Set(links.map(botProjectKey)).size === links.length,
+        'Link each project only once.'
+      )
+      .optional(),
     identity: botIdentitySchema.optional(),
     pinned: z.boolean().optional(),
     section: botSectionNameSchema.optional(),
@@ -139,6 +148,7 @@ export function projectChannelSessionKey(
 }
 
 export type ProjectChannelsApi = {
+  projectCatalog: () => Promise<BotProjectCatalog>
   vault?: ShamuVaultApi
   communications?: BotCommunicationsApi
   readUnread: (botIds?: string[]) => Promise<BotUnreadSnapshot>
