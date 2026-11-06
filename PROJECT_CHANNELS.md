@@ -56,7 +56,7 @@ This follows the previously discussed separation of persistent history, task sta
 
 ## Vault
 
-**Vault**, beside Memory, manages encrypted credentials for each bot. Create a master password, add a password or token, and explicitly enable that bot to request use when needed. An unlocked session lasts up to five minutes; the header shows its lock state and pending approvals. Each requested command requires review in Vault and a native confirmation. The agent receives references and exit codes rather than credentials or program output. Copying a password requires master-password verification. See [Shamu Vault](SHAMU_VAULT.md) for storage, device binding, security boundaries and research.
+**Vault**, beside Memory, manages encrypted credentials for each bot. Create a master password, add a password or token, and explicitly enable that bot to request use when needed. Vault unlocks automatically through the OS keychain when the Shamu window opens. Closing or hiding that window revokes access even while the primary Orca remains running; the header shows its lock state and pending approvals. Each requested command requires review in Vault and a native confirmation. The agent receives references and exit codes rather than credentials or program output. Copying a password requires master-password verification. See [Shamu Vault](SHAMU_VAULT.md) for storage, device binding, security boundaries and research.
 
 ## Runtime memory
 

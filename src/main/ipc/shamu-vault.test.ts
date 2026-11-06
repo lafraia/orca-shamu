@@ -8,9 +8,13 @@ import { registerShamuVaultHandlers } from './shamu-vault'
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
-  trusted: vi.fn(() => true)
+  trusted: vi.fn(() => true),
+  window: null as unknown
 }))
-vi.mock('./ui', () => ({ isTrustedUIRenderer: mocks.trusted }))
+vi.mock('./ui', () => ({
+  isTrustedUIRenderer: mocks.trusted,
+  getTrustedUIRendererWindow: () => mocks.window
+}))
 vi.mock('electron', () => ({
   app: { on: vi.fn(), removeListener: vi.fn() },
   BrowserWindow: { fromWebContents: () => null },
@@ -34,7 +38,14 @@ describe('Vault transport admission', () => {
     sender = Object.assign(new EventEmitter(), {
       mainFrame: {},
       isDestroyed: () => false,
+      isLoadingMainFrame: () => false,
       send: () => {}
+    })
+    mocks.window = Object.assign(new EventEmitter(), {
+      webContents: sender,
+      isVisible: () => true,
+      isMinimized: () => false,
+      isDestroyed: () => false
     })
   })
   afterEach(() => {

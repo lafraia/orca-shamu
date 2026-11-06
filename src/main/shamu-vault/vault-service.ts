@@ -51,6 +51,9 @@ export class VaultService {
       case 'vault.run':
         return this.broker.request(command, bot)
       case 'vault.result':
+        if (this.store.status(bot.id).state !== 'unlocked') {
+          throw new Error('Open and unlock Vault in Orca Shamu to inspect requests.')
+        }
         return this.broker.result(bot.id, command.requestId)
     }
   }

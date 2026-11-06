@@ -10,6 +10,7 @@ export const vaultEnvelopeSchema = z
     kdf: z.literal('scrypt-131072-8-1'),
     salt: z.string().length(24),
     wrappedKey: z.string().min(1).max(16_384),
+    deviceKey: z.string().min(1).max(16_384).optional(),
     index: z
       .string()
       .min(1)

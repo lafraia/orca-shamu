@@ -10,23 +10,46 @@ export function vaultSnapshot(
   session: VaultSession | null,
   botId: string,
   lock: () => void,
-  assertSession: (id: string) => void
+  assertSession: (id: string) => void,
+  ownerIsOpen: boolean
 ): VaultSnapshot {
+  if (!ownerIsOpen) {
+    if (session) {
+      lock()
+    }
+    return {
+      state: 'locked',
+      session: null,
+      revision: 0,
+      entries: [],
+      requests: [],
+      automaticUnlock: Boolean(file.read()?.envelope.deviceKey)
+    }
+  }
   try {
     requireVaultProtection(store)
   } catch {
     if (session) {
       lock()
     }
-    return { state: 'unavailable', session: null, revision: 0, entries: [], requests: [] }
-  }
-  if (!session) {
     return {
-      state: file.read() ? 'locked' : 'missing',
+      state: 'unavailable',
       session: null,
       revision: 0,
       entries: [],
-      requests: []
+      requests: [],
+      automaticUnlock: false
+    }
+  }
+  if (!session) {
+    const persisted = file.read()
+    return {
+      state: persisted ? 'locked' : 'missing',
+      session: null,
+      revision: 0,
+      entries: [],
+      requests: [],
+      automaticUnlock: Boolean(persisted?.envelope.deviceKey)
     }
   }
   assertSession(session.id)
@@ -35,6 +58,7 @@ export function vaultSnapshot(
     session: session.id,
     revision: session.index.revision,
     entries: session.index.entries.filter((row) => row.botId === botId).map((row) => ({ ...row })),
-    requests: []
+    requests: [],
+    automaticUnlock: Boolean(session.envelope.deviceKey)
   }
 }

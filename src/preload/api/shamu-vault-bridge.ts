@@ -5,6 +5,7 @@ export const shamuVaultApi: ShamuVaultApi = {
   status: (botId) => ipcRenderer.invoke('shamuVault:status', botId),
   create: (botId, password) => ipcRenderer.invoke('shamuVault:create', botId, password),
   unlock: (botId, password) => ipcRenderer.invoke('shamuVault:unlock', botId, password),
+  resume: (botId) => ipcRenderer.invoke('shamuVault:resume', botId),
   lock: () => ipcRenderer.invoke('shamuVault:lock'),
   save: (access, input) => ipcRenderer.invoke('shamuVault:save', access, input),
   remove: (access, id) => ipcRenderer.invoke('shamuVault:remove', access, id),

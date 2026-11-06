@@ -1,12 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  dialog,
-  ipcMain,
-  powerMonitor,
-  type IpcMainInvokeEvent,
-  type WebContents
-} from 'electron'
+import { app, dialog, ipcMain, powerMonitor, type IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import type { ProjectChannelsStore } from '../project-channels-store'
 import {
@@ -18,7 +10,10 @@ import { VaultFile } from '../shamu-vault/vault-file'
 import { VaultStore } from '../shamu-vault/vault-store'
 import { VaultCommandBroker } from '../shamu-vault/vault-command-broker'
 import { VaultService } from '../shamu-vault/vault-service'
-import { isTrustedUIRenderer } from './ui'
+import { getTrustedUIRendererWindow, isTrustedUIRenderer } from './ui'
+import { getSecretStore } from '../../shared/secret-store'
+import { VaultWindowSession } from '../shamu-vault/vault-window-session'
+import { onMainWindowBecameVisible } from '../window/main-window-visibility'
 
 const accessSchema = z
   .object({
@@ -34,24 +29,31 @@ export function registerShamuVaultHandlers(
   channels: ProjectChannelsStore
 ): VaultService {
   disposeCurrent?.()
-  let owner: WebContents | null = null
+  let lifetime: VaultWindowSession | null = null
   const disposers: (() => void)[] = []
   const changed = (): void => {
-    if (owner && !owner.isDestroyed()) {
+    const owner = getTrustedUIRendererWindow()?.webContents
+    if (owner && !owner.isDestroyed() && isTrustedUIRenderer(owner)) {
       owner.send('shamuVault:changed', {
         unlocked: store.unlocked,
         pendingBotIds: broker.pendingBotIds()
       })
     }
   }
-  const store = new VaultStore(new VaultFile(profile), changed)
+  const store = new VaultStore(
+    new VaultFile(profile),
+    changed,
+    () => lifetime?.isOpen() ?? false,
+    getSecretStore,
+    Date.now
+  )
   const broker = new VaultCommandBroker(store, changed, async (request, entry) => {
-    const window = owner && !owner.isDestroyed() ? BrowserWindow.fromWebContents(owner) : null
-    if (!window || !owner || !isTrustedUIRenderer(owner)) {
+    const window = getTrustedUIRendererWindow()
+    if (!window || !lifetime?.isOpen()) {
       return false
     }
     const bot = (await channels.read()).channels.find((row) => row.id === request.botId)
-    if (!bot) {
+    if (!bot || !lifetime?.isOpen()) {
       return false
     }
     const result = await dialog.showMessageBox(window, {
@@ -75,34 +77,18 @@ export function registerShamuVaultHandlers(
     return result.response === 1
   })
   const service = new VaultService(store, broker)
+  lifetime = new VaultWindowSession(store, {
+    getWindow: getTrustedUIRendererWindow,
+    isTrusted: isTrustedUIRenderer,
+    onVisible: onMainWindowBecameVisible
+  })
+  lifetime.start()
   const lock = (): void => store.lock()
   const trust = (event: IpcMainInvokeEvent): void => {
     if (!isTrustedUIRenderer(event.sender) || event.senderFrame !== event.sender.mainFrame) {
       throw new Error('Vault is available only in the main Orca Shamu window.')
     }
-    if (owner === event.sender) {
-      return
-    }
-    if (owner) {
-      store.lock()
-    }
-    owner = event.sender
-    const sender = owner
-    const window = BrowserWindow.fromWebContents(sender)
-    sender.on('did-start-loading', lock)
-    sender.on('render-process-gone', lock)
-    sender.on('destroyed', lock)
-    window?.on('hide', lock)
-    window?.on('minimize', lock)
-    window?.on('closed', lock)
-    disposers.push(() => {
-      sender.removeListener('did-start-loading', lock)
-      sender.removeListener('render-process-gone', lock)
-      sender.removeListener('destroyed', lock)
-      window?.removeListener('hide', lock)
-      window?.removeListener('minimize', lock)
-      window?.removeListener('closed', lock)
-    })
+    lifetime?.connect()
   }
   const requireBot = async (input: unknown, admitted: () => void): Promise<string> => {
     const botId = z.string().min(1).max(1024).parse(input)
@@ -136,6 +122,11 @@ export function registerShamuVaultHandlers(
   handle('unlock', async (admitted, bot, password) =>
     store.unlock(await requireBot(bot, admitted), z.string().parse(password))
   )
+  handle('resume', async (admitted, bot) => {
+    const botId = await requireBot(bot, admitted)
+    await lifetime!.resume()
+    return service.status(botId)
+  })
   handle('lock', lock)
   handle('save', async (admitted, raw, entry) =>
     store.save(await access(raw, admitted), vaultEntryInputSchema.parse(entry))
@@ -156,19 +147,26 @@ export function registerShamuVaultHandlers(
   handle('decide', async (admitted, raw, id, approve) =>
     broker.decide(await access(raw, admitted), z.uuid().parse(id), z.boolean().parse(approve))
   )
-  powerMonitor.on('suspend', lock)
-  powerMonitor.on('lock-screen', lock)
-  powerMonitor.on('shutdown', lock)
-  app.on('before-quit', lock)
-  const timer = setInterval(() => store.expire(powerMonitor.getSystemIdleTime()), 10_000)
-  timer.unref()
+  const sleeping = (): void => lifetime?.setSleeping(true)
+  const awake = (): void => lifetime?.setSleeping(false)
+  const screenLocked = (): void => lifetime?.setScreenLocked(true)
+  const screenUnlocked = (): void => lifetime?.setScreenLocked(false)
+  const closing = (): void => lifetime?.suspend()
+  powerMonitor.on('suspend', sleeping)
+  powerMonitor.on('resume', awake)
+  powerMonitor.on('lock-screen', screenLocked)
+  powerMonitor.on('unlock-screen', screenUnlocked)
+  powerMonitor.on('shutdown', closing)
+  app.on('before-quit', closing)
   disposeCurrent = () => {
+    lifetime?.dispose()
     service.dispose()
-    clearInterval(timer)
-    powerMonitor.removeListener('suspend', lock)
-    powerMonitor.removeListener('lock-screen', lock)
-    powerMonitor.removeListener('shutdown', lock)
-    app.removeListener('before-quit', lock)
+    powerMonitor.removeListener('suspend', sleeping)
+    powerMonitor.removeListener('resume', awake)
+    powerMonitor.removeListener('lock-screen', screenLocked)
+    powerMonitor.removeListener('unlock-screen', screenUnlocked)
+    powerMonitor.removeListener('shutdown', closing)
+    app.removeListener('before-quit', closing)
     for (const dispose of disposers) {
       dispose()
     }

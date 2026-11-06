@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { getSecretStore, type SecretStore } from '../../shared/secret-store'
 import {
   vaultEntryInputSchema,
@@ -14,7 +14,6 @@ import {
   openVaultBytes,
   requireVaultProtection,
   sealVaultBytes,
-  unwrapVaultKey,
   wrapVaultKey,
   type VaultEnvelope
 } from './vault-crypto'
@@ -22,6 +21,8 @@ import {
 import {
   createVaultSession,
   openVaultSession,
+  openDeviceVaultSession,
+  verifyVaultSessionPassword,
   sealVaultIndex,
   type VaultIndex,
   type VaultSession as Session
@@ -38,6 +39,7 @@ export class VaultStore {
   constructor(
     private readonly file: VaultFile,
     private readonly changed: () => void,
+    private readonly ownerIsOpen: () => boolean,
     private readonly secretStore: () => SecretStore = getSecretStore,
     private readonly now: () => number = Date.now
   ) {}
@@ -66,26 +68,15 @@ export class VaultStore {
     this.changed()
   }
 
-  expire(systemIdleSeconds = 0): void {
-    if (
-      this.session &&
-      (this.now() - this.session.touchedAt >= 5 * 60_000 || systemIdleSeconds >= 300)
-    ) {
-      this.lock()
-    }
-  }
-
   status(botId: string): VaultSnapshot {
-    this.expire()
     return vaultSnapshot(
       this.file,
       this.secretStore(),
       this.session,
       botId,
       () => this.lock(),
-      (id) => {
-        this.assertSession(id)
-      }
+      (id) => this.assertSession(id),
+      this.ownerIsOpen()
     )
   }
 
@@ -97,13 +88,29 @@ export class VaultStore {
     return this.open(botId, vaultPassphraseSchema.parse(input), openVaultSession)
   }
 
+  async unlockDevice(): Promise<void> {
+    if (this.session) {
+      this.assertSession(this.session.id)
+      return
+    }
+    if (!this.file.read()?.envelope.deviceKey) {
+      return
+    }
+    await this.authenticate(async (generation) => {
+      const session = await openDeviceVaultSession(this.file, this.secretStore(), this.admit())
+      if (session) {
+        this.publish(session, generation)
+      }
+    })
+  }
+
   private open(
     botId: string,
     password: string,
     prepare: typeof createVaultSession
   ): Promise<VaultSnapshot> {
     return this.authenticate(async (generation) => {
-      const session = await prepare(this.file, this.secretStore(), password, this.admit(), this.now)
+      const session = await prepare(this.file, this.secretStore(), password, this.admit())
       this.publish(session, generation)
       return this.status(botId)
     })
@@ -112,6 +119,7 @@ export class VaultStore {
   private publish(session: Session, generation: number): void {
     try {
       this.assertGeneration(generation)
+      this.assertOwnerOpen()
     } catch (error) {
       session.key.fill(0)
       throw error
@@ -201,28 +209,20 @@ export class VaultStore {
 
   async verify(access: VaultAccess, input: string): Promise<void> {
     const current = this.access(access)
-    const passphrase = vaultPassphraseSchema.parse(input)
-    if (this.authenticating) {
-      throw new Error('Another Vault authentication is in progress.')
-    }
-    this.authenticating = true
-    let key: Buffer | undefined
-    try {
-      key = await unwrapVaultKey(
-        current.envelope,
-        passphrase,
-        `${this.file.binding}:${current.envelope.id}`,
-        this.secretStore()
-      )
-      this.access(access)
-      if (!timingSafeEqual(key, current.key)) {
-        throw new Error('Vault authentication failed.')
-      }
-      current.touchedAt = this.now()
-    } finally {
-      key?.fill(0)
-      this.authenticating = false
-    }
+    const password = vaultPassphraseSchema.parse(input)
+    await this.authenticate(
+      () =>
+        verifyVaultSessionPassword(
+          current,
+          password,
+          `${this.file.binding}:${current.envelope.id}`,
+          this.secretStore(),
+          () => {
+            this.access(access)
+          }
+        ),
+      false
+    )
   }
 
   async changePassphrase(
@@ -233,11 +233,7 @@ export class VaultStore {
     vaultNewPassphraseSchema.parse(nextPassword)
     await this.verify(access, currentPassword)
     const current = this.access(access)
-    if (this.authenticating) {
-      throw new Error('Another Vault authentication is in progress.')
-    }
-    this.authenticating = true
-    try {
+    await this.authenticate(async () => {
       const wrapped = await wrapVaultKey(
         current.key,
         nextPassword,
@@ -251,9 +247,7 @@ export class VaultStore {
         { ...current.envelope, ...wrapped }
       )
       this.lock()
-    } finally {
-      this.authenticating = false
-    }
+    }, false)
   }
 
   private access(access: VaultAccess): Session {
@@ -265,7 +259,7 @@ export class VaultStore {
   }
 
   private assertSession(id: string): Session {
-    this.expire()
+    this.assertOwnerOpen()
     const current = this.session
     if (!current || current.id !== id) {
       throw new Error('Vault is locked. Unlock it in Orca Shamu.')
@@ -282,11 +276,17 @@ export class VaultStore {
     return current
   }
 
-  private async authenticate<T>(operation: (generation: number) => Promise<T>): Promise<T> {
+  private async authenticate<T>(
+    operation: (generation: number) => Promise<T>,
+    reset = true
+  ): Promise<T> {
+    this.assertOwnerOpen()
     if (this.authenticating) {
       throw new Error('Another Vault authentication is in progress.')
     }
-    this.lock()
+    if (reset) {
+      this.lock()
+    }
     this.authenticating = true
     const generation = this.generation
     try {
@@ -302,6 +302,13 @@ export class VaultStore {
     }
   }
 
+  private assertOwnerOpen(): void {
+    if (!this.ownerIsOpen()) {
+      this.lock()
+      throw new Error('Open Orca Shamu to access Vault.')
+    }
+  }
+
   private entryBinding(current: Session, entry: VaultEntry): string {
     return `${this.file.binding}:${current.envelope.id}:secret:${entry.botId}:${entry.id}:${entry.sealId}`
   }
@@ -309,7 +316,7 @@ export class VaultStore {
     envelope.index = sealVaultIndex(current.key, `${this.file.binding}:${envelope.id}`, index)
     try {
       const fingerprint = this.file.write(envelope, current.fingerprint)
-      Object.assign(current, { envelope, index, fingerprint, touchedAt: this.now() })
+      Object.assign(current, { envelope, index, fingerprint })
     } catch (error) {
       this.lock()
       throw error

@@ -20,16 +20,36 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
   const member = channel.members.find((row) => row.id === channel.home?.memberId)
   const ready = channel.home?.ready && member
   const hasConversation = Boolean(ready)
-  useEffect(
-    () =>
-      window.api.projectChannels?.vault?.onChanged((change) => {
-        setVaultState({
-          unlocked: change.unlocked,
-          pending: change.pendingBotIds.filter((id) => id === channel.id).length
-        })
-      }),
-    [channel.id]
-  )
+  useEffect(() => {
+    const api = window.api.projectChannels?.vault
+    if (!api || !hasConversation) {
+      return
+    }
+    let current = true
+    let changed = false
+    const unsubscribe = api.onChanged((change) => {
+      changed = true
+      setVaultState({
+        unlocked: change.unlocked,
+        pending: change.pendingBotIds.filter((id) => id === channel.id).length
+      })
+    })
+    void api
+      .status(channel.id)
+      .then((snapshot) => {
+        if (current && !changed) {
+          setVaultState({
+            unlocked: snapshot.state === 'unlocked',
+            pending: snapshot.requests.filter((row) => row.state === 'pending').length
+          })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      current = false
+      unsubscribe()
+    }
+  }, [channel.id, hasConversation])
   useEffect(() => {
     if (!hasConversation || memoryOpen || routinesOpen || vaultOpen) {
       return

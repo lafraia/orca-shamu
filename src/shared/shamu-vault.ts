@@ -86,6 +86,7 @@ export type VaultSnapshot = {
   revision: number
   entries: VaultEntry[]
   requests: VaultRun[]
+  automaticUnlock: boolean
 }
 export type VaultAccess = { botId: string; session: string; revision: number }
 export type VaultChange = { unlocked: boolean; pendingBotIds: string[] }
@@ -93,6 +94,7 @@ export type ShamuVaultApi = {
   status: (botId: string) => Promise<VaultSnapshot>
   create: (botId: string, passphrase: string) => Promise<VaultSnapshot>
   unlock: (botId: string, passphrase: string) => Promise<VaultSnapshot>
+  resume: (botId: string) => Promise<VaultSnapshot>
   lock: () => Promise<void>
   save: (access: VaultAccess, input: VaultEntryInput) => Promise<VaultSnapshot>
   remove: (access: VaultAccess, id: string) => Promise<VaultSnapshot>

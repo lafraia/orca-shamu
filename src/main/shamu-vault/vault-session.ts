@@ -1,8 +1,9 @@
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import type { SecretStore } from '../../shared/secret-store'
 import { vaultEntrySchema } from '../../shared/shamu-vault'
 import type { VaultFile } from './vault-file'
+import { openVaultDeviceKey, sealVaultDeviceKey } from './vault-device-key'
 import {
   openVaultBytes,
   sealVaultBytes,
@@ -25,7 +26,24 @@ export type VaultSession = {
   envelope: VaultEnvelope
   fingerprint: string
   index: VaultIndex
-  touchedAt: number
+}
+
+export async function verifyVaultSessionPassword(
+  session: VaultSession,
+  password: string,
+  binding: string,
+  store: SecretStore,
+  assertCurrent: () => void
+): Promise<void> {
+  const key = await unwrapVaultKey(session.envelope, password, binding, store)
+  try {
+    assertCurrent()
+    if (!timingSafeEqual(key, session.key)) {
+      throw new Error('Vault authentication failed.')
+    }
+  } finally {
+    key.fill(0)
+  }
 }
 
 export function sealVaultIndex(key: Buffer, binding: string, index: VaultIndex): string {
@@ -41,8 +59,7 @@ export async function createVaultSession(
   file: VaultFile,
   store: SecretStore,
   password: string,
-  admitted: () => void,
-  now: () => number
+  admitted: () => void
 ): Promise<VaultSession> {
   if (file.read()) {
     throw new Error('Vault already exists. Unlock it instead.')
@@ -59,6 +76,7 @@ export async function createVaultSession(
       version: 1,
       id,
       ...wrapped,
+      deviceKey: sealVaultDeviceKey(key, binding, store),
       index: sealVaultIndex(key, binding, index),
       secrets: {}
     }
@@ -68,8 +86,7 @@ export async function createVaultSession(
       key: Buffer.from(key),
       envelope,
       fingerprint,
-      index,
-      touchedAt: now()
+      index
     }
   } finally {
     key.fill(0)
@@ -80,8 +97,7 @@ export async function openVaultSession(
   file: VaultFile,
   store: SecretStore,
   password: string,
-  admitted: () => void,
-  now: () => number
+  admitted: () => void
 ): Promise<VaultSession> {
   const persisted = file.read()
   if (!persisted) {
@@ -90,6 +106,48 @@ export async function openVaultSession(
   const { envelope, fingerprint } = persisted
   const binding = `${file.binding}:${envelope.id}`
   const key = await unwrapVaultKey(envelope, password, binding, store)
+  let session: VaultSession | undefined
+  try {
+    session = readVaultSession(key, envelope, fingerprint, binding, admitted)
+    const deviceKey = sealVaultDeviceKey(key, binding, store)
+    admitted()
+    session.envelope = { ...envelope, deviceKey }
+    session.fingerprint = file.write(session.envelope, fingerprint)
+    return session
+  } catch (error) {
+    session?.key.fill(0)
+    throw error
+  } finally {
+    key.fill(0)
+  }
+}
+
+export async function openDeviceVaultSession(
+  file: VaultFile,
+  store: SecretStore,
+  admitted: () => void
+): Promise<VaultSession | null> {
+  const persisted = file.read()
+  if (!persisted?.envelope.deviceKey) {
+    return null
+  }
+  const { envelope, fingerprint } = persisted
+  const binding = `${file.binding}:${envelope.id}`
+  const key = openVaultDeviceKey(envelope.deviceKey!, binding, store)
+  try {
+    return readVaultSession(key, envelope, fingerprint, binding, admitted)
+  } finally {
+    key.fill(0)
+  }
+}
+
+function readVaultSession(
+  key: Buffer,
+  envelope: VaultEnvelope,
+  fingerprint: string,
+  binding: string,
+  admitted: () => void
+): VaultSession {
   let bytes: Buffer | undefined
   try {
     admitted()
@@ -106,13 +164,11 @@ export async function openVaultSession(
       key: Buffer.from(key),
       envelope,
       fingerprint,
-      index,
-      touchedAt: now()
+      index
     }
   } catch {
     throw new Error('Could not authenticate Vault contents. The file has not been replaced.')
   } finally {
     bytes?.fill(0)
-    key.fill(0)
   }
 }

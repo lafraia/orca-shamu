@@ -13,6 +13,10 @@ import {
 } from './helpers/paired-electron-client'
 import type { BotReferenceContext } from '../../src/main/shamu-bots/bot-journal-reader'
 import type { VaultAgentCommand } from '../../src/shared/shamu-vault'
+import {
+  installIsolatedVaultProtection,
+  setIsolatedVaultWindowOpen
+} from './helpers/shamu-vault-profile'
 
 const MASTER = 'synthetic master passphrase for isolated UI'
 const SECRET = 'synthetic vault credential for isolated UI'
@@ -38,10 +42,14 @@ test('manages encrypted bot credentials through desktop IPC and guards agent use
     }
   )
   const offer = await createRuntimeDesktopPairingOffer(primary)
-  const client = await launchPairedElectronClient(offer, testInfo, 'Primary', {
+  let client = await launchPairedElectronClient(offer, testInfo, 'Primary', {
     extraEnv: { ORCA_SHAMU_CLIENT: '1' },
     connect: async (page) => {
       await page.setViewportSize({ width: 1280, height: 900 })
+      const saved = await page.evaluate(() => window.api.shamuClient!.read())
+      if (saved.environmentId) {
+        return saved.environmentId
+      }
       await page.getByLabel('Primary Orca access link', { exact: true }).fill(offer.pairingUrl)
       await page.getByRole('button', { name: 'Connect to primary Orca', exact: true }).click()
       await expect(page.getByRole('heading', { name: 'Orca Shamu', exact: true })).toHaveCount(0)
@@ -52,40 +60,9 @@ test('manages encrypted bot credentials through desktop IPC and guards agent use
       return state.environmentId
     }
   })
-  const page = client.page
+  let page = client.page
   try {
-    await client.app.evaluate(({ clipboard, powerMonitor, dialog }) => {
-      const { randomBytes, createCipheriv, createDecipheriv } = process.getBuiltinModule('crypto')
-      const key = randomBytes(32)
-      const slots = globalThis as unknown as Record<symbol, unknown>
-      slots[Symbol.for('orca.host.secretStore')] = {
-        isEncryptionAvailable: () => true,
-        describeProtectionGap: () => null,
-        encryptString: (text: string) => {
-          const nonce = randomBytes(12)
-          const cipher = createCipheriv('aes-256-gcm', key, nonce)
-          const body = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
-          return Buffer.concat([nonce, cipher.getAuthTag(), body])
-        },
-        decryptString: (bytes: Buffer) => {
-          const decipher = createDecipheriv('aes-256-gcm', key, bytes.subarray(0, 12))
-          decipher.setAuthTag(bytes.subarray(12, 28))
-          return Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString(
-            'utf8'
-          )
-        }
-      }
-      let copied = ''
-      clipboard.writeText = (value: string) => {
-        copied = value
-      }
-      clipboard.readText = () => copied
-      clipboard.clear = () => {
-        copied = ''
-      }
-      powerMonitor.getSystemIdleTime = () => 0
-      dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false })
-    })
+    await installIsolatedVaultProtection(client)
     await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.getByRole('button', { name: 'New bot', exact: true }).first().click()
     const creation = page.getByRole('dialog')
@@ -230,19 +207,66 @@ test('manages encrypted bot credentials through desktop IPC and guards agent use
     await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.getByRole('button', { name: 'Vault Alpha', exact: true }).click()
     await chat.getByRole('button', { name: 'Vault', exact: true }).click()
-    await panel.getByLabel('Master password', { exact: true }).fill(MASTER)
-    await panel.getByRole('button', { name: 'Unlock Vault', exact: true }).click()
     await expect(
       panel.getByRole('heading', { name: 'Synthetic service', exact: true })
     ).toBeVisible()
-    await panel
+    await setIsolatedVaultWindowOpen(client, false)
+    expect(await list()).toMatchObject({ state: 'locked', entries: [] })
+    await setIsolatedVaultWindowOpen(client, true)
+    await expect(
+      panel.getByRole('heading', { name: 'Synthetic service', exact: true })
+    ).toBeVisible()
+    const profile = client.userDataDir
+    await client.quitPreservingProfile()
+    const closed = await runProcess({
+      program: process.execPath,
+      args: [
+        join(process.cwd(), 'out/cli/index.js'),
+        'bots',
+        'vault',
+        '--profile-dir',
+        profile,
+        '--input',
+        JSON.stringify({ action: 'vault.list', actorId: bot.id }),
+        '--json'
+      ],
+      timeoutMs: 10_000
+    })
+    expect(closed.code).not.toBe(0)
+    expect(closed.stdout.includes(SECRET) || closed.stdout.includes(MASTER)).toBe(false)
+    await waitForSessionReady(primary)
+    client = await launchPairedElectronClient(offer, testInfo, 'Primary', {
+      reuseUserDataDir: profile,
+      extraEnv: { ORCA_SHAMU_CLIENT: '1' },
+      connect: async (page) => {
+        await page.setViewportSize({ width: 1280, height: 900 })
+        const state = await page.evaluate(() => window.api.shamuClient!.read())
+        if (!state.environmentId) {
+          throw new Error('The isolated Shamu pairing was not retained.')
+        }
+        return state.environmentId
+      }
+    })
+    page = client.page
+    await installIsolatedVaultProtection(client)
+    await page.getByRole('button', { name: 'Bots', exact: true }).click()
+    await page.getByRole('button', { name: 'Vault Alpha', exact: true }).click()
+    await page
+      .getByRole('region', { name: 'Vault Alpha', exact: true })
+      .getByRole('button', { name: 'Vault', exact: true })
+      .click()
+    const reopenedPanel = page.getByRole('dialog', { name: 'Vault', exact: true })
+    await expect(
+      reopenedPanel.getByRole('heading', { name: 'Synthetic service', exact: true })
+    ).toBeVisible()
+    await reopenedPanel
       .getByRole('button', { name: 'Delete credential: Synthetic service', exact: true })
       .click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(
-      panel.getByRole('heading', { name: 'Synthetic service', exact: true })
+      reopenedPanel.getByRole('heading', { name: 'Synthetic service', exact: true })
     ).toBeVisible()
-    await panel
+    await reopenedPanel
       .getByRole('button', { name: 'Delete credential: Synthetic service', exact: true })
       .click()
     await page
@@ -250,7 +274,7 @@ test('manages encrypted bot credentials through desktop IPC and guards agent use
       .getByRole('button', { name: 'Delete credential', exact: true })
       .click()
     await expect(
-      panel.getByRole('heading', { name: 'Synthetic service', exact: true })
+      reopenedPanel.getByRole('heading', { name: 'Synthetic service', exact: true })
     ).toHaveCount(0)
   } finally {
     await client.dispose()

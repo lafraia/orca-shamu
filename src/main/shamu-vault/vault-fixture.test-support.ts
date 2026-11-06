@@ -9,7 +9,7 @@ import { VaultFile } from './vault-file'
 import { VaultStore } from './vault-store'
 
 export const TEST_PASSWORD = 'synthetic master passphrase for vault tests'
-export function vaultFixture() {
+export function vaultFixture(ownerIsOpen: () => boolean = () => true) {
   const directory = mkdtempSync(join(tmpdir(), 'shamu-vault-unit-'))
   const osKey = randomBytes(32)
   const protection: SecretStore = {
@@ -30,6 +30,7 @@ export function vaultFixture() {
   const store = new VaultStore(
     file,
     () => {},
+    ownerIsOpen,
     () => protection,
     () => now
   )

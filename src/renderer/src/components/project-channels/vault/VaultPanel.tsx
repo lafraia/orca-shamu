@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { KeyRound, LockKeyhole, Plus, RefreshCw } from 'lucide-react'
+import { LockKeyhole, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -19,6 +19,7 @@ import { VaultEntryEditor } from './VaultEntryEditor'
 import { VaultPasswordForm } from './VaultPasswordForm'
 import { VaultRequests } from './VaultRequests'
 import { VaultDeleteDialog } from './VaultDeleteDialog'
+import { VaultLockedView } from './VaultLockedView'
 import { VaultEntries } from './VaultEntries'
 import { SECURITY_SURFACE_CLASS } from '@/components/ui/security-surface'
 
@@ -248,25 +249,22 @@ export function VaultPanel({
             </div>
           ) : null}
           {snapshot?.state === 'missing' || snapshot?.state === 'locked' ? (
-            <>
-              <div className="flex size-12 items-center justify-center rounded-xl border border-border">
-                <KeyRound className="size-5 text-muted-foreground" />
-              </div>
-              <VaultPasswordForm
-                mode={snapshot.state === 'missing' ? 'create' : 'unlock'}
-                busy={busy}
-                onSubmit={(password) =>
-                  act(() =>
-                    snapshot.state === 'missing'
-                      ? api!.create(botId, password)
-                      : api!.unlock(botId, password)
-                  )
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                AES-256-GCM · Master password + OS keychain
-              </p>
-            </>
+            <VaultLockedView
+              key={snapshot.state}
+              state={snapshot.state}
+              automatic={snapshot.automaticUnlock}
+              busy={busy}
+              onResume={() => {
+                void act(() => api!.resume(botId))
+              }}
+              onAuthenticate={(password) =>
+                act(() =>
+                  snapshot.state === 'missing'
+                    ? api!.create(botId, password)
+                    : api!.unlock(botId, password)
+                )
+              }
+            />
           ) : null}
           {unlocked && editing ? (
             <VaultEntryEditor
@@ -330,9 +328,9 @@ export function VaultPanel({
         {unlocked ? (
           <div className="space-y-2 border-t border-border p-5">
             <p className="text-xs text-muted-foreground">
-              Locks after 5 minutes without Vault activity, when the app is hidden, or when this
-              computer locks or sleeps. Closing this panel keeps Vault unlocked until then. Use Lock
-              Vault to end the session now.
+              Vault stays unlocked while the Shamu window is open. Closing or hiding the window,
+              locking this computer or sleep locks it. Reopening Shamu unlocks it through the OS
+              keychain.
             </p>
             <Button
               size="sm"

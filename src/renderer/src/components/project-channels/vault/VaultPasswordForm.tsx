@@ -97,8 +97,8 @@ export function VaultPasswordForm({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Use at least 15 characters. Keep this password safely: losing it or access to this
-            device’s keychain makes the Vault unrecoverable.
+            Use at least 15 characters. Keep this password to confirm copies and password changes.
+            Vault unlocks automatically using this device’s keychain.
           </p>
         </>
       ) : null}

@@ -125,6 +125,7 @@ describe('Vault protection and session boundaries', () => {
     const moved = new VaultStore(
       new VaultFile(other),
       () => {},
+      () => true,
       () => fixture.protection
     )
     await expect(moved.unlock('alpha', TEST_PASSWORD)).rejects.toThrow('Could not unlock')
@@ -189,11 +190,4 @@ describe('Vault protection and session boundaries', () => {
       expect(fixture.store.status('alpha').state).toBe('locked')
     }
   )
-
-  it('ends an unlocked session when the system reports idle', async () => {
-    const snapshot = await fixture.store.create('alpha', TEST_PASSWORD)
-    fixture.store.expire(600)
-    expect(fixture.store.status('alpha')).toMatchObject({ state: 'locked', entries: [] })
-    expect(() => fixture.store.save(vaultAccess(snapshot), TEST_ENTRY)).toThrow('Vault is locked')
-  })
 })
