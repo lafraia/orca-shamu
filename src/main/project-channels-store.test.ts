@@ -171,4 +171,115 @@ describe('project conversation persistence', () => {
       members: channelFixture().members
     })
   })
+
+  it('moves groups directly above or below distant groups and persists the default group', async () => {
+    const store = new ProjectChannelsStore(directory)
+    await store.write({
+      ...(await store.read()),
+      channels: ['', 'Alpha', 'Beta', 'Gamma'].map((section) => ({
+        ...channelFixture(),
+        id: section || 'default',
+        section,
+        members: [],
+        mainMemberId: null
+      }))
+    })
+    await store.move({ kind: 'section', section: 'Gamma', targetSection: '', placement: 'before' })
+    expect((await store.read()).sectionOrder).toEqual(['Gamma', '', 'Alpha', 'Beta'])
+    await store.move({ kind: 'section', section: '', targetSection: 'Beta', placement: 'after' })
+    expect((await new ProjectChannelsStore(directory).read()).sectionOrder).toEqual([
+      'Gamma',
+      'Alpha',
+      'Beta',
+      ''
+    ])
+  })
+
+  it('reorders by anchors without dropping hidden bots and moves a conversation with its draft', async () => {
+    const store = new ProjectChannelsStore(directory)
+    const original = { ...channelFixture(), section: 'Product', draft: 'Unfinished message' }
+    const peers = ['hidden', 'web', 'platform'].map((id) => ({
+      ...channelFixture(),
+      id,
+      section: id === 'platform' ? 'Engineering' : 'Product',
+      members: [],
+      mainMemberId: null
+    }))
+    await store.write({ ...(await store.read()), channels: [original, ...peers] })
+    await store.move({
+      kind: 'bot',
+      botId: 'web',
+      section: 'Product',
+      relativeTo: 'project',
+      placement: 'before'
+    })
+    expect((await store.read()).channels.map((bot) => bot.id)).toEqual([
+      'web',
+      'project',
+      'hidden',
+      'platform'
+    ])
+    await Promise.all([
+      store.move({
+        kind: 'bot',
+        botId: 'project',
+        section: 'Engineering',
+        relativeTo: 'platform',
+        placement: 'after'
+      }),
+      store.update('project', (bot) => ({ ...bot, draft: 'Concurrently updated draft' }))
+    ])
+    const reopened = await new ProjectChannelsStore(directory).read()
+    expect(reopened.channels.map((bot) => bot.id)).toEqual(['web', 'hidden', 'platform', 'project'])
+    expect(reopened.channels[3]).toEqual({
+      ...original,
+      section: 'Engineering',
+      pinned: false,
+      draft: 'Concurrently updated draft'
+    })
+  })
+
+  it('reorders pinned bots, remembers their groups and refuses a destination that moved meanwhile', async () => {
+    const store = new ProjectChannelsStore(directory)
+    await store.write({
+      ...(await store.read()),
+      channels: ['one', 'two', 'three'].map((id) => ({
+        ...channelFixture(),
+        id,
+        section: 'Product',
+        members: [],
+        mainMemberId: null,
+        pinned: id !== 'three'
+      }))
+    })
+    await store.move({
+      kind: 'bot',
+      botId: 'two',
+      section: null,
+      relativeTo: 'one',
+      placement: 'before'
+    })
+    expect((await store.read()).channels.map((bot) => bot.id)).toEqual(['two', 'one', 'three'])
+    await store.move({ kind: 'bot', botId: 'three', section: null, placement: 'after' })
+    expect((await store.read()).channels[2]).toMatchObject({
+      id: 'three',
+      pinned: true,
+      section: 'Product'
+    })
+    await store.update('three', (bot) => ({ ...bot, pinned: false }))
+    const before = await store.read()
+    await expect(
+      store.move({
+        kind: 'bot',
+        botId: 'one',
+        section: null,
+        relativeTo: 'three',
+        placement: 'before'
+      })
+    ).rejects.toThrow('destination changed')
+    await expect(
+      store.move({ kind: 'bot', botId: 'one', section: 'Missing', placement: 'after' })
+    ).rejects.toThrow('no longer exists')
+    expect(await store.read()).toEqual(before)
+  })
 })

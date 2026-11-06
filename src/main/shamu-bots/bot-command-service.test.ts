@@ -111,6 +111,24 @@ describe('bot commands and creation provenance', () => {
       messages: [{ id: 'user-request', role: 'user' }]
     })
   })
+  it('requires user provenance before an agent can reorder bots', async () => {
+    const before = await fixture.channels.read()
+    await expect(
+      commands.invoke(
+        {
+          action: 'reorder',
+          move: {
+            kind: 'bot',
+            botId: 'actor',
+            section: null,
+            placement: 'after'
+          }
+        },
+        'agent'
+      )
+    ).rejects.toThrow('sourceItemId')
+    expect(await fixture.channels.read()).toEqual(before)
+  })
   it('lists a stable named Markdown reference without sending a turn or changing the bot', async () => {
     const before = await fixture.channels.read()
     expect(await commands.invoke({ action: 'list' }, 'agent')).toMatchObject({

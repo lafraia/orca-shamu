@@ -15,11 +15,8 @@ import { translate } from '@/i18n/i18n'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { botSectionNames } from '../../../../shared/bot-sections'
 import { BotSectionHeader } from './BotSectionHeader'
-import { BotAvatar } from './BotAvatar'
-import { BotUnreadDot } from './BotUnreadDot'
-import { botUnreadDescription, useBotUnread } from './bot-unread-store'
-import { BotSidebarActions } from './BotSidebarActions'
-import { openProjectChannel } from './project-channel-store'
+import { BotSidebarRow } from './BotSidebarRow'
+import { BotSidebarDrag, BotSidebarDropMark, useBotSidebarDrag } from './BotSidebarDrag'
 import { runBotRosterCommand } from './bot-roster-actions'
 
 export function BotSidebarGroups({
@@ -40,8 +37,6 @@ export function BotSidebarGroups({
   const [sectionName, setSectionName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const counts = useBotUnread((state) => state.counts)
-  const pending = useBotUnread((state) => state.pending)
   const groups = [
     {
       key: 'pinned',
@@ -61,12 +56,12 @@ export function BotSidebarGroups({
   ].filter((group) => group.bots.length)
   return (
     <>
-      {groups.map((group) => (
-        <section key={group.key} className="mb-3" aria-label={group.name}>
-          <BotSectionHeader
+      <BotSidebarDrag>
+        {groups.map((group) => (
+          <BotSidebarGroup
+            key={group.key}
             name={group.name}
             section={group.pinned ? null : group.key.slice('section:'.length)}
-            count={group.bots.length}
             collapsed={Boolean(collapsed[group.key])}
             onToggle={() =>
               setCollapsed((current) => ({ ...current, [group.key]: !current[group.key] }))
@@ -81,53 +76,25 @@ export function BotSidebarGroups({
                 [`section:${name}`]: Boolean(current[group.key])
               }))
             }
-          />
-          {!collapsed[group.key]
-            ? group.bots.map((channel) => (
-                <BotSidebarActions
-                  key={channel.id}
-                  channel={channel}
-                  sections={sections}
-                  onSection={() => {
-                    setEditing(channel)
-                    setSectionName('')
-                    setError(null)
-                  }}
-                >
-                  <button
-                    type="button"
-                    data-current={active && channel.id === selectedId}
-                    aria-current={active && channel.id === selectedId ? 'page' : undefined}
-                    aria-description={botUnreadDescription(
-                      counts[channel.id] ?? 0,
-                      pending.includes(channel.id)
-                    )}
-                    onClick={() => openProjectChannel(channel.id)}
-                    className={cn(
-                      'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      active && channel.id === selectedId && 'bg-worktree-sidebar-accent'
-                    )}
-                  >
-                    <BotAvatar
-                      id={channel.id}
-                      identity={channel.identity}
-                      className={group.pinned ? 'size-12' : 'size-7 rounded-lg'}
-                    />
-                    <span
-                      className={cn(
-                        'min-w-0 flex-1 truncate font-medium',
-                        group.pinned && 'text-base font-semibold'
-                      )}
-                    >
-                      {channel.name}
-                    </span>
-                    <BotUnreadDot count={counts[channel.id] ?? 0} />
-                  </button>
-                </BotSidebarActions>
-              ))
-            : null}
-        </section>
-      ))}
+          >
+            {!collapsed[group.key]
+              ? group.bots.map((channel) => (
+                  <BotSidebarRow
+                    key={channel.id}
+                    channel={channel}
+                    sections={sections}
+                    selected={active && channel.id === selectedId}
+                    onSection={() => {
+                      setEditing(channel)
+                      setSectionName('')
+                      setError(null)
+                    }}
+                  />
+                ))
+              : null}
+          </BotSidebarGroup>
+        ))}
+      </BotSidebarDrag>
       <Dialog
         open={editing !== null}
         onOpenChange={(open) => {
@@ -194,5 +161,30 @@ export function BotSidebarGroups({
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+function BotSidebarGroup({
+  children,
+  ...props
+}: Omit<React.ComponentProps<typeof BotSectionHeader>, 'dragHandle'> & {
+  children: React.ReactNode
+}): React.JSX.Element {
+  const drag = useBotSidebarDrag({
+    kind: 'section',
+    id: props.section === null ? 'pinned' : `section:${props.section}`,
+    label: props.name,
+    section: props.section
+  })
+  return (
+    <section
+      ref={drag.ref}
+      className={cn('relative mb-3', drag.dragging && 'opacity-40')}
+      aria-label={props.name}
+    >
+      <BotSidebarDropMark placement={drag.insertion} />
+      <BotSectionHeader {...props} dragHandle={props.section === null ? undefined : drag.handle} />
+      {children}
+    </section>
   )
 }

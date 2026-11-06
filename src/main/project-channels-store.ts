@@ -8,6 +8,8 @@ import {
 } from '../shared/project-channels'
 import { withSidecarSnapshotQueue, writeSidecarSnapshot } from './filesystem/sidecar-snapshot-file'
 import { botSectionNames, botSectionNameSchema } from '../shared/bot-sections'
+import { botRosterMoveSchema, type BotRosterMove } from '../shared/bot-roster-move'
+import { moveBotRoster } from './shamu-bots/bot-roster-move'
 
 export class ProjectChannelsStore {
   private readonly file: string
@@ -110,7 +112,7 @@ export class ProjectChannelsStore {
   renameSection(name: string, newName: string): Promise<ProjectChannelsSnapshot> {
     const previous = botSectionNameSchema.parse(name)
     const nextName = botSectionNameSchema.min(1).parse(newName)
-    return this.changeSections((current) => {
+    return this.changeRoster((current) => {
       const order = botSectionNames(current.channels, current.sectionOrder)
       if (!order.includes(previous)) {
         throw new Error('This group no longer exists. Reload bots before trying again.')
@@ -133,7 +135,7 @@ export class ProjectChannelsStore {
 
   moveSection(name: string, direction: 'up' | 'down'): Promise<ProjectChannelsSnapshot> {
     const section = botSectionNameSchema.parse(name)
-    return this.changeSections((current) => {
+    return this.changeRoster((current) => {
       const order = botSectionNames(current.channels, current.sectionOrder)
       const visible = botSectionNames(
         current.channels.filter((bot) => !bot.pinned),
@@ -155,7 +157,12 @@ export class ProjectChannelsStore {
     })
   }
 
-  private changeSections(
+  move(move: BotRosterMove): Promise<ProjectChannelsSnapshot> {
+    const parsed = botRosterMoveSchema.parse(move)
+    return this.changeRoster((current) => moveBotRoster(current, parsed))
+  }
+
+  private changeRoster(
     update: (snapshot: ProjectChannelsSnapshot) => ProjectChannelsSnapshot
   ): Promise<ProjectChannelsSnapshot> {
     return withSidecarSnapshotQueue(this.file, async () => {

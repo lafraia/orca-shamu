@@ -91,7 +91,7 @@ export function BotSidebarActions({
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className="group flex items-center gap-1 rounded-md hover:bg-worktree-sidebar-accent">
+        <div className="group/bot flex items-center gap-1 rounded-md hover:bg-worktree-sidebar-accent">
           {children}
           {channel.pinned ? (
             <Pin
@@ -100,18 +100,20 @@ export function BotSidebarActions({
             />
           ) : null}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                disabled={busy}
-                aria-label={translate('shamu.bots.actions', 'Bot actions: {{name}}', {
-                  name: channel.name
-                })}
-              >
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
+            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot:opacity-100 group-focus-within/bot:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={busy}
+                  aria-label={translate('shamu.bots.actions', 'Bot actions: {{name}}', {
+                    name: channel.name
+                  })}
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+            </span>
             <DropdownMenuContent>{items(false)}</DropdownMenuContent>
           </DropdownMenu>
         </div>

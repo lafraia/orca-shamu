@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ComponentPropsWithRef } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, MoreHorizontal, Pencil, Pin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,12 +20,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import { runBotRosterCommand } from './bot-roster-actions'
+import { moveBotSidebarItem, runBotRosterCommand } from './bot-roster-actions'
 
 export function BotSectionHeader({
   name,
   section,
-  count,
+  dragHandle,
   collapsed,
   onToggle,
   canMoveUp,
@@ -34,7 +34,7 @@ export function BotSectionHeader({
 }: {
   name: string
   section: string | null
-  count: number
+  dragHandle?: ComponentPropsWithRef<'button'>
   collapsed: boolean
   onToggle: () => void
   canMoveUp: boolean
@@ -63,38 +63,61 @@ export function BotSectionHeader({
   }
   return (
     <>
-      <div className="mb-1 flex items-center gap-1">
+      <div className="group/bot-section mb-1 flex items-center gap-1">
         <Button
+          {...dragHandle}
           variant="ghost"
           size="xs"
-          className="min-w-0 flex-1 justify-start"
+          className={cn(
+            'min-w-0 flex-1 touch-manipulation justify-start',
+            section !== null && 'cursor-grab active:cursor-grabbing'
+          )}
           aria-expanded={!collapsed}
+          aria-label={translate('shamu.bots.toggleGroup', 'Toggle group: {{name}}', { name })}
           onClick={onToggle}
+          aria-keyshortcuts={section === null ? undefined : 'Alt+ArrowUp Alt+ArrowDown'}
+          onKeyDown={(event) => {
+            if (
+              section !== null &&
+              event.altKey &&
+              (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+            ) {
+              event.preventDefault()
+              event.stopPropagation()
+              if (!busy && !dragHandle?.['aria-disabled']) {
+                void moveBotSidebarItem(
+                  { kind: 'section', id: `section:${section}`, label: name, section },
+                  event.key === 'ArrowUp' ? 'up' : 'down'
+                ).catch(() => {})
+              }
+            }
+          }}
         >
           <ChevronDown
             className={cn(
-              'size-3 transition-transform motion-reduce:transition-none',
+              'size-3 transition-transform duration-(--duration-fast) ease-(--ease-smooth-out) motion-reduce:transition-none',
               collapsed && '-rotate-90'
             )}
           />
           {section === null ? <Pin className="size-3" /> : null}
           <span className="truncate">{name}</span>
-          <span className="ml-auto text-muted-foreground">{count}</span>
         </Button>
         {section !== null ? (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                disabled={busy}
-                aria-label={translate('shamu.bots.groupActions', 'Group actions: {{name}}', {
-                  name
-                })}
-              >
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
+            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot-section:opacity-100 group-focus-within/bot-section:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={busy}
+                  aria-label={translate('shamu.bots.groupActions', 'Group actions: {{name}}', {
+                    name
+                  })}
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+            </span>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onSelect={() => {

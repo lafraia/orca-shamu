@@ -16,6 +16,7 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Keep bot and group action menus quiet until hover or keyboard focus, remove group counts, and persist drag or keyboard reordering of groups and bots. Reuse workspace activity and attention icons from each bot's live primary session, including when its chat is closed.
 - Unlock Vault through the OS keychain when the Shamu window opens and revoke keys and pending uses when it closes or hides, independently of the primary Orca. Keep legacy Vault enrollment behind one verified master-password unlock.
 - Add an encrypted Vault beside Memory with a master password, OS keychain protection, per-bot credentials, guarded clipboard access and one-command approvals that keep credential values out of agent responses. See `SHAMU_VAULT.md` for security boundaries and research.
 - Highlight the first typed mention match, omit bots' internal workspaces, and keep suggestions owned by the focused composer and beneath floating chats.

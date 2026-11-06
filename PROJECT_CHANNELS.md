@@ -166,6 +166,12 @@ The local runtime RPC is authenticated through the existing CLI transport and re
 
 See `UPSTREAM_PATCHES.md` for upstream fix reviews, retired workarounds and regression coverage.
 
+## Bot sidebar
+
+The bot sidebar keeps group counts hidden and reveals action menus on hover, keyboard focus or touch devices. Drag a group header above or below another group, drag bots to reorder them, or drop a bot on a group header to append it even while that group is collapsed. Pinned bots keep their dedicated top section and can be reordered or moved into another section. Alt+Up and Alt+Down reorder the focused bot or group; menus retain group movement and bot section choices. Order and membership are saved atomically against the current roster, preserving filtered bots, conversation identities and drafts. Invalid or changed destinations leave the saved roster intact and report an error.
+
+Bot rows read the same primary status stream as native workspaces and reuse their spinner and attention glyphs. A pending approval or question shows the attention icon; background monitoring and finished outcomes retain the workspace presentation. A disconnected stream shows unverified status rather than claiming that cached work is still running. Unread dots remain a separate per-bot indication.
+
 ## Shamu settings and connection status
 
 The primary connection lives in the existing statusbar. Press it to open Settings → Orca Shamu. The Shamu section is local to this desktop interface and is absent from the official Orca and paired web clients. It contains interface preference import, reconnect and access-link renewal. Import runs only on request; it copies the existing interface preference allowlist, including fonts, without changing the primary Orca. Access-link renewal retains the pinned primary and uses the existing connection form.

@@ -47,6 +47,7 @@ export class BotCommandService {
         'routine.control',
         'mention',
         'organize',
+        'reorder',
         'section.rename',
         'section.move'
       ].includes(command.action)
@@ -113,6 +114,11 @@ export class BotCommandService {
         const result = await this.channels.moveSection(command.name, command.direction)
         this.changed()
         return { sections: result.sectionOrder ?? [] }
+      }
+      case 'reorder': {
+        await this.channels.move(command.move)
+        this.changed()
+        return { moved: true }
       }
       case 'mention': {
         if (caller === 'agent' && command.actorId) {

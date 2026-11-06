@@ -21,6 +21,7 @@ function argValue(name) {
 
 const sessionId = argValue('--session-id') ?? argValue('--resume') ?? randomUUID()
 const modelSwitching = args.includes('--orca-test-model-switching')
+const sidebarQuestions = args.includes('--orca-test-sidebar-questions')
 let currentModel = argValue('--model') ?? 'default'
 const write = (frame) => process.stdout.write(`${JSON.stringify(frame)}\n`)
 const initializeResponse = {
@@ -43,46 +44,82 @@ const initializeResponse = {
 const TURN_MS = 500
 const SLOW_TURN_MS = 60_000
 let turnTimer = null
+let pendingQuestion = null
+
+function finishTurn() {
+  turnTimer = null
+  write({
+    type: 'assistant',
+    uuid: randomUUID(),
+    session_id: sessionId,
+    parent_tool_use_id: null,
+    message: {
+      id: randomUUID(),
+      role: 'assistant',
+      model: modelSwitching ? currentModel : 'claude-fake',
+      content: [{ type: 'text', text: 'Stub reply.' }]
+    }
+  })
+  write({
+    type: 'result',
+    subtype: 'success',
+    uuid: randomUUID(),
+    session_id: sessionId,
+    is_error: false,
+    terminal_reason: 'completed',
+    result: 'Stub reply.'
+  })
+}
 
 function startTurn(frame) {
   // The CLI's --replay-user-messages echo, which opens the turn.
   write({ ...frame, isReplay: true })
-  const slow = JSON.stringify(frame.message ?? '').includes('slow')
-  turnTimer = setTimeout(
-    () => {
-      turnTimer = null
-      write({
-        type: 'assistant',
-        uuid: randomUUID(),
-        session_id: sessionId,
-        parent_tool_use_id: null,
-        message: {
-          id: randomUUID(),
-          role: 'assistant',
-          model: modelSwitching ? currentModel : 'claude-fake',
-          content: [{ type: 'text', text: 'Stub reply.' }]
+  if (sidebarQuestions && JSON.stringify(frame.message ?? '').includes('sidebar-question')) {
+    const toolId = randomUUID()
+    const input = {
+      questions: [
+        {
+          question: 'Continue the sidebar test?',
+          header: 'Sidebar',
+          multiSelect: false,
+          options: [
+            { label: 'Continue', description: 'Complete the synthetic turn.' },
+            { label: 'Wait', description: 'Keep this task pending.' }
+          ]
         }
-      })
-      write({
-        type: 'result',
-        subtype: 'success',
-        uuid: randomUUID(),
-        session_id: sessionId,
-        is_error: false,
-        terminal_reason: 'completed',
-        result: 'Stub reply.'
-      })
-    },
-    slow ? SLOW_TURN_MS : TURN_MS
-  )
+      ]
+    }
+    pendingQuestion = { requestId: randomUUID(), toolId }
+    write({
+      type: 'assistant',
+      uuid: randomUUID(),
+      session_id: sessionId,
+      parent_tool_use_id: null,
+      message: {
+        id: randomUUID(),
+        role: 'assistant',
+        model: 'claude-fake',
+        content: [{ type: 'tool_use', id: toolId, name: 'AskUserQuestion', input }]
+      }
+    })
+    write({
+      type: 'control_request',
+      request_id: pendingQuestion.requestId,
+      request: { subtype: 'can_use_tool', tool_name: 'AskUserQuestion', tool_use_id: toolId, input }
+    })
+    return
+  }
+  const slow = JSON.stringify(frame.message ?? '').includes('slow')
+  turnTimer = setTimeout(finishTurn, slow ? SLOW_TURN_MS : TURN_MS)
 }
 
 function interruptTurn() {
-  if (!turnTimer) {
+  if (!turnTimer && !pendingQuestion) {
     return
   }
   clearTimeout(turnTimer)
   turnTimer = null
+  pendingQuestion = null
   write({
     type: 'result',
     subtype: 'error_during_execution',
@@ -122,6 +159,27 @@ process.stdin.on('data', (chunk) => {
     )
     if (frame?.type === 'user') {
       startTurn(frame)
+      continue
+    }
+    if (
+      frame?.type === 'control_response' &&
+      pendingQuestion &&
+      frame.response?.request_id === pendingQuestion.requestId
+    ) {
+      write({
+        type: 'user',
+        uuid: randomUUID(),
+        session_id: sessionId,
+        parent_tool_use_id: null,
+        message: {
+          role: 'user',
+          content: [
+            { type: 'tool_result', tool_use_id: pendingQuestion.toolId, content: 'Answered.' }
+          ]
+        }
+      })
+      pendingQuestion = null
+      finishTurn()
       continue
     }
     if (frame?.type !== 'control_request') {
