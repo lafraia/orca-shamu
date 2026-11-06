@@ -3,6 +3,7 @@ import { botMentionRequestSchema } from './bot-mentions'
 import { botRoutineSchema } from './bot-routines'
 import { JournalCursor } from './rpc-contract/structured-agent-session-params'
 import { botSectionNameSchema } from './bot-sections'
+import { vaultAgentCommandSchema } from './shamu-vault'
 
 const id = z.string().min(1).max(1024)
 export const botRunRequestIdSchema = z.string().regex(/^\d{13}-[0-9a-f]{32}$/)
@@ -18,6 +19,7 @@ export const botCreateCommandSchema = z
   })
   .strict()
 export const botCommandSchema = z.discriminatedUnion('action', [
+  vaultAgentCommandSchema,
   z.object({ action: z.literal('list') }).strict(),
   botCreateCommandSchema,
   z

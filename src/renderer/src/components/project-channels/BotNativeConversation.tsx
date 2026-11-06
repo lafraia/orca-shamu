@@ -7,18 +7,31 @@ import { ensureProjectChannelConversation } from './project-channel-store'
 import { BotConversationHeader } from './BotConversationHeader'
 import { BotMemoryPanel } from './BotMemoryPanel'
 import { BotRoutinesPanel } from './BotRoutinesPanel'
+import { VaultPanel } from './vault/VaultPanel'
 import { useBotUnread } from './bot-unread-store'
 
 export function BotNativeConversation({ channel }: { channel: ProjectChannel }): React.JSX.Element {
   const [attempt, setAttempt] = useState(0)
   const [memoryOpen, setMemoryOpen] = useState(false)
+  const [vaultOpen, setVaultOpen] = useState(false)
+  const [vaultState, setVaultState] = useState({ unlocked: false, pending: 0 })
   const [routinesOpen, setRoutinesOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const member = channel.members.find((row) => row.id === channel.home?.memberId)
   const ready = channel.home?.ready && member
   const hasConversation = Boolean(ready)
+  useEffect(
+    () =>
+      window.api.projectChannels?.vault?.onChanged((change) => {
+        setVaultState({
+          unlocked: change.unlocked,
+          pending: change.pendingBotIds.filter((id) => id === channel.id).length
+        })
+      }),
+    [channel.id]
+  )
   useEffect(() => {
-    if (!hasConversation || memoryOpen || routinesOpen) {
+    if (!hasConversation || memoryOpen || routinesOpen || vaultOpen) {
       return
     }
     useBotUnread.setState({ openChatId: channel.id })
@@ -27,7 +40,7 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
         useBotUnread.setState({ openChatId: null })
       }
     }
-  }, [channel.id, hasConversation, memoryOpen, routinesOpen])
+  }, [channel.id, hasConversation, memoryOpen, routinesOpen, vaultOpen])
   useEffect(() => {
     let current = true
     setError(null)
@@ -56,6 +69,8 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
       ready={Boolean(ready)}
       error={error}
       onMemory={() => setMemoryOpen(true)}
+      onVault={() => setVaultOpen(true)}
+      vaultState={vaultState}
       onRoutines={() => setRoutinesOpen(true)}
       onRetry={() => setAttempt((value) => value + 1)}
     />
@@ -66,6 +81,12 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
       aria-label={channel.name}
     >
       {header}
+      <VaultPanel
+        botId={channel.id}
+        name={channel.name}
+        open={vaultOpen}
+        onOpenChange={setVaultOpen}
+      />
       {routinesOpen ? (
         <BotRoutinesPanel
           botId={channel.id}

@@ -16,6 +16,7 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Add an encrypted Vault beside Memory with a master password, OS keychain protection, per-bot credentials, guarded clipboard access and one-command approvals that keep credential values out of agent responses. See `SHAMU_VAULT.md` for security boundaries and research.
 - Highlight the first typed mention match, omit bots' internal workspaces, and keep suggestions owned by the focused composer and beneath floating chats.
 - Show recalled memory as a quiet, collapsed brain row beneath the turn status, separate from the user's message, and link known notification IDs to their original bot communication.
 - Identify the macOS menu bar item as Orca Shamu in its menu heading, open action and activity tooltip, including development instances and menu rebuilds.

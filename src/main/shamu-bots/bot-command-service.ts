@@ -7,6 +7,7 @@ import type { ProjectChannelsStore } from '../project-channels-store'
 import type { BotConversationService } from '../bot-conversation-service'
 import type { BotMentionDelivery } from '../bot-mention-delivery'
 import type { BotRoutineService } from './bot-routine-service'
+import type { VaultService } from '../shamu-vault/vault-service'
 import {
   readBotReferenceContext,
   requireBotUserRequest,
@@ -20,10 +21,25 @@ export class BotCommandService {
     private readonly mentions: Pick<BotMentionDelivery, 'deliver' | 'context'>,
     readonly routines: BotRoutineService,
     private readonly primary: BotPrimary,
-    private readonly changed: () => void
+    private readonly changed: () => void,
+    private readonly vault?: VaultService | null
   ) {}
   async invoke(input: unknown, caller: 'desktop' | 'agent' = 'desktop'): Promise<unknown> {
     const command = botCommandSchema.parse(input)
+    if (
+      command.action === 'vault.list' ||
+      command.action === 'vault.run' ||
+      command.action === 'vault.result'
+    ) {
+      if (!this.vault) {
+        throw new Error('Vault is unavailable in this Orca profile.')
+      }
+      const bot = await this.requireBot(command.actorId)
+      if (command.action === 'vault.run') {
+        await this.requireActorRequest(command.actorId, command.sourceItemId)
+      }
+      return this.vault.invoke(command, bot)
+    }
     if (
       caller === 'agent' &&
       [

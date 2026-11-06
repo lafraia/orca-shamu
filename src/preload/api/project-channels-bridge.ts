@@ -1,7 +1,9 @@
 import { ipcRenderer } from 'electron'
 import type { ProjectChannelsApi } from '../../shared/project-channels'
+import { shamuVaultApi } from './shamu-vault-bridge'
 
 export const projectChannelsApi: ProjectChannelsApi = {
+  vault: shamuVaultApi,
   communications: {
     read: (sessionId) => ipcRenderer.invoke('projectChannels:communications', sessionId),
     texts: (ids) => ipcRenderer.invoke('projectChannels:communicationTexts', ids),

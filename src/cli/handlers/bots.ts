@@ -21,7 +21,11 @@ function commandHandler(action: string): CommandHandler {
     const payload: unknown = text ? JSON.parse(text) : action === 'list' ? { action: 'list' } : null
     const command: BotCommand = botCommandSchema.parse(payload)
     if (
-      action === 'routines' ? !command.action.startsWith('routine.') : command.action !== action
+      action === 'routines'
+        ? !command.action.startsWith('routine.')
+        : action === 'vault'
+          ? !command.action.startsWith('vault.')
+          : command.action !== action
     ) {
       throw new Error('The request action must match the bots command.')
     }
@@ -31,7 +35,7 @@ function commandHandler(action: string): CommandHandler {
   }
 }
 export const BOT_HANDLERS: Record<string, CommandHandler> = Object.fromEntries(
-  ['list', 'create', 'organize', 'mention', 'context', 'routines'].map((action) => [
+  ['list', 'create', 'organize', 'mention', 'context', 'routines', 'vault'].map((action) => [
     `bots ${action}`,
     commandHandler(action)
   ])

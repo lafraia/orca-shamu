@@ -7,7 +7,8 @@ export const BOT_COMMAND_SPECS: CommandSpec[] = [
   'organize',
   'mention',
   'context',
-  'routines'
+  'routines',
+  'vault'
 ].map((command) => ({
   path: ['bots', command],
   summary: `Orca Shamu bot ${command}`,

@@ -7,7 +7,8 @@ export const BOT_HANDLER_GROUP: HandlerGroup = {
     'bots organize',
     'bots mention',
     'bots context',
-    'bots routines'
+    'bots routines',
+    'bots vault'
   ],
   load: async () => (await import('./handlers/bots.js')).BOT_HANDLERS
 }

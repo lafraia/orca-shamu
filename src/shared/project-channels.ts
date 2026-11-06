@@ -1,4 +1,5 @@
 import type { BotCommunicationsApi } from './bot-communications'
+import type { ShamuVaultApi } from './shamu-vault'
 import type { BotMentionReceipt, BotMentionRequest } from './bot-mentions'
 import { z } from 'zod'
 import { botIdentitySchema } from './bot-identity'
@@ -138,6 +139,7 @@ export function projectChannelSessionKey(
 }
 
 export type ProjectChannelsApi = {
+  vault?: ShamuVaultApi
   communications?: BotCommunicationsApi
   readUnread: (botIds?: string[]) => Promise<BotUnreadSnapshot>
   markRead: (mark: BotReadMark) => Promise<BotUnreadSnapshot>

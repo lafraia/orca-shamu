@@ -1,4 +1,4 @@
-import { Brain, CalendarClock, FolderOpen, RotateCcw } from 'lucide-react'
+import { Brain, CalendarClock, FolderOpen, LockKeyhole, LockOpen, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import type { ProjectChannel } from '../../../../shared/project-channels'
@@ -11,6 +11,8 @@ export function BotConversationHeader({
   ready,
   error,
   onMemory,
+  onVault,
+  vaultState,
   onRoutines,
   onRetry
 }: {
@@ -18,6 +20,8 @@ export function BotConversationHeader({
   ready: boolean
   error: string | null
   onMemory: () => void
+  onVault: () => void
+  vaultState: { unlocked: boolean; pending: number }
   onRoutines: () => void
   onRetry: () => void
 }): React.JSX.Element {
@@ -39,6 +43,21 @@ export function BotConversationHeader({
         <Button variant="ghost" size="sm" disabled={!ready} onClick={onMemory}>
           <Brain />
           {translate('shamu.memory.button', 'Memory')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!ready}
+          onClick={onVault}
+          title={vaultState.unlocked ? 'Vault unlocked' : 'Vault locked'}
+        >
+          {vaultState.unlocked ? <LockOpen /> : <LockKeyhole />}
+          {translate('shamu.vault.button', 'Vault')}
+          {vaultState.pending ? (
+            <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
+              {vaultState.pending}
+            </span>
+          ) : null}
         </Button>
         <Button variant="ghost" size="sm" disabled={!ready} onClick={onRoutines}>
           <CalendarClock />

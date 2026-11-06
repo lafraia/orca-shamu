@@ -15,6 +15,7 @@ import type { ShamuPrimaryConnection } from '../shamu-primary-connection'
 import { projectChannelsSnapshotSchema } from '../../shared/project-channels'
 import { BotConversationService } from '../bot-conversation-service'
 import { BotMemoryService } from '../bot-memory-service'
+import { registerShamuVaultHandlers } from './shamu-vault'
 
 export function registerProjectChannelsHandlers(
   store: Store,
@@ -49,6 +50,9 @@ export function registerProjectChannelsHandlers(
     return snapshot
   })
   const memory = primary ? new BotMemoryService(channels, primary) : null
+  const vault = primary
+    ? registerShamuVaultHandlers(store.getProfileStorageDirectory(), channels)
+    : null
   for (const name of ['readMemory', 'writeMemory', 'prepareMessage']) {
     ipcMain.removeHandler(`projectChannels:${name}`)
   }
@@ -101,7 +105,8 @@ export function registerProjectChannelsHandlers(
             store.getProfileStorageDirectory()
           ),
           primary,
-          changed
+          changed,
+          vault
         )
       : null
   installBotCommandService(commands)
@@ -117,7 +122,7 @@ export function registerProjectChannelsHandlers(
     return commands.invoke(input)
   })
   const trusted = (event: Electron.IpcMainInvokeEvent): void => {
-    if (!isTrustedUIRenderer(event.sender)) {
+    if (!isTrustedUIRenderer(event.sender) || event.senderFrame !== event.sender.mainFrame) {
       throw new Error('Untrusted project conversation request.')
     }
   }
