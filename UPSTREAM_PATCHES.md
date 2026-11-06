@@ -2,7 +2,9 @@
 
 Keep Shamu features separate from temporary fixes to upstream behavior. At each upstream import, check the linked report and run the regression journey before removing a patch.
 
-No temporary upstream patch remains active on `v1.4.251`.
+On `v1.4.251`, PR validation omits the dangling job-timeout check: the release workflow references `.github/scripts/check-pull-request-job-timeouts.mjs`, which is absent from the release's tracked files and history. Existing job timeouts and the required-context ownership check remain. Remove this adjustment when upstream repairs that workflow reference.
+
+Fork bootstrap adaptations keep the test LoC reporter restricted to default-branch scripts and report unavailable comparisons when the old fork base predates a benchmark. They do not run PR code with a write token or substitute current code for an absent benchmark baseline.
 
 The native chat autocomplete positioning workaround for [report #38234](https://github.com/stablyai/orca/issues/38234) was retired when importing `v1.4.250`. `NativeChatPickerListbox.tsx` now shares the upstream positioning implementation from [#38322](https://github.com/stablyai/orca/pull/38322) and the launch submenu support from [#38328](https://github.com/stablyai/orca/pull/38328). The module extraction and Shamu's foreground/background menu layers remain fork features.
 

@@ -33,7 +33,15 @@ jobs:
         run: |
           set -euo pipefail
           for script in pr-test-loc-table.mjs pr-test-loc-summary.mjs; do
-            gh api "repos/${GITHUB_REPOSITORY}/contents/.github/scripts/${script}?ref=${TRUSTED_REF}" \
-              --jq .content | base64 --decode > "$RUNNER_TEMP/${script}"
+            if ! content="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.github/scripts/${script}?ref=${TRUSTED_REF}" \
+              --jq .content 2> "$RUNNER_TEMP/loc-script-error")"; then
+              if [[ "$(cat "$RUNNER_TEMP/loc-script-error")" == *'HTTP 404'* ]]; then
+                echo '::notice::The default branch has no trusted test LoC reporter yet; no PR code was executed.'
+                exit 0
+              fi
+              cat "$RUNNER_TEMP/loc-script-error" >&2
+              exit 1
+            fi
+            printf '%s' "$content" | base64 --decode > "$RUNNER_TEMP/${script}"
           done
           node "$RUNNER_TEMP/pr-test-loc-summary.mjs" --update-pr "$PR_NUMBER"

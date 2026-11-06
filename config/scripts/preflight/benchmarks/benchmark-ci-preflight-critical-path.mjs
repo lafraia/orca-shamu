@@ -109,9 +109,19 @@ const baselineName =
     : comparison === 'typecheck'
       ? 'run-typecheck-projects-in-parallel.mjs'
       : 'check-main-sync-spawn-ratchet.mjs'
+const baselinePath = baselineScriptPath(`config/scripts/${baselineName}`)
+if (
+  runProcessSync({ program: 'git', args: ['cat-file', '-e', `HEAD^1:${baselinePath}`], cwd: root })
+    .code !== 0
+) {
+  report.skippedReason = `The first parent has no comparable ${baselineName}; this is an initial import.`
+  save()
+  console.log(report.skippedReason)
+  process.exit(0)
+}
 const baselineFile = path.join(
   root,
-  path.dirname(baselineScriptPath(`config/scripts/${baselineName}`)),
+  path.dirname(baselinePath),
   `.benchmark-baseline-${baselineName}`
 )
 const runnerFile = path.join(output, 'baseline-smoke-runner.mjs')
