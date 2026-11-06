@@ -67,7 +67,8 @@ test('the sidebar follows live work and pending questions even while another bot
     await expect(
       researcher.getByRole('img', { name: 'Waiting for input', exact: true })
     ).toHaveCount(0)
-    await expect(researcher.getByRole('img', { name: 'Done', exact: true })).toBeVisible()
+    await expect(chat.getByRole('button', { name: 'Stop the agent', exact: true })).toHaveCount(0)
+    await expect(researcher.getByRole('img', { name: 'Done', exact: true })).toHaveCount(0)
   } finally {
     await client.dispose()
   }

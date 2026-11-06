@@ -95,6 +95,7 @@
   --color-dialog-surface: var(--dialog-surface);
   --color-agent-question: var(--agent-question);
   --color-agent-working: var(--agent-working);
+  --color-chat-unread: var(--chat-unread);
   --color-agent-question-text: var(--agent-question-text);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -269,6 +270,7 @@
   --worktree-sidebar-accent-foreground: #171717;
   --worktree-sidebar-border: #e5e5e5;
   --worktree-sidebar-ring: #a1a1a1;
+  --chat-unread: var(--color-blue-500);
   --sidebar: #fafafa;
   --sidebar-foreground: #0a0a0a;
   --sidebar-primary: #171717;
@@ -387,6 +389,7 @@
      aren't brighter than the rest of the UI in dark mode (#5906). */
   --worktree-sidebar-border: rgb(255 255 255 / 0.07);
   --worktree-sidebar-ring: #737373;
+  --chat-unread: var(--color-blue-400);
   --sidebar: #171717;
   --sidebar-foreground: #f0f0f0;
   --sidebar-primary: #1447e6;

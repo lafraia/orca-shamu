@@ -57,16 +57,19 @@ export function BotSidebarRow({
           }}
           onClick={() => openProjectChannel(channel.id)}
           className={cn(
-            'flex min-w-0 flex-1 cursor-grab touch-manipulation items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'group/bot-row flex min-w-0 flex-1 cursor-grab touch-manipulation items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             selected && 'bg-worktree-sidebar-accent'
           )}
         >
-          <BotLiveAvatar
-            id={channel.id}
-            identity={channel.identity}
-            member={member ?? undefined}
-            className={channel.pinned ? 'size-12' : 'size-7 rounded-lg'}
-          />
+          <span className="relative inline-flex shrink-0">
+            <BotLiveAvatar
+              id={channel.id}
+              identity={channel.identity}
+              member={member ?? undefined}
+              className={channel.pinned ? 'size-12' : 'size-7 rounded-lg'}
+            />
+            <BotUnreadDot count={count} />
+          </span>
           <span
             className={cn(
               'min-w-0 flex-1 truncate font-medium',
@@ -76,7 +79,6 @@ export function BotSidebarRow({
             {channel.name}
           </span>
           {member ? <BotSidebarStatus member={member} /> : null}
-          <BotUnreadDot count={count} />
         </button>
       </BotSidebarActions>
     </div>
