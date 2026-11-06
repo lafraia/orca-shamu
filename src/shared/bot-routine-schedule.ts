@@ -50,12 +50,11 @@ function calendarOccurrence(
   const firstDay = Math.floor(wallNow / DAY) * DAY
   const hours =
     rule.kind === 'cron'
-      ? [...rule.hours].toSorted((a, b) => a - b)
+      ? [...rule.hours].sort((a, b) => a - b)
       : rule.freq === 'HOURLY'
         ? Array.from({ length: 24 }, (_, index) => index)
         : [rule.byHour]
-  const minutes =
-    rule.kind === 'cron' ? [...rule.minutes].toSorted((a, b) => a - b) : [rule.byMinute]
+  const minutes = rule.kind === 'cron' ? [...rule.minutes].sort((a, b) => a - b) : [rule.byMinute]
   for (
     let day = firstDay;
     Math.abs(day - firstDay) <= DAY * 9 * 366 && (direction === 1 || day + 2 * DAY > anchor);
@@ -95,7 +94,7 @@ function calendarOccurrence(
         }
       }
     }
-    const next = candidates.toSorted((a, b) => (a - b) * direction)[0]
+    const next = candidates.sort((a, b) => (a - b) * direction)[0]
     if (next !== undefined) {
       return next
     }

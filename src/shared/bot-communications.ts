@@ -39,5 +39,5 @@ export type BotCommunicationText = {
 export const botCommunicationPairKey = (entry: BotCommunication): string =>
   JSON.stringify([
     entry.environmentId,
-    ...[entry.source.sessionId, entry.recipient.sessionId].toSorted()
+    ...[entry.source.sessionId, entry.recipient.sessionId].sort()
   ])
