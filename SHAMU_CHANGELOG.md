@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Retain shared request hooks while live renderer windows need proof validation, release them with the last live window and preserve active browser consumers.
 - Complete bot provisioning when a successful host reply omits its optional tab ID, retaining the persisted tab identity.
 - Read project-channel agent controllers through stable callbacks that follow committed state, avoiding speculative render-time ref mutations.
 - Invalidate Vault operations when panel visibility commits, keeping render work free of ref mutations and preventing late results after closure.

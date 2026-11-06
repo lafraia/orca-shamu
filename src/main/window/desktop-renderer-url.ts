@@ -7,12 +7,8 @@ import {
   verifyShamuLiveProof
 } from '../../shared/shamu-live-renderer'
 import { isShamuClientMode } from '../startup/shamu-client-mode'
-import { registerShamuLiveWindow } from './shamu-live-request-guard'
 import { ensureBrowserSessionUserAgentPolicy } from '../browser/identity/browser-session-ua'
-import {
-  installBrowserSessionHeadersReceived,
-  installBrowserSessionRequestLifecycle
-} from '../browser/sessions/requests/browser-session-request-decisions'
+import { registerShamuLiveBrowserSession } from '../browser/sessions/requests/browser-session-request-decisions'
 
 function liveRenderer() {
   if (!process.env.ORCA_SHAMU_RENDERER_URL && !process.env.ORCA_SHAMU_LIVE_TOKEN) {
@@ -37,11 +33,9 @@ export function loadDesktopRenderer(
   if (live) {
     const contents = window.webContents
     const session = contents.session
-    const unregister = registerShamuLiveWindow(session, contents.id, live)
+    const unregister = registerShamuLiveBrowserSession(session, contents.id, live)
     contents.once('destroyed', unregister)
     ensureBrowserSessionUserAgentPolicy(session)
-    installBrowserSessionHeadersReceived(session)
-    installBrowserSessionRequestLifecycle(session)
     return desktopRendererUrl(entry).then((url) => {
       if (!url) {
         throw new Error('The Shamu live renderer is unavailable.')
