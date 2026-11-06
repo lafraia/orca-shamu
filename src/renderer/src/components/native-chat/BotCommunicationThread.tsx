@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sheet'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { motionSafeScrollBehavior } from '@/hooks/usePrefersReducedMotion'
+import { useBotCommunicationMessageFocus } from './use-bot-communication-message-focus'
 import {
   botCommunicationPairKey,
   type BotCommunication,
@@ -55,7 +55,8 @@ export function BotCommunicationThread({
   const [attempt, setAttempt] = useState(0)
   const [peers, setPeers] = useState<Record<string, BotCommunicationPeerSnapshot>>({})
   const selectedElement = useRef<HTMLElement | null>(null)
-  const scrolled = useRef<string | null>(null)
+  const viewportRef = useRef<HTMLDivElement | null>(null)
+  const contentRef = useRef<HTMLDivElement | null>(null)
   const settings = useAppStore((state) => state.settings)
   const appearance = useNativeChatAppearanceStyle(settings)
   const pair = botCommunicationPairKey(selected)
@@ -213,13 +214,14 @@ export function BotCommunicationThread({
       })),
     [shown, texts, peers, source, recipient]
   )
-  useEffect(() => {
-    if (loading || scrolled.current === selected.id || !selectedElement.current) {
-      return
-    }
-    scrolled.current = selected.id
-    selectedElement.current.scrollIntoView({ block: 'start', behavior: motionSafeScrollBehavior() })
-  }, [loading, posts, selected.id])
+  useBotCommunicationMessageFocus({
+    open,
+    ready: !loading,
+    selectionId: selected.id,
+    viewportRef,
+    contentRef,
+    selectedRef: selectedElement
+  })
   const replied = Object.values(peers).some((peer) =>
     peer.replies.some(({ entry }) => entry.id === selected.id)
   )
@@ -267,70 +269,75 @@ export function BotCommunicationThread({
             </SheetDescription>
           </SheetHeader>
         </div>
-        <div className="scrollbar-sleek min-h-0 flex-1 overflow-y-auto p-5">
-          {error ? (
-            <div
-              role="alert"
-              className="mb-5 flex items-center justify-between gap-3 text-sm text-chat-warning"
-            >
-              <span>{error}</span>
-              <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
-                <RefreshCw />
-                {translate('shamu.communication.retry', 'Retry')}
+        <div ref={viewportRef} className="scrollbar-sleek min-h-0 flex-1 overflow-y-auto p-5">
+          <div ref={contentRef}>
+            {error ? (
+              <div
+                role="alert"
+                className="mb-5 flex items-center justify-between gap-3 text-sm text-chat-warning"
+              >
+                <span>{error}</span>
+                <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
+                  <RefreshCw />
+                  {translate('shamu.communication.retry', 'Retry')}
+                </Button>
+              </div>
+            ) : null}
+            {pairEntries.length > count ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mb-5"
+                onClick={() => setCount((value) => value + 20)}
+              >
+                {translate('shamu.communication.earlier', 'Load earlier communication')}
               </Button>
-            </div>
-          ) : null}
-          {pairEntries.length > count ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mb-5"
-              onClick={() => setCount((value) => value + 20)}
-            >
-              {translate('shamu.communication.earlier', 'Load earlier communication')}
-            </Button>
-          ) : null}
-          {loading && !posts.length ? (
-            <CommunicationSkeleton />
-          ) : (
-            <div className="space-y-8">
-              {posts.map((post) => (
-                <CommunicationPost
-                  key={post.id}
-                  post={post}
-                  selectedRef={
-                    post.request && post.entryId === selected.id ? selectedElement : undefined
-                  }
+            ) : null}
+            {loading && !posts.length ? (
+              <CommunicationSkeleton />
+            ) : (
+              <div className="space-y-8">
+                {posts.map((post) => (
+                  <CommunicationPost
+                    key={post.id}
+                    post={post}
+                    selectedRef={
+                      post.request && post.entryId === selected.id ? selectedElement : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )}
+            {!loading && !error && !replied ? (
+              <p className="mt-6 text-sm text-chat-foreground-faint">
+                {mixed
+                  ? translate(
+                      'shamu.communication.sharedTurn',
+                      'This reply shares a turn with your message. Open the original chat to read it in context.'
+                    )
+                  : selected.state === 'refused'
+                    ? translate(
+                        'shamu.communication.notDelivered',
+                        'The message was not delivered. Open the original chat to check its status.'
+                      )
+                    : translate(
+                        'shamu.communication.noReply',
+                        'No reply in the loaded history yet.'
+                      )}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {sessions.map((sessionId) => (
+                <BotCommunicationPeer
+                  key={sessionId}
+                  sessionId={sessionId}
+                  target={target}
+                  entries={baseEntries}
+                  selected={selected}
+                  onSnapshot={receive}
                 />
               ))}
             </div>
-          )}
-          {!loading && !error && !replied ? (
-            <p className="mt-6 text-sm text-chat-foreground-faint">
-              {mixed
-                ? translate(
-                    'shamu.communication.sharedTurn',
-                    'This reply shares a turn with your message. Open the original chat to read it in context.'
-                  )
-                : selected.state === 'refused'
-                  ? translate(
-                      'shamu.communication.notDelivered',
-                      'The message was not delivered. Open the original chat to check its status.'
-                    )
-                  : translate('shamu.communication.noReply', 'No reply in the loaded history yet.')}
-            </p>
-          ) : null}
-          <div className="mt-5 flex flex-wrap gap-2">
-            {sessions.map((sessionId) => (
-              <BotCommunicationPeer
-                key={sessionId}
-                sessionId={sessionId}
-                target={target}
-                entries={baseEntries}
-                selected={selected}
-                onSnapshot={receive}
-              />
-            ))}
           </div>
         </div>
       </SheetContent>

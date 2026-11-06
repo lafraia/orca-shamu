@@ -24023,6 +24023,9 @@
       "received": "Received from CLI"
     },
     "communication": {
+      "messageTo": "Message to",
+      "openFullConversation": "View full conversation",
+      "previewFailed": "Could not load this message.",
       "readFailed": "Could not read replies. Open the original chat to inspect its history.",
       "earlierReplies": "Load earlier replies",
       "incomplete": "Some communication records are unavailable.",

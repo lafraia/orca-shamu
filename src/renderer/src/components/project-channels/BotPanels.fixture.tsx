@@ -11,6 +11,7 @@ import { BotMemoryPanel } from './BotMemoryPanel'
 import { BotRoutinesPanel } from './BotRoutinesPanel'
 import { VaultPanel } from './vault/VaultPanel'
 import { useProjectChannels } from './project-channel-store'
+import { BotCommunicationRow } from '../native-chat/BotCommunicationRow'
 
 const channel: ProjectChannel = {
   id: 'coordinator',
@@ -39,6 +40,29 @@ const entry: BotCommunication = {
     itemId: 'question',
     blocks: [{ type: 'text', text: '@Release specialist, what is the status of `example/app#33`?' }]
   }
+}
+
+const history: BotCommunication[] = Array.from({ length: 36 }, (_, index) => ({
+  ...entry,
+  id: `exchange-${index}`,
+  referenceId: `exchange-${index}`,
+  createdAt: 1_800_000_000_000 + index * 60_000,
+  native: {
+    itemId: `message-${index}`,
+    blocks: [
+      {
+        type: 'text',
+        text: `**Consultation ${index}.**\n\n${'The release review is complete. Tests passed and the next step is ready.\n\n'.repeat(4)}`
+      }
+    ]
+  }
+}))
+const storedEntry: BotCommunication = {
+  ...entry,
+  id: 'stored-message',
+  referenceId: 'stored-message',
+  native: undefined,
+  createdAt: 1_800_000_000_000
 }
 
 const vaultSnapshot: VaultSnapshot = {
@@ -135,8 +159,13 @@ export const drawers = defineFixture({
         scheduler: 'running'
       }),
       communications: {
-        read: async () => ({ entries: [entry], incomplete: false }),
-        texts: async () => [],
+        read: async () => ({ entries: [entry, ...history, storedEntry], incomplete: false }),
+        texts: async () => [
+          {
+            referenceId: storedEntry.referenceId,
+            text: `Release review notes.\n\n${'A detailed note stays inside the message preview rather than filling the main conversation.\n\n'.repeat(24)}`
+          }
+        ],
         onChanged: () => () => {}
       }
     }
@@ -153,4 +182,37 @@ export const drawers = defineFixture({
       <Controls />
     </BotCommunicationProvider>
   )
+})
+
+export const communicationCards = defineFixture({
+  ...drawers,
+  width: 720,
+  render: () => (
+    <BotCommunicationProvider
+      sessionId={entry.recipient.sessionId}
+      target={{ kind: 'environment', environmentId: 'fixture' }}
+      isVisible
+    >
+      <div className="native-chat-appearance space-y-4 bg-chat-canvas p-5 text-sm text-chat-foreground">
+        <p>The coordinator is collecting the release updates.</p>
+        <BotCommunicationRow
+          row={{ entry: history[18], direction: 'incoming', state: 'replied' }}
+        />
+        <p>Your conversation continues here, independently of the bot exchange.</p>
+        <BotCommunicationRow
+          row={{ entry: history[30], direction: 'outgoing', state: 'working' }}
+        />
+        <BotCommunicationRow row={{ entry: storedEntry, direction: 'incoming', state: 'sent' }} />
+      </div>
+    </BotCommunicationProvider>
+  )
+})
+export const narrowCommunication = defineFixture({ ...communicationCards, width: 360 })
+export const expandedCommunication = defineFixture({
+  ...communicationCards,
+  interact: (frame) => {
+    const triggers = frame.querySelectorAll<HTMLButtonElement>('button[aria-expanded="false"]')
+    triggers[0]?.click()
+    triggers[2]?.click()
+  }
 })

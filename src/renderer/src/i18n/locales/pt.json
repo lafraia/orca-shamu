@@ -23687,6 +23687,11 @@
     "preferencesError": "Não foi possível importar as configurações da interface.",
     "title": "Orca Shamu",
     "liveReload": "Atualização ao vivo",
+    "communication": {
+      "messageTo": "Mensagem para",
+      "openFullConversation": "Ver conversa completa",
+      "previewFailed": "Não foi possível carregar esta mensagem."
+    },
     "vault": {
       "unlockedTitle": "Vault desbloqueado",
       "lockedTitle": "Vault bloqueado",
