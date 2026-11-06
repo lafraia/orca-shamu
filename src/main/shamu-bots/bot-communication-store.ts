@@ -156,7 +156,8 @@ function communicationEntries(saved: BotMentionRecord, fallbackAt: number): BotC
               botId: receipt.botId,
               sessionId: receipt.sessionId,
               name: receipt.name,
-              operationId: receipt.operationId
+              operationId: receipt.operationId,
+              ...(receipt.messageId ? { messageId: receipt.messageId } : {})
             },
             actor: saved.origin ? 'bot' : saved.createdAt ? 'user' : 'unknown',
             state: receipt.state

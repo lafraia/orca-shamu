@@ -87,13 +87,14 @@ export function BotCommunicationProvider({
       sessionId,
       target,
       loaded,
+      isVisible,
       error,
       selectedPair: selected ? botCommunicationPairKey(selected) : null,
       open,
       close,
       retry
     }),
-    [snapshot, sessionId, target, loaded, error, selected, open, close, retry]
+    [snapshot, sessionId, target, loaded, isVisible, error, selected, open, close, retry]
   )
   if (!enabled) {
     return <>{children}</>

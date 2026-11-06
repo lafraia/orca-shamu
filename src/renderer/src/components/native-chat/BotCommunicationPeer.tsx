@@ -43,7 +43,8 @@ export function BotCommunicationPeer({
   )
   const paged = useRef(0)
   const queued = state.queuedMessages?.some(
-    (message) => message.messageId === selected.recipient.operationId
+    (message) =>
+      message.messageId === (selected.recipient.messageId ?? selected.recipient.operationId)
   )
   useEffect(() => {
     onSnapshot(sessionId, snapshot)

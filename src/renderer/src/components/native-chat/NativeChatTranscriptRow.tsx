@@ -1,4 +1,8 @@
 import { BotCommunicationRow, BotCommunicationRowsContext } from './BotCommunicationRow'
+import {
+  BotCommunicationSummary,
+  BotCommunicationSummariesContext
+} from './BotCommunicationSummary'
 import { memo, useContext } from 'react'
 import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
 import { cn } from '@/lib/utils'
@@ -55,6 +59,9 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
   // Offered only on the conversation's own turn-opening prompts (`nativeChatRowOffersRewind`).
   const rewind = useContext(NativeChatRewindContext)
   const communication = useContext(BotCommunicationRowsContext).get(
+    slot.kind === 'message' ? slot.message.id : ''
+  )
+  const summary = useContext(BotCommunicationSummariesContext).get(
     slot.kind === 'message' ? slot.message.id : ''
   )
   if (communication) {
@@ -171,6 +178,7 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
         />
       )}
       {slot.statusAbove ? null : turnHeader}
+      {summary && message.role === 'user' ? <BotCommunicationSummary entries={summary} /> : null}
       {turnDiff ? (
         <NativeChatTurnDiffRollup diff={turnDiff} onLinkClick={context.onLinkClick} />
       ) : null}

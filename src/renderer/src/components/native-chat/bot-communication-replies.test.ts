@@ -124,5 +124,123 @@ describe('the internal communication reader', () => {
     })
     expect(view.mixed.has(entry.id)).toBe(true)
     expect(view.replies).toEqual([])
+    expect(view.states.get(entry.id)).toBe('unconfirmed')
+  })
+  it('tracks the requested peer turn through running, human input, completion and interruption', () => {
+    const running = {
+      ...turn,
+      body: {
+        ...turn.body,
+        kind: 'turn' as const,
+        turnId: 'provider-turn',
+        userItemId: prompt.itemId,
+        state: 'running' as const
+      }
+    }
+    const read = (items: AgentJournalRenderItem[], actionablePromptIds: string[] = []) =>
+      botCommunicationReplies('dev', [entry], {
+        ...EMPTY_STRUCTURED_AGENT_SESSION,
+        status: 'ready',
+        items,
+        submissions: [submission],
+        actionablePromptIds
+      }).states.get(entry.id)
+    expect(read([prompt, running, answer])).toBe('working')
+    const approval = item('approval', 4, {
+      kind: 'approval',
+      title: 'Approve command',
+      detail: null,
+      options: [],
+      resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
+    })
+    expect(read([prompt, running, answer, approval], ['approval'])).toBe('waiting')
+    expect(
+      read([
+        prompt,
+        {
+          ...turn,
+          body: {
+            kind: 'turn',
+            turnId: 'provider-turn',
+            userItemId: prompt.itemId,
+            state: 'completed',
+            outcome: 'success'
+          }
+        },
+        answer
+      ])
+    ).toBe('replied')
+    expect(
+      read([
+        prompt,
+        {
+          ...turn,
+          body: {
+            kind: 'turn',
+            turnId: 'provider-turn',
+            userItemId: prompt.itemId,
+            state: 'interrupted'
+          }
+        },
+        answer
+      ])
+    ).toBe('failed')
+    expect(read([prompt, turn, answer])).toBe('unconfirmed')
+    expect(read([answer])).toBe('unconfirmed')
+  })
+  it('uses the recorded native message ID for queued and completed requests', () => {
+    const queued = {
+      ...entry,
+      recipient: { ...entry.recipient, messageId: 'actual-native-message' }
+    }
+    const read = (state: Partial<typeof EMPTY_STRUCTURED_AGENT_SESSION>) =>
+      botCommunicationReplies('dev', [queued], {
+        ...EMPTY_STRUCTURED_AGENT_SESSION,
+        status: 'ready',
+        ...state
+      }).states.get(entry.id)
+    expect(
+      read({
+        queuedMessages: [
+          {
+            messageId: 'actual-native-message',
+            position: 0,
+            body: { kind: 'message', role: 'user', blocks: [] },
+            state: 'waiting'
+          }
+        ]
+      })
+    ).toBe('queued')
+    expect(
+      read({
+        queuedMessages: [
+          {
+            messageId: 'actual-native-message',
+            position: 0,
+            body: { kind: 'message', role: 'user', blocks: [] },
+            state: 'returned'
+          }
+        ]
+      })
+    ).toBe('unconfirmed')
+    expect(
+      read({
+        items: [
+          prompt,
+          {
+            ...turn,
+            body: {
+              kind: 'turn',
+              turnId: 'provider-turn',
+              userItemId: prompt.itemId,
+              state: 'completed',
+              outcome: 'success'
+            }
+          },
+          answer
+        ],
+        submissions: [{ ...submission, queuedMessageId: 'actual-native-message' }]
+      })
+    ).toBe('replied')
   })
 })

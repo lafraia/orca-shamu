@@ -44,7 +44,7 @@ export function BotCommunicationRow({ row }: { row: Row }): React.JSX.Element {
   const status =
     row.state === 'working'
       ? 'working'
-      : row.state === 'refused'
+      : row.state === 'refused' || row.state === 'failed'
         ? 'failed'
         : row.state === 'replied'
           ? 'completed'
@@ -70,7 +70,9 @@ export function BotCommunicationRow({ row }: { row: Row }): React.JSX.Element {
     replied: translate('shamu.communication.replied', 'Replied'),
     queued: translate('shamu.communication.queued', 'Queued'),
     refused: translate('shamu.communication.refused', 'Not delivered'),
-    unconfirmed: translate('shamu.communication.unconfirmed', 'Check delivery')
+    unconfirmed: translate('shamu.communication.unconfirmed', 'Check delivery'),
+    waiting: translate('shamu.communication.needsInput', 'Needs input'),
+    failed: translate('shamu.communication.failed', 'Reply not completed')
   }
   if (row.entry.cli) {
     return (

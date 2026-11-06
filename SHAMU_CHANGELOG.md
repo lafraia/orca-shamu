@@ -16,6 +16,7 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Integrate consulted chats into the originating answer with grouped bot avatars, clickable exchanges and native reply, queue and human-input status, without marking those peer chats as read.
 - Keep successful bot mentions quiet by removing their sending and confirmation toasts, while retaining delivery warnings and retryable errors.
 - Return the responding bot's canonical name and chat reference with consultation results, and bundle an on-demand reply skill for concise source attribution, evidence and qualified estimates across configured providers.
 - Keep bot-chat mentions with the coordinator, add attributed first-person peer consultations through `bots ask` and `bots ask-result`, and read the requested native turn's result without forwarding the user's message or copying source history into the peer prompt.

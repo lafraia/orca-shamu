@@ -6,6 +6,7 @@ import { nativeChatTurnMembership } from '../../../../shared/native-chat/transcr
 import { projectStructuredAgentSessionMessages } from './structured-agent-session-message-projection'
 import { nativeChatBotCommunicationTurns } from './native-chat-bot-communication-turns'
 import type { createNativeBotCommunicationProjection } from './native-bot-communications'
+import { botCommunicationReplyStates } from './bot-communication-reply-states'
 
 export function botCommunicationReplies(
   sessionId: string,
@@ -37,23 +38,32 @@ export function botCommunicationReplies(
     state.submissions,
     items
   )
+  const replies = messages.flatMap((message, index) => {
+    const key = turnKeys[index]
+    const entry = key ? turns.get(key) : undefined
+    return key &&
+      entry &&
+      !mixed.has(key) &&
+      message.role === 'assistant' &&
+      message.blocks.some(
+        (block) =>
+          (block.type === 'text' && block.text.trim().length > 0) || block.type === 'image-ref'
+      )
+      ? [{ entry, message }]
+      : []
+  })
   return {
     nativeEntries,
     found: new Set([...prompts.values()].map((entry) => entry.id)),
     mixed: new Set([...mixed].flatMap((key) => turns.get(key)?.id ?? [])),
-    replies: messages.flatMap((message, index) => {
-      const key = turnKeys[index]
-      const entry = key ? turns.get(key) : undefined
-      return key &&
-        entry &&
-        !mixed.has(key) &&
-        message.role === 'assistant' &&
-        message.blocks.some(
-          (block) =>
-            (block.type === 'text' && block.text.trim().length > 0) || block.type === 'image-ref'
-        )
-        ? [{ entry, message }]
-        : []
-    })
+    replies,
+    states: botCommunicationReplyStates(
+      sessionId,
+      combined,
+      state,
+      turns,
+      mixed,
+      replies.map(({ entry }) => entry.id)
+    )
   }
 }

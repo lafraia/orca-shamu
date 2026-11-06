@@ -12,7 +12,7 @@ export type BotCommunication = {
   environmentId: string
   createdAt: number
   source: BotCommunicationParticipant & { itemId?: string }
-  recipient: BotCommunicationParticipant & { operationId: string }
+  recipient: BotCommunicationParticipant & { operationId: string; messageId?: string }
   actor: 'user' | 'bot' | 'workspace' | 'cli' | 'unknown'
   cli?: { text: string; sender: string }
   state: 'ready' | 'issued' | 'recorded' | 'refused' | 'unconfirmed'

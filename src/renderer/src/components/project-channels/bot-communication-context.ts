@@ -9,6 +9,7 @@ export type BotCommunicationContextValue = BotCommunicationSnapshot & {
   sessionId: string
   target: RuntimeClientTarget
   loaded: boolean
+  isVisible?: boolean
   error: string | null
   selectedPair: string | null
   open: (entry: BotCommunication) => void

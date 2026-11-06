@@ -18,6 +18,8 @@ export type BotCommunicationRowState =
   | 'queued'
   | 'refused'
   | 'unconfirmed'
+  | 'waiting'
+  | 'failed'
 export type BotCommunicationRow = {
   entry: BotCommunication
   direction: 'incoming' | 'outgoing'
@@ -79,6 +81,7 @@ export function nativeChatBotCommunicationSlots(
   const hiddenPromptIds = new Set<string>()
   const hiddenMessageIds = new Set<string>()
   const headers = new Map<string, BotCommunicationRow>()
+  const summaries = new Map<string, BotCommunication[]>()
   const drawn = new Set<string>()
   const output: NativeChatTranscriptSlot[] = []
   const replies = new Set(
@@ -127,6 +130,33 @@ export function nativeChatBotCommunicationSlots(
   const outgoing = entries.filter((entry) => entry.source.sessionId === sessionId)
   for (const entry of outgoing) {
     const anchor = entry.source.itemId
+    const sourceIndex = anchor
+      ? rows.messages.findIndex(
+          (message, index) => message.id === anchor || rows.turnKeys[index] === anchor
+        )
+      : -1
+    const sourceTurn = sourceIndex >= 0 ? rows.turnKeys[sourceIndex] : undefined
+    const answer = sourceTurn
+      ? output.findLast(
+          (slot) =>
+            slot.kind === 'message' &&
+            slot.depth === 0 &&
+            slot.drawsMessage &&
+            slot.turnKey === sourceTurn &&
+            slot.message.role === 'assistant' &&
+            slot.message.blocks.some(
+              (block) => block.type === 'text' && block.text.trim().length > 0
+            )
+        )
+      : undefined
+    const owner =
+      answer ?? output.find((slot) => slot.kind === 'message' && slot.message.id === anchor)
+    if (owner?.kind === 'message') {
+      const group = summaries.get(owner.message.id) ?? []
+      group.push(entry)
+      summaries.set(owner.message.id, group)
+      continue
+    }
     const at = anchor
       ? output.findLastIndex(
           (slot) =>
@@ -175,24 +205,39 @@ export function nativeChatBotCommunicationSlots(
     turns.has(rows.liveTurnKey) &&
     !turns.get(rows.liveTurnKey)?.cli &&
     !mixed.has(rows.liveTurnKey)
-  return { slots: output, headers, hiddenLiveTurn, hiddenMessageIds, hiddenPromptIds }
+  return { slots: output, headers, summaries, hiddenLiveTurn, hiddenMessageIds, hiddenPromptIds }
 }
 
 const EMPTY_IDS: ReadonlySet<string> = new Set()
 const EMPTY_HEADERS: ReadonlyMap<string, BotCommunicationRow> = new Map()
+const EMPTY_SUMMARIES: ReadonlyMap<string, readonly BotCommunication[]> = new Map()
 export function createNativeChatBotCommunicationProjection() {
   let headers = EMPTY_HEADERS
+  let summaries = EMPTY_SUMMARIES
   return (...args: Parameters<typeof nativeChatBotCommunicationSlots>) => {
     if (!args[1].length) {
       return {
         slots: args[0],
         headers: EMPTY_HEADERS,
+        summaries: EMPTY_SUMMARIES,
         hiddenLiveTurn: false,
         hiddenMessageIds: EMPTY_IDS,
         hiddenPromptIds: EMPTY_IDS
       }
     }
     const next = nativeChatBotCommunicationSlots(...args)
+    if (
+      summaries.size !== next.summaries.size ||
+      [...next.summaries].some(([id, entries]) => {
+        const previous = summaries.get(id)
+        return (
+          previous?.length !== entries.length ||
+          entries.some((entry, index) => previous[index] !== entry)
+        )
+      })
+    ) {
+      summaries = next.summaries
+    }
     if (
       headers.size !== next.headers.size ||
       [...next.headers].some(([id, row]) => {
@@ -206,6 +251,6 @@ export function createNativeChatBotCommunicationProjection() {
     ) {
       headers = next.headers
     }
-    return { ...next, headers }
+    return { ...next, headers, summaries }
   }
 }

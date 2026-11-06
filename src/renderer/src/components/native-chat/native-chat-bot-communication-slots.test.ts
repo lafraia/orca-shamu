@@ -157,14 +157,52 @@ describe('bot communication transcript separation', () => {
     expect(pasted.headers.size).toBe(0)
     expect(JSON.stringify(pasted.slots)).toContain('The user mentioned you')
   })
-  it('shows outgoing communication next to its source without suppressing the bot reply to the person', () => {
+  it('groups consulted peers under their own answer without attaching them to a later turn', () => {
     const view = project(
-      [message('human', 'user', 'Ask Dev to review'), message('reply', 'assistant', 'I asked Dev')],
-      ['human', 'human'],
+      [
+        message('human', 'user', 'Ask Dev to review'),
+        message('reply', 'assistant', 'I asked Dev'),
+        message('next-user', 'user', 'A separate question'),
+        message('next-reply', 'assistant', 'A separate answer')
+      ],
+      ['human', 'human', 'next-user', 'next-user'],
       'ceo-session'
     )
     expect(JSON.stringify(view.slots)).toContain('I asked Dev')
-    expect([...view.headers.values()]).toMatchObject([{ direction: 'outgoing', state: 'sent' }])
+    expect([...view.summaries].map(([id, entries]) => [id, entries.map((row) => row.id)])).toEqual([
+      ['reply', ['cbe8f90b-af62-4ee2-9323-28c09f0d6001:dev']]
+    ])
+    expect(view.headers.size).toBe(0)
+    const rows = {
+      messages: [message('human', 'user', 'Ask Dev and QA')],
+      turnKeys: ['human'],
+      liveTurnKey: 'human'
+    }
+    const slots = buildNativeChatTranscriptSlots({
+      ...rows,
+      receipts: new Map(),
+      turnStatuses: { active: null, completedByTurn: {} },
+      turnDiffs: new Map(),
+      expandedTurnKeys: new Set(),
+      isWorking: true,
+      lifecycleWorking: true
+    })
+    const pending = createNativeChatBotCommunicationProjection()(
+      slots,
+      [
+        entry,
+        {
+          ...entry,
+          id: 'second:qa',
+          recipient: { ...entry.recipient, botId: 'qa', name: 'QA', sessionId: 'qa-session' }
+        }
+      ],
+      'ceo-session',
+      rows,
+      [],
+      true
+    )
+    expect(pending.summaries.get('human')?.map((row) => row.recipient.botId)).toEqual(['dev', 'qa'])
   })
   it('keeps row context stable while an internal answer streams', () => {
     const id = agentJournalSubmissionKey(operationId)

@@ -1,4 +1,9 @@
 import { cn } from '@/lib/utils'
+import { useContext } from 'react'
+import {
+  BotCommunicationSummary,
+  BotCommunicationSummariesContext
+} from './BotCommunicationSummary'
 import type { NativeChatMessage } from '../../../../shared/native-chat/native-chat-types'
 import type { deriveNativeChatRowContent } from '../../../../shared/native-chat/transcript/native-chat-row-content'
 import type { MessageRowProps } from './NativeChatMessageRow'
@@ -46,6 +51,7 @@ export function NativeChatAssistantMessageRow({
     runtimeContext
   } = props
   const { markdown, prose } = content
+  const communications = useContext(BotCommunicationSummariesContext).get(message.id)
   const toolRun = toolRunProps(props, content, run)
   const isSystem = message.role === 'system'
   // A thought heading a run reads inside it, so the row has no words of its own.
@@ -87,6 +93,7 @@ export function NativeChatAssistantMessageRow({
         />
       ) : null}
       {toolRun ? <NativeChatToolRun {...toolRun} /> : null}
+      {communications ? <BotCommunicationSummary entries={communications} /> : null}
       {showControls ? (
         <NativeChatAgentControls
           markdown={words}

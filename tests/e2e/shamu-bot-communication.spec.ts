@@ -137,7 +137,6 @@ test('separates bidirectional bot communication, preserves personal messages and
     )
     await mention(ceo, dev, `Can you review the launch plan?\n\n![Launch plan](${imagePath})`)
     await expect(ceoChat.locator('[data-bot-communication]')).toHaveCount(1)
-    await expect(ceoChat).toContainText('Messaged Dev: Vagalume')
     await page.getByRole('button', { name: 'Dev: Vagalume', exact: true }).click()
     const devChat = page.getByRole('region', { name: 'Dev: Vagalume', exact: true })
     await expect(devChat.locator('[data-bot-communication]')).toHaveCount(1)

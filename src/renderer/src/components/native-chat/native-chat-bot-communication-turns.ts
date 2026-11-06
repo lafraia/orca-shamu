@@ -40,9 +40,15 @@ export function nativeChatBotCommunicationTurns(
   items: readonly AgentJournalRenderItem[] = []
 ) {
   const incoming = entries.filter((entry) => entry.recipient.sessionId === sessionId)
-  const operations = new Map(incoming.map((entry) => [entry.recipient.operationId, entry]))
+  const operations = new Map(
+    incoming.flatMap((entry) =>
+      [entry.recipient.operationId, entry.recipient.messageId ?? entry.recipient.operationId].map(
+        (id) => [id, entry] as const
+      )
+    )
+  )
   const aliases = new Map(
-    incoming.map((entry) => [agentJournalSubmissionKey(entry.recipient.operationId), entry])
+    [...operations].map(([id, entry]) => [agentJournalSubmissionKey(id), entry])
   )
   for (const entry of incoming) {
     if (entry.native) {
