@@ -101,7 +101,7 @@ export function useNativeChatExternalAttachments({
         stagingScope: structuredSession.attachmentStagingScope
       }
     }
-    if (structuredWorktreeId && structuredSession?.runtimeEnvironmentId) {
+    if (structuredSession?.runtimeEnvironmentId) {
       if (structuredSession.sessionPending) {
         return { kind: 'not-ready', notice: structuredSession.sessionPendingNotice }
       }

@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Route dropped, selected and pasted bot attachments through their known paired session even when the frontend has no registered workspace tab, preserving upload capability and pairing checks.
 - Match inline bot and resource references to the chat's existing highlights, and keep bot communication, Memory and Routines drawers mounted through their dismissal animation. Preserve immediate Vault cleanup while sharing the corrected sheet exit lifecycle.
 - Extend bot hover and selection across the whole sidebar row, with pinned indicators and action menus sharing one aligned trailing slot.
 - Retain shared request hooks while live renderer windows need proof validation, release them with the last live window and preserve active browser consumers.
