@@ -1,5 +1,6 @@
-import { MessagesSquare } from 'lucide-react'
+import { ArrowLeftRight, MessagesSquare } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 import type { BotCommunicationParticipant } from '../../../../shared/bot-communications'
 import type { NativeChatBlock } from '../../../../shared/native-chat/native-chat-types'
 import { BotAvatar } from '../project-channels/BotAvatar'
@@ -26,11 +27,13 @@ export type CommunicationPostData = {
 export function CommunicationParticipant({
   participant,
   onOpen,
-  available
+  available,
+  className
 }: {
   participant: BotCommunicationParticipant
   onOpen: () => void
   available?: boolean
+  className?: string
 }): React.JSX.Element {
   const identity = useProjectChannels(
     (state) => state.snapshot.channels.find((bot) => bot.id === participant.botId)?.identity
@@ -40,7 +43,10 @@ export function CommunicationParticipant({
       type="button"
       disabled={available === false || (!participant.botId && available !== true)}
       onClick={onOpen}
-      className="flex min-w-0 items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(
+        'flex min-w-0 items-center gap-1.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        className
+      )}
     >
       {participant.botId ? (
         <BotAvatar id={participant.botId} identity={identity} className="size-6 rounded-md" />
@@ -49,6 +55,25 @@ export function CommunicationParticipant({
       )}
       <span className="truncate">{participant.name}</span>
     </button>
+  )
+}
+
+export function CommunicationPair({
+  source,
+  recipient
+}: {
+  source: React.ComponentProps<typeof CommunicationParticipant>
+  recipient: React.ComponentProps<typeof CommunicationParticipant>
+}): React.JSX.Element {
+  return (
+    <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-chat-user-border bg-chat-user-surface px-3 py-2">
+      <CommunicationParticipant
+        {...source}
+        className={cn('max-w-1/2 shrink-0', source.className)}
+      />
+      <ArrowLeftRight aria-hidden className="size-3.5 shrink-0 text-chat-foreground-faint" />
+      <CommunicationParticipant {...recipient} />
+    </span>
   )
 }
 
@@ -69,11 +94,23 @@ export function CommunicationPost({
     .map((block) => block.text)
     .join('\n\n')
   return (
-    <article ref={selectedRef} className="group flex gap-3" data-communication-message={post.id}>
+    <article
+      ref={selectedRef}
+      aria-label={translate('shamu.communication.postFrom', 'Message from {{name}}', {
+        name: post.author.name
+      })}
+      className="group flex items-end gap-3"
+      data-communication-message={post.id}
+    >
       {post.author.botId ? (
         <BotAvatar id={post.author.botId} identity={identity} className="size-7" />
       ) : (
-        <MessagesSquare aria-hidden className="mt-1 size-5 shrink-0 text-chat-foreground-faint" />
+        <span
+          aria-hidden
+          className="inline-flex size-7 shrink-0 items-center justify-center text-chat-foreground-faint"
+        >
+          <MessagesSquare className="size-4" />
+        </span>
       )}
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs text-chat-foreground-faint">
@@ -86,22 +123,24 @@ export function CommunicationPost({
             {post.at > 0 ? <NativeChatMessageTimestamp timestamp={post.at} /> : null}
           </span>
         </div>
-        <NativeChatMarkdownImageOwnerContext.Provider value={media}>
-          <NativeChatLinkPeekProvider fileLinkContext={media?.fileLinkContext ?? null}>
-            <NativeChatImageAttachments
-              blocks={post.blocks}
-              runtimeContext={runtimeContext}
-              enablePreview={Boolean(runtimeContext)}
-            />
-            {text ? (
-              <NativeChatMarkdown
-                content={text}
-                variant="document"
-                renderCodeBlock={NativeChatCodeBlock}
+        <div className="rounded-xl border border-chat-user-border bg-chat-user-surface px-3.5 py-2.5 text-sm text-chat-foreground">
+          <NativeChatMarkdownImageOwnerContext.Provider value={media}>
+            <NativeChatLinkPeekProvider fileLinkContext={media?.fileLinkContext ?? null}>
+              <NativeChatImageAttachments
+                blocks={post.blocks}
+                runtimeContext={runtimeContext}
+                enablePreview={Boolean(runtimeContext)}
               />
-            ) : null}
-          </NativeChatLinkPeekProvider>
-        </NativeChatMarkdownImageOwnerContext.Provider>
+              {text ? (
+                <NativeChatMarkdown
+                  content={text}
+                  variant="document"
+                  renderCodeBlock={NativeChatCodeBlock}
+                />
+              ) : null}
+            </NativeChatLinkPeekProvider>
+          </NativeChatMarkdownImageOwnerContext.Provider>
+        </div>
       </div>
     </article>
   )
@@ -115,12 +154,14 @@ export function CommunicationSkeleton(): React.JSX.Element {
       className="space-y-8"
     >
       {[0, 1].map((id) => (
-        <div key={id} aria-hidden className="flex gap-3">
+        <div key={id} aria-hidden className="flex items-end gap-3">
           <span className="size-7 shrink-0 rounded-lg bg-muted" />
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 space-y-2">
             <div className="h-3 w-24 rounded bg-muted" />
-            <div className="h-3 w-full rounded bg-muted" />
-            <div className="h-3 w-3/4 rounded bg-muted" />
+            <div className="space-y-3 rounded-xl border border-chat-user-border bg-chat-user-surface px-3.5 py-2.5">
+              <div className="h-3 w-full rounded bg-muted" />
+              <div className="h-3 w-3/4 rounded bg-muted" />
+            </div>
           </div>
         </div>
       ))}

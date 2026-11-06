@@ -1,10 +1,10 @@
 import {
-  CommunicationParticipant,
+  CommunicationPair,
   CommunicationPost,
   CommunicationSkeleton
 } from './BotCommunicationThreadPosts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeftRight, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -235,24 +235,20 @@ export function BotCommunicationThread({
       >
         <div className="shrink-0 border-b border-border">
           <SheetHeader>
-            <div className="pr-8">
+            <div className="pr-8 text-center">
               <SheetTitle>
-                <span className="flex min-w-0 items-center gap-2">
-                  <CommunicationParticipant
-                    participant={source}
-                    available={sourceAvailable}
-                    onOpen={() => open(selected.source)}
-                  />
-                  <ArrowLeftRight
-                    aria-hidden
-                    className="size-3.5 shrink-0 text-chat-foreground-faint"
-                  />
-                  <CommunicationParticipant
-                    participant={recipient}
-                    available={recipientAvailable}
-                    onOpen={() => open(selected.recipient)}
-                  />
-                </span>
+                <CommunicationPair
+                  source={{
+                    participant: source,
+                    available: sourceAvailable,
+                    onOpen: () => open(selected.source)
+                  }}
+                  recipient={{
+                    participant: recipient,
+                    available: recipientAvailable,
+                    onOpen: () => open(selected.recipient)
+                  }}
+                />
               </SheetTitle>
             </div>
             <SheetDescription>

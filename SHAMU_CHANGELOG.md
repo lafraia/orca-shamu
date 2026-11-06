@@ -16,6 +16,7 @@ Upstream commit: `b98a0fba16561fadc06868fe3e8710781d705efd`
 
 ### Shamu changes
 
+- Clarify the bot-pair conversation with a fixed participant capsule, named message bubbles and avatars beside each message, while preserving chronology, attachments and original-chat navigation.
 - Integrate consulted chats into the originating answer with grouped bot avatars, clickable exchanges and native reply, queue and human-input status, without marking those peer chats as read.
 - Keep successful bot mentions quiet by removing their sending and confirmation toasts, while retaining delivery warnings and retryable errors.
 - Return the responding bot's canonical name and chat reference with consultation results, and bundle an on-demand reply skill for concise source attribution, evidence and qualified estimates across configured providers.
