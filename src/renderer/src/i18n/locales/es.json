@@ -23625,6 +23625,9 @@
     "terminalUnverifiable": "Orca no pudo comprobar si la distribución WSL {{distro}} está en ejecución, así que no inició esta terminal. Inicia la distribución y vuelve a intentarlo."
   },
   "shamu": {
+    "bots": {
+      "general": "General"
+    },
     "projects": {
       "title": "Proyectos vinculados",
       "description": "Elige los proyectos que este bot debe seguir, en cualquier carpeta. Los grupos vinculados incluyen sus proyectos actuales.",

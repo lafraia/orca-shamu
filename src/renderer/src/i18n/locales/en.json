@@ -23933,11 +23933,9 @@
   },
   "projectChannels": {
     "projects": "Bots",
-    "search": "Find bot",
     "new": "New bot",
     "reload": "Reload bots",
     "loading": "Loading bots",
-    "noResults": "No bots found",
     "offline": "Chat unavailable",
     "connecting": "Connecting…",
     "needsAnswer": "Needs your answer",
@@ -24242,6 +24240,7 @@
       "localScheduler": "Local scheduler. Keep Shamu and the primary Orca running. You can minimize the window. Quitting the app or sleeping the computer pauses execution."
     },
     "bots": {
+      "general": "General",
       "identity": "Identity",
       "changePhoto": "Change bot photo",
       "uploadPhoto": "Upload photo",
@@ -24264,7 +24263,6 @@
       "unpin": "Unpin bot",
       "pin": "Pin bot",
       "moveSection": "Move to section",
-      "noSection": "Without section",
       "newSection": "New section…",
       "pinned": "Pinned",
       "actions": "Bot actions: {{name}}",

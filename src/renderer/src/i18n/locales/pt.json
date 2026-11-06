@@ -23599,11 +23599,9 @@
   },
   "projectChannels": {
     "projects": "Bots",
-    "search": "Buscar bot",
     "new": "Novo bot",
     "reload": "Recarregar bots",
     "loading": "Carregando bots",
-    "noResults": "Nenhum bot encontrado",
     "offline": "Chat indisponível",
     "connecting": "Conectando…",
     "needsAnswer": "Aguarda sua resposta",
@@ -23662,6 +23660,9 @@
     "changeSaveError": "Não foi possível salvar esta alteração. Recarregue os bots antes de tentar novamente."
   },
   "shamu": {
+    "bots": {
+      "general": "Geral"
+    },
     "projects": {
       "title": "Projetos vinculados",
       "description": "Escolha os projetos que este bot deve acompanhar, em qualquer pasta. Grupos vinculados incluem seus projetos atuais.",

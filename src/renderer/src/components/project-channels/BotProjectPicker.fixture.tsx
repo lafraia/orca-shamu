@@ -96,6 +96,16 @@ export const navigation = defineFixture({
             draft: '',
             createdAt: 2,
             identity: { color: 'pink', animated: false }
+          },
+          {
+            id: 'research',
+            name: 'Research',
+            mainMemberId: null,
+            members: [],
+            messages: [],
+            draft: '',
+            createdAt: 3,
+            identity: { color: 'blue', animated: false }
           }
         ]
       }
@@ -109,4 +119,12 @@ export const navigation = defineFixture({
       <div className="flex-1" />
     </div>
   )
+})
+
+export const navigationNarrow = defineFixture({ ...navigation, width: 240 })
+export const navigationCollapsed = defineFixture({
+  ...navigation,
+  interact: (frame) => {
+    frame.querySelector<HTMLButtonElement>('[data-slot="collapsible-trigger"]')?.click()
+  }
 })

@@ -49,7 +49,7 @@ export function BotSidebarGroups({
       sectionOrder
     ).map((section) => ({
       key: `section:${section}`,
-      name: section || translate('projectChannels.projects', 'Bots'),
+      name: section || translate('shamu.bots.general', 'General'),
       bots: channels.filter((row) => !row.pinned && (row.section ?? '') === section),
       pinned: false
     }))
@@ -184,7 +184,7 @@ function BotSidebarGroup({
     >
       <BotSidebarDropMark placement={drag.insertion} />
       <BotSectionHeader {...props} dragHandle={props.section === null ? undefined : drag.handle} />
-      {children}
+      <div className="pl-4">{children}</div>
     </section>
   )
 }

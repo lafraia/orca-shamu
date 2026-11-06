@@ -69,7 +69,7 @@ export function BotSidebarActions({
             </Trigger>
             <Content>
               <Item onSelect={() => organize({ section: '' })}>
-                {translate('shamu.bots.noSection', 'Without section')}
+                {translate('shamu.bots.general', 'General')}
                 {!channel.section ? <Check /> : null}
               </Item>
               {sections.map((section) => (

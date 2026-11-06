@@ -1,8 +1,6 @@
 import { Bot, ChevronDown, Plus } from 'lucide-react'
-import { useState } from 'react'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -24,13 +22,10 @@ export function ProjectChannelSidebar(): React.JSX.Element | null {
   const error = useProjectChannels((state) => state.error)
   const expanded = useProjectChannels((state) => state.sidebarExpanded)
   const active = useAppStore((state) => state.activeView === 'project-chat')
-  const [search, setSearch] = useState('')
   if (!enabled || !window.api?.projectChannels) {
     return null
   }
-  const channels = snapshot.channels.filter((channel) =>
-    channel.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())
-  )
+  const channels = snapshot.channels
   const newBotLabel = translate('projectChannels.new', 'New bot')
   return (
     <div className="shrink-0 px-2 pb-1">
@@ -79,18 +74,8 @@ export function ProjectChannelSidebar(): React.JSX.Element | null {
         <CollapsibleContent animation="height">
           <nav
             aria-label={translate('projectChannels.projects', 'Bots')}
-            className="max-h-[min(20rem,35vh)] overflow-y-auto worktree-sidebar-scrollbar pt-1"
+            className="max-h-[min(20rem,35vh)] overflow-y-auto worktree-sidebar-scrollbar pt-1 pl-4"
           >
-            {snapshot.channels.length > 0 ? (
-              <Input
-                aria-label={translate('projectChannels.search', 'Find bot')}
-                placeholder={translate('projectChannels.search', 'Find bot')}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                density="compact"
-                className="mb-1"
-              />
-            ) : null}
             {error ? (
               <div role="alert" className="space-y-2 p-2 text-xs text-destructive">
                 {error}
@@ -122,14 +107,10 @@ export function ProjectChannelSidebar(): React.JSX.Element | null {
             />
             {loaded && channels.length === 0 ? (
               <div className="px-2 py-2 text-xs text-muted-foreground">
-                {search ? (
-                  translate('projectChannels.noResults', 'No bots found')
-                ) : (
-                  <Button variant="ghost" size="xs" onClick={() => openProjectChannelEditor({})}>
-                    <Plus />
-                    {newBotLabel}
-                  </Button>
-                )}
+                <Button variant="ghost" size="xs" onClick={() => openProjectChannelEditor({})}>
+                  <Plus />
+                  {newBotLabel}
+                </Button>
               </div>
             ) : null}
           </nav>
