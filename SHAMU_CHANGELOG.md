@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Read project-channel agent controllers through stable callbacks that follow committed state, avoiding speculative render-time ref mutations.
 - Invalidate Vault operations when panel visibility commits, keeping render work free of ref mutations and preventing late results after closure.
 - Scope bot navigation and prompt preparation to the Shamu client, preserve upstream composer drafts without the optional bot bridge, and register bot CLI dispatch and host ownership. Align startup and release fixtures with the current APIs and test runner.
 - Keep shared bot communication and routine sorting compatible with mobile Hermes, include Shamu dependencies in native composite typechecks and restore the fingerprint job's checkout before action cleanup.

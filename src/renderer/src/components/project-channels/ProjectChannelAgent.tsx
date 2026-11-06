@@ -1,4 +1,5 @@
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect } from 'react'
+import { useLatestHandler } from '@/lib/use-latest-handler'
 import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { useStructuredAgentSession } from '../native-chat/use-structured-agent-session'
@@ -40,14 +41,13 @@ export const ProjectChannelAgent = memo(function ProjectChannelAgent({
     transportEnabled: available,
     queueFollowUps: true
   })
-  const latest = useRef(controller)
-  latest.current = controller
+  const readController = useLatestHandler(() => controller)
   useEffect(() => {
-    controllers.set(member.id, () => latest.current)
+    controllers.set(member.id, readController)
     return () => {
       controllers.delete(member.id)
     }
-  }, [controllers, member.id])
+  }, [controllers, member.id, readController])
   useEffect(() => {
     if (available && controller.readCurrent && controller.status === 'ready') {
       syncProjectChannelMessages(channelId, member.id, controller.messages, {
