@@ -11,7 +11,7 @@ import {
 
 test.use({ claudeModelSwitching: true })
 
-test('changes a bot model from its header and retains each bot session, history and draft', async ({
+test('changes a bot model from its composer and retains each bot session, history and draft', async ({
   orcaPage: primary,
   claudeStub
 }, testInfo) => {
@@ -48,8 +48,7 @@ test('changes a bot model from its header and retains each bot session, history 
   })
   const page = client.page
   const botChat = (name: string) => page.getByRole('region', { name, exact: true })
-  const modelPicker = (name: string) =>
-    botChat(name).getByRole('group', { name: 'Bot model', exact: true }).getByRole('button')
+  const modelPicker = (name: string) => botChat(name).getByRole('button', { name: /^Model(?: |$)/ })
   const selectBot = async (name: string) => {
     await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.getByRole('button', { name, exact: true }).click()
@@ -71,9 +70,22 @@ test('changes a bot model from its header and retains each bot session, history 
     await page.getByRole('combobox').fill(label)
     await expect(page.getByRole('option', { name: label, exact: true })).toBeVisible()
     await page.getByRole('option', { name: label, exact: true }).click()
-    await expect(modelPicker(name)).toContainText(label)
-    await botChat(name).getByRole('textbox').click()
+    await expect(page.getByRole('listbox')).toHaveAttribute('aria-busy', 'false')
+    await expect(page.getByRole('option', { name: label, exact: true })).toHaveAttribute(
+      'aria-current',
+      'true'
+    )
+    await page.getByRole('combobox').press('Escape')
     await expect(page.getByRole('combobox')).toHaveCount(0)
+  }
+  const expectSelectedModel = async (name: string, label: string) => {
+    await modelPicker(name).click()
+    await page.getByRole('combobox').fill(label)
+    await expect(page.getByRole('option', { name: label, exact: true })).toHaveAttribute(
+      'aria-current',
+      'true'
+    )
+    await page.getByRole('combobox').press('Escape')
   }
   const identity = () =>
     page.evaluate(async () =>
@@ -90,26 +102,33 @@ test('changes a bot model from its header and retains each bot session, history 
     await createBot('Beta')
     const original = await identity()
     await selectBot('Alpha')
+    await expect(modelPicker('Alpha')).toHaveCount(1)
+    const composerBounds = await botChat('Alpha').getByRole('textbox').boundingBox()
+    const modelBounds = await modelPicker('Alpha').boundingBox()
+    expect(modelBounds!.y).toBeGreaterThanOrEqual(composerBounds!.y + composerBounds!.height)
     await botChat('Alpha').getByRole('textbox').fill('Alpha draft stays here')
     await chooseModel('Alpha', 'Test Sonnet')
     await expect(botChat('Alpha').getByRole('textbox')).toHaveText('Alpha draft stays here')
     await selectBot('Beta')
-    await expect(modelPicker('Beta')).not.toContainText('Test Sonnet')
     await botChat('Beta').getByRole('textbox').fill('Beta draft stays here')
     await chooseModel('Beta', 'Test Haiku')
     await page.reload()
     await selectBot('Alpha')
-    await expect(modelPicker('Alpha')).toContainText('Test Sonnet')
+    await expectSelectedModel('Alpha', 'Test Sonnet')
     await expect(botChat('Alpha').getByRole('textbox')).toHaveText('Alpha draft stays here')
     await expect(botChat('Alpha').getByText('Hello Alpha', { exact: true })).toBeVisible()
     await botChat('Alpha').getByRole('textbox').press('Enter')
     await expect(botChat('Alpha').getByText('Stub reply.', { exact: true })).toHaveCount(2)
+    await expect(modelPicker('Alpha')).toContainText('Test Sonnet')
     await modelPicker('Alpha').click()
-    await expect(page.locator('[data-slot="popover-content"]')).toHaveCSS('opacity', '1')
-    await page.screenshot({ path: testInfo.outputPath('bot-model-picker.png') })
-    await botChat('Alpha').getByRole('textbox').click()
+    await expect(page.getByRole('combobox')).toBeVisible()
+    await page.screenshot({
+      path: testInfo.outputPath('bot-model-picker.png'),
+      animations: 'disabled'
+    })
+    await page.getByRole('combobox').press('Escape')
     await selectBot('Beta')
-    await expect(modelPicker('Beta')).toContainText('Test Haiku')
+    await expectSelectedModel('Beta', 'Test Haiku')
     await expect(botChat('Beta').getByRole('textbox')).toHaveText('Beta draft stays here')
     await botChat('Beta').getByRole('textbox').press('Enter')
     await expect(botChat('Beta').getByText('Stub reply.', { exact: true })).toHaveCount(2)

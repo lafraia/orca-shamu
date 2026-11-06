@@ -5,7 +5,6 @@ import NativeChatView from '../native-chat/NativeChatView'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { ensureProjectChannelConversation } from './project-channel-store'
 import { BotConversationHeader } from './BotConversationHeader'
-import type { NativeChatSessionOptionPickersProps } from '../native-chat/NativeChatSessionOptionPickers'
 import { BotMemoryPanel } from './BotMemoryPanel'
 import { BotRoutinesPanel } from './BotRoutinesPanel'
 import { useBotUnread } from './bot-unread-store'
@@ -51,11 +50,10 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
     channel.identity?.image,
     attempt
   ])
-  const header = (options?: NativeChatSessionOptionPickersProps) => (
+  const header = (
     <BotConversationHeader
       channel={channel}
       ready={Boolean(ready)}
-      options={options}
       error={error}
       onMemory={() => setMemoryOpen(true)}
       onRoutines={() => setRoutinesOpen(true)}
@@ -67,7 +65,7 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
       className="flex min-h-0 flex-1 flex-col bg-background text-foreground"
       aria-label={channel.name}
     >
-      {!ready ? header() : null}
+      {header}
       {routinesOpen ? (
         <BotRoutinesPanel
           botId={channel.id}
@@ -81,7 +79,6 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
       {ready ? (
         <NativeChatView
           mode="structured"
-          renderHeader={header}
           tabId={member.tabId}
           sessionId={member.sessionId}
           target={member.target}

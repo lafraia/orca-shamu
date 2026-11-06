@@ -108,7 +108,7 @@ Known bot names in memory notes and source labels use the same reference pills a
 
 ## Bot model selection
 
-Each permanent bot chat exposes its native model picker in the header as well as the composer. Both controls use the same host session, model catalogue and option writer. A selection changes that conversation's model without replacing its session, history, bot identity or composer draft. Reopening the bot reads the recorded session options from the owning Orca. Loading, unavailable models, pending writes and refusals use the existing native picker behavior. This control offers models of the bot's current agent.
+Each permanent bot chat exposes its native model picker only in the composer footer. The control uses the same host session, model catalogue and option writer as workspace chats. A selection changes that conversation's model without replacing its session, history, bot identity or composer draft. Reopening the bot reads the recorded session options from the owning Orca. Loading, unavailable models, pending writes and refusals use the existing native picker behavior. This control offers models of the bot's current agent.
 
 ## Bot mentions
 
