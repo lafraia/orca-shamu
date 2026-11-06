@@ -135,6 +135,9 @@ it('returns only the completed consultation to its originating bot without anoth
       waitSeconds: 0
     })
   ).toMatchObject({
+    botId: 'specialist',
+    name: 'Specialist',
+    reference: '[@Specialist](#orca-shamu-bot/specialist)',
     state: 'completed',
     response: 'I can confirm Friday after review approval.'
   })

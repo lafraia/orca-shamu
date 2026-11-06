@@ -46,6 +46,16 @@ The result reader follows the native submission and its root turn, including que
 
 ## Presentation and compatibility
 
+### Linked replies and scoped skill
+
+`bots ask-result` includes `name`, `botId` and a canonical Markdown `reference` generated from the recorded recipient identity. The coordinator uses that reference to name and link the peer in its synthesis. It opens the peer's permanent chat, not an exact-answer permalink. The application does not guess links from names in generated prose or rewrite the model's answer.
+
+The bundled [shamu-consultation-reply skill](skills/shamu-consultation-reply/SKILL.md) guides concise, attributed replies. It distinguishes completed answers from pending, failed and truncated results, preserves the peer's evidence and uncertainty, and separates confirmed facts from estimates or the coordinator's own inferences. The skill uses a flexible answer structure rather than requiring a long report for every question.
+
+[Agent Skills](https://agentskills.io/home) separates discovery from on-demand guidance. Shamu follows that approach: the bot turn guidance and BOT_TOOLS.md identify this skill, and the bot reads its version-matched body through `skills get shamu-consultation-reply --json` using its bundled CLI. This shares one guide across configured providers without adding a global skill installation or inserting the whole guide into every turn. The source in `skill-guides/shamu-consultation-reply.md` generates the portable SKILL.md and CLI catalog through the existing generator.
+
+The service guarantees the reference's origin and native result correlation; the wording and whether the bot follows the skill still depend on the model. A peer result is source material, not new permission. Loading the guide does not send another prompt, approve a pending action or resume a coordinator that has already finished.
+
 Both directions remain visible in the existing bot-pair communication drawer, with each bot's real name and authored text. The user's original request stays in the coordinator's chat. Bot-authored consultation frames use their recorded native operation and reference IDs, so ordinary pasted text cannot become an authenticated communication merely by resembling a prompt wrapper.
 
 Workspace-to-bot user mentions keep their direct notification behavior. Existing historical mentions are not rewritten. `bots mention` remains available for one-way bot notifications; `bots send` and `bots result` remain the external CLI ingress and its result API. Neither CLI sender labels nor peer messages expand Vault permissions.

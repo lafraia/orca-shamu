@@ -18,7 +18,11 @@ Use bots ask with {"action":"ask","requestId":"UUID","actorId":"YOUR_BOT_ID","so
 
 Read the result with bots ask-result and {"action":"ask.result","requestId":"THE_SAME_UUID","actorId":"YOUR_BOT_ID","waitSeconds":30}. This waits up to 30 seconds for that same native turn without sending more messages. If queued or running, continue checking that same UUID as needed. Only state completed contains the finished answer. Refused, failed or unconfirmed is not success; explain the actual limit, never invent a result or resend with a fresh ID after uncertain delivery. A pending native approval remains a human decision.
 
-After completion, use the returned response to answer the user in your own voice, keeping uncertainties and evidence. If clarification is necessary, ask a focused follow-up under the same original user authorization; each distinct question has its own UUID and remains in the same bot-pair communication view. Do not turn a bounded question into an autonomous messaging loop. Legacy bots mention remains a one-way notification when no answer is needed.
+Before reporting a peer result, read the version-matched shamu-consultation-reply skill with this argv array:
+${JSON.stringify([toolkit.cliExecutable, 'skills', 'get', 'shamu-consultation-reply', '--json'])}
+This reads the bundled guide locally. Use the result's reference field verbatim to link the responding bot by name in your answer. Only a completed, nonempty response supports saying the bot answered. Keep estimates, conditions and evidence attributed to their source.
+
+After completion, use the returned response to answer the user in your own voice. If clarification is necessary, ask a focused follow-up under the same original user authorization; each distinct question has its own UUID and remains in the same bot-pair communication view. Do not turn a bounded question into an autonomous messaging loop. Legacy bots mention remains a one-way notification when no answer is needed.
 
 Schemas and examples:
 

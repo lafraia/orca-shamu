@@ -5,6 +5,7 @@ import type { ProjectChannelsStore } from '../project-channels-store'
 import type { BotMentionDelivery } from '../bot-mention-delivery'
 import { requireBotUserRequest, type BotPrimary } from './bot-journal-reader'
 import { readBotTurnPrompt } from '../../shared/bot-turn-context'
+import { botReferenceMarkdown } from '../../shared/bot-reference'
 
 export class BotConsultationService {
   constructor(
@@ -60,6 +61,9 @@ export class BotConsultationService {
       await setTimeout(Math.min(1000, Math.max(0, deadline - Date.now())))
       result = await this.mentions.result(command.actorId, command.requestId)
     }
-    return result
+    return {
+      ...result,
+      reference: botReferenceMarkdown({ id: result.botId, name: result.name })
+    }
   }
 }
