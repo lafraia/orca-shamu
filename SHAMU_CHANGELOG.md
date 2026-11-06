@@ -18,6 +18,7 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Scope bot navigation and prompt preparation to the Shamu client, preserve upstream composer drafts without the optional bot bridge, and register bot CLI dispatch and host ownership. Align startup and release fixtures with the current APIs and test runner.
 - Keep shared bot communication and routine sorting compatible with mobile Hermes, include Shamu dependencies in native composite typechecks and restore the fingerprint job's checkout before action cleanup.
 - Repair the upstream CI workflow's dangling timeout-check reference and support the first fork sync when trusted default-branch reporting tools or benchmark baselines do not yet exist. Keep unavailable benchmark comparisons explicit.
 - Adapt Shamu to the upstream validation rules: declare the bot and Vault interface copy in the English and Portuguese catalogs, regenerate the bundled skill catalog, preserve typed bot references and prevent synchronous Windows Vault permission rewrites while retaining fail-closed access checks.

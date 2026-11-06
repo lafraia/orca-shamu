@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
 import { BotSidebarGroups } from './BotSidebarGroups'
 import { botSectionNames } from '../../../../shared/bot-sections'
+import { useShamuClient } from '../shamu/shamu-client-state'
 import {
   openProjectChannelEditor,
   reloadProjectChannels,
@@ -14,7 +15,8 @@ import {
 
 export function ProjectNavigationSwitch(): React.JSX.Element | null {
   const mode = useProjectChannels((state) => state.mode)
-  if (!window.api.projectChannels) {
+  const enabled = useShamuClient((state) => state.enabled)
+  if (!enabled || !window.api?.projectChannels) {
     return null
   }
   return (

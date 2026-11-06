@@ -18,11 +18,6 @@ vi.mock('./use-orchestration-panel-enabled', () => ({
   useOrchestrationPanelEnabled: () => true
 }))
 const rig = vi.hoisted(() => ({ open: vi.fn(), copy: vi.fn(), identity: vi.fn(), crew: vi.fn() }))
-// Keep the dormant panel's interaction coverage independent of its release availability.
-vi.mock('./use-orchestration-panel-enabled', () => ({
-  useOrchestrationPanelEnabled: () =>
-    useAppStore((state) => state.settings?.experimentalOrchestrationPanel === true)
-}))
 vi.mock('./use-terminal-crew-identity', () => ({
   useTerminalCrewIdentity: (paneKey: string) => {
     rig.identity(paneKey)

@@ -3,7 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 import { shamuUnreleasedTemplate } from './shamu-changelog.mjs'
 
 function fixture(
@@ -11,7 +11,7 @@ function fixture(
   changes = '- Preserve the reviewed bot changes. [PR #12](https://github.com/lafraia/orca-shamu/pull/12)'
 ) {
   const root = mkdtempSync(join(tmpdir(), 'shamu-release-test-'))
-  t.after(() => rmSync(root, { recursive: true, force: true }))
+  t.onTestFinished(() => rmSync(root, { recursive: true, force: true }))
   const git = (...args) =>
     execFileSync('git', ['-c', 'commit.gpgsign=false', ...args], {
       cwd: root,

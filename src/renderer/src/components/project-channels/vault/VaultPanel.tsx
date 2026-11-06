@@ -31,7 +31,7 @@ export function VaultPanel({
   name,
   open,
   onOpenChange,
-  api = window.api.projectChannels?.vault
+  api = window.api?.projectChannels?.vault
 }: {
   botId: string
   name: string

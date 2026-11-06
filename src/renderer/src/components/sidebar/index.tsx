@@ -3,6 +3,7 @@ import {
   ProjectNavigationSwitch
 } from '../project-channels/ProjectChannelSidebar'
 import { useProjectChannels } from '../project-channels/project-channel-store'
+import { useShamuClient } from '../shamu/shamu-client-state'
 import React, { useEffect, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -69,8 +70,11 @@ function Sidebar({
   worktreeScrollAnchorRef
 }: SidebarProps): React.JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const shamuEnabled = useShamuClient((s) => s.enabled)
   const projectMode =
-    useProjectChannels((s) => s.mode === 'projects') && Boolean(window.api.projectChannels)
+    useProjectChannels((s) => s.mode === 'projects') &&
+    shamuEnabled &&
+    Boolean(window.api?.projectChannels)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
   const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const repos = useAppStore((s) => s.repos)

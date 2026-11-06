@@ -8,6 +8,7 @@ import type { StructuredAgentSessionCommandOutcome } from '../../../../shared/ag
 import type { NativeChatStructuredComposerTransport } from './native-chat-composer-types'
 import type { NativeChatComposerImageAttachment } from './NativeChatComposerField'
 import type { StructuredAgentSessionSendRequest } from './structured-agent-session-send-slot'
+import { useShamuClient } from '../shamu/shamu-client-state'
 
 export async function dispatchNativeChatStructuredComposerText(
   transport: NativeChatStructuredComposerTransport,
@@ -30,7 +31,7 @@ export async function dispatchNativeChatStructuredComposerText(
   if (handled) {
     return { ...command, revealsTranscript: false }
   }
-  if (window.api.projectChannels?.prepareMessage) {
+  if (useShamuClient.getState().enabled && window.api?.projectChannels?.prepareMessage) {
     prompt = await window.api.projectChannels.prepareMessage(
       transport.sessionId,
       transport.runtimeEnvironmentId,

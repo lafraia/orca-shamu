@@ -21,7 +21,7 @@ export function BotNativeConversation({ channel }: { channel: ProjectChannel }):
   const ready = channel.home?.ready && member
   const hasConversation = Boolean(ready)
   useEffect(() => {
-    const api = window.api.projectChannels?.vault
+    const api = window.api?.projectChannels?.vault
     if (!api || !hasConversation) {
       return
     }
