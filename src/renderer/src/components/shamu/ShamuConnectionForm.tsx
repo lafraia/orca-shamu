@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { useProjectChannels } from '../project-channels/project-channel-store'
 import { connectShamuPrimary } from './shamu-client-store'
 
 export function ShamuConnectionForm({
@@ -30,7 +29,6 @@ export function ShamuConnectionForm({
       await connectShamuPrimary(code)
       setCode('')
       if (!embedded) {
-        useProjectChannels.setState({ mode: 'workspaces' })
         useAppStore.setState({ activeView: 'terminal' })
       }
       onConnected?.()

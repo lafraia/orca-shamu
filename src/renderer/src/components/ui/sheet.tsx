@@ -90,17 +90,17 @@ function SheetContent({
   return (
     <SheetPortal>
       <SheetOverlay className={overlayClassName} style={overlayStyle} />
-      <OverlayFocusScope value={scope}>
-        <SheetPrimitive.Content
-          data-slot="sheet-content"
-          className={cn(sheetContentVariants({ side, motion, surface }), className)}
-          // Disable native dragging where portaled sheet headers overlap the titlebar.
-          style={{ ...style, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          {...props}
-          ref={focusScopeRef}
-          onCloseAutoFocus={(event) => handleOverlayCloseAutoFocus(event, props.onCloseAutoFocus)}
-          onEscapeKeyDown={(event) => handleImeOverlayEscape(event, props.onEscapeKeyDown)}
-        >
+      <SheetPrimitive.Content
+        data-slot="sheet-content"
+        className={cn(sheetContentVariants({ side, motion, surface }), className)}
+        // Disable native dragging where portaled sheet headers overlap the titlebar.
+        style={{ ...style, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        {...props}
+        ref={focusScopeRef}
+        onCloseAutoFocus={(event) => handleOverlayCloseAutoFocus(event, props.onCloseAutoFocus)}
+        onEscapeKeyDown={(event) => handleImeOverlayEscape(event, props.onEscapeKeyDown)}
+      >
+        <OverlayFocusScope value={scope}>
           {children}
           {showCloseButton && (
             <SheetPrimitive.Close
@@ -113,8 +113,8 @@ function SheetContent({
               </span>
             </SheetPrimitive.Close>
           )}
-        </SheetPrimitive.Content>
-      </OverlayFocusScope>
+        </OverlayFocusScope>
+      </SheetPrimitive.Content>
     </SheetPortal>
   )
 }

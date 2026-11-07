@@ -23,11 +23,13 @@ import { BotRoutineEditor } from './BotRoutineEditor'
 export function BotRoutinesPanel({
   botId,
   name,
-  onClose
+  open,
+  onOpenChange
 }: {
   botId: string
   name: string
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
   const [view, setView] = useState<BotRoutinesView | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +39,12 @@ export function BotRoutinesPanel({
     null
   )
   useEffect(() => {
+    if (!open) {
+      return
+    }
     let current = true
+    setView(null)
+    setError(null)
     const refresh = (): void => {
       void window.api
         .projectChannels!.command({ action: 'routine.list', botId })
@@ -58,7 +65,7 @@ export function BotRoutinesPanel({
       current = false
       clearInterval(timer)
     }
-  }, [botId, attempt])
+  }, [botId, attempt, open])
   const mutate = async (command: BotCommand): Promise<void> => {
     if (busy) {
       return
@@ -87,14 +94,22 @@ export function BotRoutinesPanel({
   }
   return (
     <Sheet
-      open
-      onOpenChange={(open) => {
-        if (!open && !busy) {
-          onClose()
+      open={open}
+      onOpenChange={(next) => {
+        if (!busy) {
+          onOpenChange(next)
         }
       }}
     >
-      <SheetContent motion="theme" className="w-full sm:max-w-xl">
+      <SheetContent
+        motion="theme"
+        className="w-full sm:max-w-xl"
+        onCloseAutoFocus={() => {
+          setView(null)
+          setError(null)
+          setEditing(null)
+        }}
+      >
         <SheetHeader>
           <SheetTitle>
             <CalendarClock className="mr-2 inline size-4" />
@@ -225,7 +240,7 @@ export function BotRoutinesPanel({
           ) : null}
         </div>
         <footer className="space-y-2 border-t border-border p-4">
-          <Button variant="outline" onClick={onClose} disabled={busy}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             {translate('shamu.routines.openChat', 'Open bot chat')}
           </Button>
           <p role="status" className="text-xs text-muted-foreground">

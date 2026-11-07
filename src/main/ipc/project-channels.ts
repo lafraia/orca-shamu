@@ -16,6 +16,7 @@ import type { ShamuPrimaryConnection } from '../shamu-primary-connection'
 import { projectChannelsSnapshotSchema } from '../../shared/project-channels'
 import { BotConversationService } from '../bot-conversation-service'
 import { BotMemoryService } from '../bot-memory-service'
+import { BotProjectService } from '../shamu-bots/bot-project-service'
 import { registerShamuVaultHandlers } from './shamu-vault'
 
 export function registerProjectChannelsHandlers(
@@ -50,7 +51,8 @@ export function registerProjectChannelsHandlers(
     }
     return snapshot
   })
-  const memory = primary ? new BotMemoryService(channels, primary) : null
+  const projects = primary ? new BotProjectService(channels, primary) : null
+  const memory = primary ? new BotMemoryService(channels, primary, projects ?? undefined) : null
   const vault = primary
     ? registerShamuVaultHandlers(store.getProfileStorageDirectory(), channels)
     : null
@@ -61,6 +63,7 @@ export function registerProjectChannelsHandlers(
   ipcMain.removeHandler('projectChannels:read')
   ipcMain.removeHandler('projectChannels:write')
   ipcMain.removeHandler('projectChannels:ensureConversation')
+  ipcMain.removeHandler('projectChannels:projectCatalog')
   const bots = primary
     ? new BotConversationService(
         channels,
@@ -219,7 +222,18 @@ export function registerProjectChannelsHandlers(
     trusted(event)
     const snapshot = projectChannelsSnapshotSchema.parse(input)
     await primary?.assertChannelAuthority(snapshot)
+    if (!projects && snapshot.channels.some((bot) => bot.projects?.length)) {
+      throw new Error('Link projects in Orca Shamu connected to the primary Orca.')
+    }
+    await projects?.assertLinks(snapshot)
     return channels.write(snapshot)
+  })
+  ipcMain.handle('projectChannels:projectCatalog', async (event) => {
+    trusted(event)
+    if (!projects) {
+      throw new Error('Connect Shamu to the primary Orca to link projects.')
+    }
+    return projects.catalog()
   })
   ipcMain.handle('projectChannels:ensureConversation', async (event, input: unknown) => {
     trusted(event)

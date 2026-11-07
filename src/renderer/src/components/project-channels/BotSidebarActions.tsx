@@ -22,6 +22,7 @@ import {
   ContextMenuTrigger
 } from '@/components/ui/context-menu'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 import type { ProjectChannel } from '../../../../shared/project-channels'
 import { openProjectChannelEditor } from './project-channel-store'
 import { runBotRosterCommand } from './bot-roster-actions'
@@ -29,11 +30,13 @@ import { runBotRosterCommand } from './bot-roster-actions'
 export function BotSidebarActions({
   channel,
   sections,
+  selected,
   onSection,
   children
 }: {
   channel: ProjectChannel
   sections: string[]
+  selected: boolean
   onSection: () => void
   children: React.ReactNode
 }): React.JSX.Element {
@@ -66,7 +69,7 @@ export function BotSidebarActions({
             </Trigger>
             <Content>
               <Item onSelect={() => organize({ section: '' })}>
-                {translate('shamu.bots.noSection', 'Without section')}
+                {translate('shamu.bots.general', 'General')}
                 {!channel.section ? <Check /> : null}
               </Item>
               {sections.map((section) => (
@@ -91,31 +94,38 @@ export function BotSidebarActions({
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className="group/bot flex items-center gap-1 rounded-md hover:bg-worktree-sidebar-accent">
+        <div
+          className={cn(
+            'group/bot flex w-full min-w-0 items-center rounded-md hover:bg-worktree-sidebar-accent',
+            selected && 'bg-worktree-sidebar-accent'
+          )}
+        >
           {children}
-          {channel.pinned ? (
-            <Pin
-              className="size-3 shrink-0 text-muted-foreground"
-              aria-label={translate('shamu.bots.pinned', 'Pinned')}
-            />
-          ) : null}
-          <DropdownMenu>
-            <span className="inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot:opacity-100 [[class~='group/bot']:has(:focus-visible)_&]:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={busy}
-                  aria-label={translate('shamu.bots.actions', 'Bot actions: {{name}}', {
-                    name: channel.name
-                  })}
-                >
-                  <MoreHorizontal />
-                </Button>
-              </DropdownMenuTrigger>
-            </span>
-            <DropdownMenuContent>{items(false)}</DropdownMenuContent>
-          </DropdownMenu>
+          <div className="group/bot-actions grid shrink-0 place-items-center">
+            {channel.pinned ? (
+              <Pin
+                className="pointer-events-none col-start-1 row-start-1 hidden size-3 text-muted-foreground transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:block group-hover/bot:opacity-0 [[class~='group/bot']:has(:focus-visible)_&]:opacity-0 [[class~='group/bot-actions']:has([data-state=open])_&]:opacity-0 motion-reduce:transition-none"
+                aria-label={translate('shamu.bots.pinned', 'Pinned')}
+              />
+            ) : null}
+            <DropdownMenu>
+              <span className="col-start-1 row-start-1 inline-flex shrink-0 transition-opacity duration-(--duration-quick) ease-(--ease-in-out) can-hover:opacity-0 group-hover/bot:opacity-100 [[class~='group/bot']:has(:focus-visible)_&]:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none">
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={busy}
+                    aria-label={translate('shamu.bots.actions', 'Bot actions: {{name}}', {
+                      name: channel.name
+                    })}
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+              </span>
+              <DropdownMenuContent>{items(false)}</DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>{items(true)}</ContextMenuContent>

@@ -87,8 +87,6 @@ export function CommunicationPost({
   const identity = useProjectChannels(
     (state) => state.snapshot.channels.find((bot) => bot.id === post.author.botId)?.identity
   )
-  const media = useBotCommunicationMedia(post.author)
-  const runtimeContext = media?.runtimeContext ?? null
   const text = post.blocks
     .filter((block) => block.type === 'text')
     .map((block) => block.text)
@@ -101,6 +99,8 @@ export function CommunicationPost({
       })}
       className="group flex items-end gap-3"
       data-communication-message={post.id}
+      data-communication-entry={post.entryId}
+      aria-current={selectedRef ? 'true' : undefined}
     >
       {post.author.botId ? (
         <BotAvatar id={post.author.botId} identity={identity} className="size-7" />
@@ -124,25 +124,43 @@ export function CommunicationPost({
           </span>
         </div>
         <div className="rounded-xl border border-chat-user-border bg-chat-user-surface px-3.5 py-2.5 text-sm text-chat-foreground">
-          <NativeChatMarkdownImageOwnerContext.Provider value={media}>
-            <NativeChatLinkPeekProvider fileLinkContext={media?.fileLinkContext ?? null}>
-              <NativeChatImageAttachments
-                blocks={post.blocks}
-                runtimeContext={runtimeContext}
-                enablePreview={Boolean(runtimeContext)}
-              />
-              {text ? (
-                <NativeChatMarkdown
-                  content={text}
-                  variant="document"
-                  renderCodeBlock={NativeChatCodeBlock}
-                />
-              ) : null}
-            </NativeChatLinkPeekProvider>
-          </NativeChatMarkdownImageOwnerContext.Provider>
+          <CommunicationMessageBody author={post.author} blocks={post.blocks} />
         </div>
       </div>
     </article>
+  )
+}
+
+export function CommunicationMessageBody({
+  author,
+  blocks
+}: {
+  author: BotCommunicationParticipant
+  blocks: NativeChatBlock[]
+}): React.JSX.Element {
+  const media = useBotCommunicationMedia(author)
+  const runtimeContext = media?.runtimeContext ?? null
+  const text = blocks
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n\n')
+  return (
+    <NativeChatMarkdownImageOwnerContext.Provider value={media}>
+      <NativeChatLinkPeekProvider fileLinkContext={media?.fileLinkContext ?? null}>
+        <NativeChatImageAttachments
+          blocks={blocks}
+          runtimeContext={runtimeContext}
+          enablePreview={Boolean(runtimeContext)}
+        />
+        {text ? (
+          <NativeChatMarkdown
+            content={text}
+            variant="document"
+            renderCodeBlock={NativeChatCodeBlock}
+          />
+        ) : null}
+      </NativeChatLinkPeekProvider>
+    </NativeChatMarkdownImageOwnerContext.Provider>
   )
 }
 

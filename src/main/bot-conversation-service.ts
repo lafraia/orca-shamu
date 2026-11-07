@@ -286,6 +286,7 @@ export class BotConversationService {
           ? { color: channel.identity.color, animated: channel.identity.animated }
           : undefined,
         memory: { guide: 'BOT_MEMORY.md', file: 'memory.json' },
+        projects: channel.projects ?? [],
         ...(this.toolkit ? { toolkit: { ...this.toolkit, guide: 'BOT_TOOLS.md' } } : {}),
         sessionId: channel.members.find((row) => row.id === channel.home?.memberId)?.sessionId
       },

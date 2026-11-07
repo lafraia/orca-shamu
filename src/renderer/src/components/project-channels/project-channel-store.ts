@@ -11,7 +11,7 @@ import {
 type ProjectChannelState = {
   snapshot: ProjectChannelsSnapshot
   selectedId: string | null
-  mode: 'projects' | 'workspaces'
+  sidebarExpanded: boolean
   editor: { channelId?: string; tabId?: string } | null
   loaded: boolean
   error: string | null
@@ -22,7 +22,7 @@ type ProjectChannelState = {
 export const useProjectChannels = create<ProjectChannelState>(() => ({
   snapshot: emptyProjectChannels(),
   selectedId: null,
-  mode: 'projects',
+  sidebarExpanded: true,
   editor: null,
   loaded: false,
   error: null,
@@ -157,7 +157,7 @@ export function ensureProjectChannelConversation(id: string): Promise<void> {
 }
 
 export function openProjectChannel(id: string): void {
-  useProjectChannels.setState({ selectedId: id, mode: 'projects' })
+  useProjectChannels.setState({ selectedId: id, sidebarExpanded: true })
   useAppStore.setState({ activeView: 'project-chat' })
 }
 

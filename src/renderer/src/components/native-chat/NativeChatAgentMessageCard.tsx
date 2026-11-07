@@ -1,9 +1,6 @@
-import { useId } from 'react'
-import { ChevronDown } from 'lucide-react'
 import { AgentStateDot } from '@/components/AgentStateDot'
 import { AgentTypeIcon } from '@/lib/agent-type-icon'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import type { RuntimeClientTarget } from '../../../../shared/runtime-client-target'
 import type { NativeChatMessage } from '../../../../shared/native-chat/native-chat-types'
@@ -17,13 +14,11 @@ import { agentMessageTranscriptText } from '../../../../shared/agent-session/age
 import { NativeChatAgentMessageSenders } from './NativeChatAgentMessageSenders'
 import { useAgentMessageSenderView } from './native-chat-agent-message-sender-view'
 import { useNativeChatVisualOwner } from './native-chat-visual-owner'
-import { useNativeChatDisclosure } from './native-chat-disclosure-store'
-import { NativeChatExpandable } from './NativeChatExpandable'
+import { NativeChatMessageDisclosureCard } from './NativeChatMessageDisclosureCard'
 import { NativeChatMarkdown } from './NativeChatMarkdown'
 import { NativeChatTextAttachments } from './NativeChatTextAttachments'
 import { NativeChatCodeBlock } from './NativeChatCodeBlock'
 import { NativeChatCopyButton } from './NativeChatCopyButton'
-import { NativeChatMessageTimestamp } from './NativeChatMessageTimestamp'
 import { NativeChatImageAttachments } from './NativeChatTranscriptChrome'
 
 function heading(from: AgentMessageSource, message: NativeChatMessage): string {
@@ -73,106 +68,61 @@ export function NativeChatAgentMessageCard({
   const worktreeId = owner?.worktreeId ?? runtimeContext?.worktreeId ?? null
   const target = owner?.target ?? runtimeContext?.target
   const text = agentMessageTranscriptText(message.blocks, from, message.shortened)
-  const disclosure = useNativeChatDisclosure(`agent-message:${message.id}`, false)
-  const labelId = useId()
-  const bodyId = useId()
   const expandable =
     agentMessageCanCopy(text) || message.blocks.some((block) => block.type === 'image-ref')
-  const toggle = () => {
-    disclosure.setOpen(!disclosure.open)
-    if (disclosure.open) {
-      requestAnimationFrame(onRefolded)
-    }
-  }
   return (
-    <div className="group @container w-full rounded-xl border border-border bg-card text-sm text-card-foreground">
-      <div
-        className="relative flex min-w-0 items-center gap-2 px-3 py-1.5"
-        data-state={disclosure.open ? 'open' : 'closed'}
-      >
-        {expandable ? (
-          <button
-            type="button"
-            aria-labelledby={labelId}
-            aria-controls={bodyId}
-            aria-expanded={disclosure.open}
-            onClick={toggle}
-            className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          />
-        ) : null}
-        <div className="pointer-events-none">
-          <AgentMessageAvatar
-            sender={agentMessagePrimarySender(from)}
-            dispatchId={message.agentStartDispatchId}
-            worktreeId={worktreeId}
-            target={target}
-          />
-        </div>
-        <span
-          id={labelId}
-          className="pointer-events-none max-w-1/3 shrink-0 truncate text-xs text-muted-foreground"
-        >
-          {heading(from, message)}
-        </span>
-        <div className="pointer-events-none relative min-w-0 flex-1 [&_button]:pointer-events-auto">
-          <NativeChatAgentMessageSenders
-            compact
-            dispatchId={message.agentStartDispatchId}
-            from={from}
-            chatWorktreeId={worktreeId}
-            target={target}
-          />
-        </div>
-        {agentMessageCanCopy(text) ? (
+    <NativeChatMessageDisclosureCard
+      disclosureKey={`agent-message:${message.id}`}
+      heading={heading(from, message)}
+      avatar={
+        <AgentMessageAvatar
+          sender={agentMessagePrimarySender(from)}
+          dispatchId={message.agentStartDispatchId}
+          worktreeId={worktreeId}
+          target={target}
+        />
+      }
+      sender={
+        <NativeChatAgentMessageSenders
+          compact
+          dispatchId={message.agentStartDispatchId}
+          from={from}
+          chatWorktreeId={worktreeId}
+          target={target}
+        />
+      }
+      actions={
+        agentMessageCanCopy(text) ? (
           <NativeChatCopyButton
             text={text}
             className="relative transition-opacity can-hover:pointer-events-none can-hover:opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 [.group:has(:focus-visible)_&]:pointer-events-auto [.group:has(:focus-visible)_&]:opacity-100"
           />
-        ) : null}
-        <div className={cn('pointer-events-none shrink-0', expandable && 'hidden @sm:block')}>
-          <NativeChatMessageTimestamp
-            timestamp={message.timestamp}
-            className="text-muted-foreground"
+        ) : null
+      }
+      timestamp={message.timestamp}
+      expandable={expandable}
+      onRefolded={onRefolded}
+    >
+      <NativeChatImageAttachments
+        blocks={message.blocks}
+        runtimeContext={runtimeContext}
+        enablePreview={runtimeContext !== undefined}
+      />
+      <NativeChatTextAttachments
+        content={textAttachmentContent ?? text}
+        structured={textAttachmentContent !== undefined}
+        runtimeContext={runtimeContext}
+        renderText={() => (
+          <NativeChatMarkdown
+            rowKey={message.id}
+            content={text}
+            variant="document"
+            className="text-sm"
+            renderCodeBlock={NativeChatCodeBlock}
           />
-        </div>
-        {expandable ? (
-          <ChevronDown
-            aria-hidden
-            className={cn(
-              'pointer-events-none size-3.5 shrink-0 text-muted-foreground',
-              disclosure.open && 'rotate-180'
-            )}
-          />
-        ) : null}
-      </div>
-      <NativeChatExpandable open={expandable && disclosure.open}>
-        <div id={bodyId} className="space-y-2 px-3 pb-3">
-          <NativeChatImageAttachments
-            blocks={message.blocks}
-            runtimeContext={runtimeContext}
-            enablePreview={runtimeContext !== undefined}
-          />
-          <NativeChatTextAttachments
-            content={textAttachmentContent ?? text}
-            structured={textAttachmentContent !== undefined}
-            runtimeContext={runtimeContext}
-            renderText={() => (
-              <NativeChatMarkdown
-                rowKey={message.id}
-                content={text}
-                variant="document"
-                className="text-sm"
-                renderCodeBlock={NativeChatCodeBlock}
-              />
-            )}
-          />
-          <NativeChatMessageTimestamp
-            timestamp={message.timestamp}
-            className="text-muted-foreground @sm:hidden"
-          />
-        </div>
-      </NativeChatExpandable>
-    </div>
+        )}
+      />
+    </NativeChatMessageDisclosureCard>
   )
 }
 

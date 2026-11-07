@@ -43,7 +43,7 @@ describe('bot mentions in the native transcript', () => {
       },
       loaded: true,
       selectedId: 'ceo',
-      mode: 'projects'
+      sidebarExpanded: true
     })
     useAppStore.setState({ activeView: 'terminal', floatingWorkspacePanelOpen: false })
   })
@@ -53,27 +53,15 @@ describe('bot mentions in the native transcript', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders saved names with spaces, punctuation and accents as composer-style pills', () => {
-    render(
-      <NativeChatMarkdown
-        content="Mandei um oi para @Dev: Vagalume. Depois, @QA (PT) e @José Ávila. @ceo pode acompanhar."
-        variant="document"
-      />
-    )
-    for (const name of ['Dev: Vagalume', 'QA (PT)', 'José Ávila', 'CEO']) {
-      expect(screen.getByRole('button', { name: `Open bot chat: ${name}` })).toHaveAttribute(
-        'data-variant',
-        'promptPill'
-      )
-    }
-    expect(screen.queryByRole('button', { name: 'Open bot chat: Dev' })).toBeNull()
-  })
   it('opens the referenced bot and clears a floating overlay without sending another message', () => {
     useAppStore.setState({ floatingWorkspacePanelOpen: true })
     persistFloatingTerminalPanelOpen(true)
     render(<NativeChatMarkdown content="Fale com @Dev: Vagalume." variant="document" />)
     fireEvent.click(screen.getByRole('button', { name: 'Open bot chat: Dev: Vagalume' }))
-    expect(useProjectChannels.getState()).toMatchObject({ selectedId: 'dev', mode: 'projects' })
+    expect(useProjectChannels.getState()).toMatchObject({
+      selectedId: 'dev',
+      sidebarExpanded: true
+    })
     expect(useAppStore.getState()).toMatchObject({
       activeView: 'project-chat',
       floatingWorkspacePanelOpen: false

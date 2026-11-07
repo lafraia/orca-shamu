@@ -29,7 +29,9 @@ const badgeVariants = cva(
           'h-4 border-current/30 px-1.5 py-0 align-[1px] text-3xs font-semibold tracking-wider uppercase',
         /** A skill or file sitting inline in the chat message box, ringed while selected. */
         promptPill:
-          'max-w-full border-border bg-secondary px-1.5 py-0 align-baseline text-muted-foreground data-[selected=true]:ring-1 data-[selected=true]:ring-ring [button&]:cursor-pointer [button&]:hover:bg-accent [button&]:hover:text-foreground'
+          'max-w-full border-border bg-secondary px-1.5 py-0 align-baseline text-muted-foreground data-[selected=true]:ring-1 data-[selected=true]:ring-ring [button&]:cursor-pointer [button&]:hover:bg-accent [button&]:hover:text-foreground',
+        inlineReference:
+          'native-chat-inline-reference max-w-full align-baseline font-normal [button&]:cursor-pointer [button&]:hover:underline'
       }
     },
     defaultVariants: {

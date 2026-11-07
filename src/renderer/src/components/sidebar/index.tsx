@@ -1,9 +1,4 @@
-import {
-  ProjectChannelSidebar,
-  ProjectNavigationSwitch
-} from '../project-channels/ProjectChannelSidebar'
-import { useProjectChannels } from '../project-channels/project-channel-store'
-import { useShamuClient } from '../shamu/shamu-client-state'
+import { ProjectChannelSidebar } from '../project-channels/ProjectChannelSidebar'
 import React, { useEffect, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -70,11 +65,6 @@ function Sidebar({
   worktreeScrollAnchorRef
 }: SidebarProps): React.JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
-  const shamuEnabled = useShamuClient((s) => s.enabled)
-  const projectMode =
-    useProjectChannels((s) => s.mode === 'projects') &&
-    shamuEnabled &&
-    Boolean(window.api?.projectChannels)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
   const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const repos = useAppStore((s) => s.repos)
@@ -191,63 +181,57 @@ function Sidebar({
         >
           {sidebarOpen && (
             <>
-              <ProjectNavigationSwitch />
-              {projectMode ? (
-                <ProjectChannelSidebar />
+              <SidebarNav />
+              <ProjectChannelSidebar />
+              <SidebarHeader
+                onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
+                activityOptionsTarget={setAgentOptionsTarget}
+                projectsCollapseTarget={setProjectsCollapseTarget}
+              />
+              <SeveredTerminalDaemonBanner />
+              <StalledTerminalDaemonBanner />
+              {sidebarBody === 'agents' ? (
+                <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
+                  <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
+                    <SidebarAgentsList
+                      readFilter={agentReadFilter}
+                      setReadFilter={setAgentReadFilter}
+                      groupBy={agentGroupBy}
+                      setGroupBy={setAgentGroupBy}
+                      query={agentQuery}
+                      setQuery={setAgentQuery}
+                      optionsTarget={agentOptionsTarget}
+                      scrollTopRef={agentsScrollTopRef}
+                    />
+                  </ActivityThreadCollapseContext.Provider>
+                </React.Suspense>
               ) : (
                 <>
-                  <SidebarNav />
-                  <SidebarHeader
-                    onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
-                    activityOptionsTarget={setAgentOptionsTarget}
-                    projectsCollapseTarget={setProjectsCollapseTarget}
+                  <LocalGitToolchainScanBanner />
+                  <StartupWorktreeRefreshStatus />
+                  <WorktreeList
+                    scrollOffsetRef={worktreeScrollOffsetRef}
+                    scrollAnchorRef={worktreeScrollAnchorRef}
+                    workspaceBoardOpen={workspaceBoardOpen}
+                    onWorktreeCardClick={closeWorkspaceBoard}
+                    onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
+                    onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
+                    onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                    projectsCollapseTarget={projectsCollapseTarget}
                   />
-                  <SeveredTerminalDaemonBanner />
-                  <StalledTerminalDaemonBanner />
-                  {sidebarBody === 'agents' ? (
-                    <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
-                      <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
-                        <SidebarAgentsList
-                          readFilter={agentReadFilter}
-                          setReadFilter={setAgentReadFilter}
-                          groupBy={agentGroupBy}
-                          setGroupBy={setAgentGroupBy}
-                          query={agentQuery}
-                          setQuery={setAgentQuery}
-                          optionsTarget={agentOptionsTarget}
-                          scrollTopRef={agentsScrollTopRef}
-                        />
-                      </ActivityThreadCollapseContext.Provider>
-                    </React.Suspense>
-                  ) : (
-                    <>
-                      <LocalGitToolchainScanBanner />
-                      <StartupWorktreeRefreshStatus />
-                      <WorktreeList
-                        scrollOffsetRef={worktreeScrollOffsetRef}
-                        scrollAnchorRef={worktreeScrollAnchorRef}
-                        workspaceBoardOpen={workspaceBoardOpen}
-                        onWorktreeCardClick={closeWorkspaceBoard}
-                        onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
-                        onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
-                        onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
-                        projectsCollapseTarget={projectsCollapseTarget}
-                      />
-                      <WslMovedProjectsSection />
-                    </>
-                  )}
-
-                  <div className="relative shrink-0">
-                    <SetupScriptPromptCard />
-
-                    <SidebarToolbar
-                      workspaceBoardOpen={workspaceBoardOpen}
-                      workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
-                      onWorkspaceBoardToggle={toggleWorkspaceBoard}
-                    />
-                  </div>
+                  <WslMovedProjectsSection />
                 </>
               )}
+
+              <div className="relative shrink-0">
+                <SetupScriptPromptCard />
+
+                <SidebarToolbar
+                  workspaceBoardOpen={workspaceBoardOpen}
+                  workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
+                  onWorkspaceBoardToggle={toggleWorkspaceBoard}
+                />
+              </div>
             </>
           )}
 

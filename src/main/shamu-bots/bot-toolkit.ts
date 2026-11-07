@@ -10,6 +10,10 @@ Use this bundled command as an argv array, preserving spaces and avoiding shell 
 ${JSON.stringify([toolkit.cliExecutable, 'bots', 'list', '--profile-dir', toolkit.userDataDirectory, '--json'])}
 Other commands use the same executable and profile: bots COMMAND --input-file REQUEST.json --json. Save JSON request files and reuse their identifiers after a lost reply. Never copy or log pairing credentials.
 
+## Linked projects
+
+bot.json records the projects, folders and groups linked to this bot. These references are independent of your permanent folder workspace. Resolve their current names, paths and membership through the version-matched Orca CLI before working on them. Each reference identifies its primary environment and execution host; local means the primary Orca host. Read the selected project's instructions and use the owning host for its files and commands. A link does not change your session directory, grant permissions or authorize work. Keep the same bot session and memory when moving between projects. Shamu sends include a bounded, current catalog inventory; resolve omitted projects through the saved links in bot.json.
+
 ## Consult another bot
 
 You remain the user's conversational partner. An @bot mention in your chat is addressed to you and is not automatically sent to that bot. When asked to consult someone, discover their ID, formulate your own focused question in the first person and send only the necessary task context. For example, as CEO: "I need to report the app's launch forecast. What date can you confirm, what is still blocking it, and what evidence supports that forecast?" Do not forward "Ask @Bot when the app will launch" or attribute the user's exact words to yourself.

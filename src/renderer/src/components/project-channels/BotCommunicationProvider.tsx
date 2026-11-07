@@ -31,15 +31,22 @@ export function BotCommunicationProvider({
   })
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<BotCommunication | null>(null)
+  const [selection, setSelection] = useState<{ entry: BotCommunication; open: boolean } | null>(
+    null
+  )
+  const selected = selection?.entry
   const [attempt, setAttempt] = useState(0)
-  const close = useCallback(() => setSelected(null), [])
+  const close = useCallback(
+    () => setSelection((current) => (current ? { ...current, open: false } : null)),
+    []
+  )
+  const closed = useCallback(() => setSelection((current) => (current?.open ? current : null)), [])
   const open = useCallback((entry: BotCommunication) => {
     if (entry.cli && entry.recipient.botId) {
       openProjectChannel(entry.recipient.botId)
       return
     }
-    setSelected(entry)
+    setSelection({ entry, open: true })
   }, [])
   const retry = useCallback(() => setAttempt((value) => value + 1), [])
   useEffect(() => {
@@ -89,12 +96,12 @@ export function BotCommunicationProvider({
       loaded,
       isVisible,
       error,
-      selectedPair: selected ? botCommunicationPairKey(selected) : null,
+      selectedPair: selection?.open ? botCommunicationPairKey(selection.entry) : null,
       open,
       close,
       retry
     }),
-    [snapshot, sessionId, target, loaded, isVisible, error, selected, open, close, retry]
+    [snapshot, sessionId, target, loaded, isVisible, error, selection, open, close, retry]
   )
   if (!enabled) {
     return <>{children}</>
@@ -108,7 +115,9 @@ export function BotCommunicationProvider({
           selected={snapshot.entries.find((entry) => entry.id === selected.id) ?? selected}
           entries={snapshot.entries}
           target={target}
+          open={selection?.open ?? false}
           onClose={close}
+          onClosed={closed}
         />
       ) : null}
     </BotCommunicationContext.Provider>

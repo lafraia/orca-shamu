@@ -1,13 +1,14 @@
 import { createContext, useContext } from 'react'
-import { ChevronRight, MessagesSquare } from 'lucide-react'
+import { ArrowUpRight, MessagesSquare } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { Button } from '@/components/ui/button'
 import { BotAvatar } from '../project-channels/BotAvatar'
 import { useProjectChannels } from '../project-channels/project-channel-store'
 import { BotCommunicationContext } from '../project-channels/bot-communication-context'
 import type { BotCommunicationRow as Row } from './native-chat-bot-communication-slots'
-import { StatusDot } from './NativeChatSubagentRun'
 import { BotCliPromptCard } from './BotCliPromptCard'
+import { NativeChatMessageDisclosureCard } from './NativeChatMessageDisclosureCard'
+import { BotCommunicationMessagePreview } from './BotCommunicationMessagePreview'
 
 export const BotCommunicationRowsContext = createContext<ReadonlyMap<string, Row>>(new Map())
 
@@ -41,14 +42,6 @@ export function BotCommunicationRow({ row }: { row: Row }): React.JSX.Element {
   const identity = useProjectChannels(
     (state) => state.snapshot.channels.find((bot) => bot.id === peer.botId)?.identity
   )
-  const status =
-    row.state === 'working'
-      ? 'working'
-      : row.state === 'refused' || row.state === 'failed'
-        ? 'failed'
-        : row.state === 'replied'
-          ? 'completed'
-          : 'idle'
   const label =
     row.direction === 'incoming' && peer.botId
       ? translate('shamu.communication.fromBot', 'Message from bot {{name}}', { name: peer.name })
@@ -85,22 +78,55 @@ export function BotCommunicationRow({ row }: { row: Row }): React.JSX.Element {
     )
   }
   return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      onClick={() => context?.open(row.entry)}
-      data-bot-communication={row.entry.id}
-      className="group/bot-communication flex min-h-7 w-full items-center gap-2 rounded-md py-1 text-left text-sm text-chat-foreground-faint hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+    <NativeChatMessageDisclosureCard
+      disclosureKey={`bot-communication:${row.direction}:${row.entry.id}`}
+      expandLabel={label}
+      heading={
+        row.direction === 'incoming'
+          ? translate('components.native-chat.agentMessage.messageFrom', 'Message from')
+          : translate('shamu.communication.messageTo', 'Message to')
+      }
+      avatar={
+        peer.botId ? (
+          <BotAvatar
+            id={peer.botId}
+            identity={identity}
+            activity={
+              row.state === 'working' ? 'working' : row.state === 'waiting' ? 'waiting' : 'idle'
+            }
+            className="size-6"
+          />
+        ) : (
+          <MessagesSquare aria-hidden className="size-6 shrink-0" />
+        )
+      }
+      sender={
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          aria-label={translate(
+            'shamu.communication.openWith',
+            'Open conversation with {{name}}: {{state}}',
+            { name: peer.name, state: states[row.state] }
+          )}
+          onClick={() => context?.open(row.entry)}
+          data-bot-communication={row.entry.id}
+          className="flex min-w-0 max-w-full items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="min-w-0 truncate">{peer.name}</span>
+          <ArrowUpRight aria-hidden className="size-3 shrink-0" />
+          <span className="shrink-0 text-xs text-muted-foreground">{states[row.state]}</span>
+        </button>
+      }
+      timestamp={row.entry.createdAt > 0 ? row.entry.createdAt : null}
     >
-      {peer.botId ? (
-        <BotAvatar id={peer.botId} identity={identity} className="size-5 rounded-md" />
-      ) : (
-        <MessagesSquare aria-hidden className="size-4 shrink-0" />
-      )}
-      <StatusDot state={status} pulsing={row.state === 'working'} />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <span className="shrink-0 text-xs">{states[row.state]}</span>
-      <ChevronRight aria-hidden className="size-3.5 shrink-0" />
-    </button>
+      <div className="scrollbar-sleek max-h-60 overflow-y-auto overscroll-contain">
+        <BotCommunicationMessagePreview entry={row.entry} />
+      </div>
+      <Button variant="link" size="inline" onClick={() => context?.open(row.entry)}>
+        {translate('shamu.communication.openFullConversation', 'View full conversation')}
+        <ArrowUpRight aria-hidden className="size-3" />
+      </Button>
+    </NativeChatMessageDisclosureCard>
   )
 }

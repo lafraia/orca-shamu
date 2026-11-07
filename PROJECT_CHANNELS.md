@@ -15,7 +15,7 @@ Shamu uses its own bundle ID, Keychain service and application profile. No produ
 
 ## Use
 
-The top navigation uses **Bots** with a bot icon. Bots have a saved name and optional instructions, independent of any existing conversation. Workspaces retain Orca's existing project terminology.
+The main sidebar shows a collapsible **Bots** entry above **Projects**, with a bot icon and a **New bot** action. Bots and projects share the same navigation. Bots have a saved name and optional instructions, independent of any existing conversation. Workspaces retain Orca's existing project terminology.
 
 1. Choose **New bot**, enter a name and optional instructions, choose a color or upload an image, then **Create bot**. The bot opens its own native Chat immediately, with the standard model, permissions, attachments and history controls. No existing conversation is required. Opening an existing empty bot provisions its chat the same way.
 2. Each bot gets a permanent folder workspace in **Bots** on the primary Orca, stored at `~/orca/bots/bot-<stable-id>`. **Workspace** opens its original tab. Returning to a bot reuses the same session, history and native draft.
@@ -31,6 +31,12 @@ For promoted shared conversations, unmentioned messages go to the default partic
 The main participant's loaded history appears as **Earlier conversation**. **Load earlier conversation** pages older native history without losing its user questions. Other participants' prior history is not imported. New replies enter the shared chat only when the native turn can be attributed to a send from that channel; messages sent directly in the original tab remain there.
 
 **Open chat** returns to the original tab and its execution host. Unlinking a conversation does not stop its process or erase history. Removing the final link keeps the bot and its instructions saved. Closing a source tab can make it unavailable to the project; the project retains its existing messages. Terminal-backed agents must first use the existing **Continue with Chat Agent** flow.
+
+## Linked projects
+
+Bot settings can link projects, folder workspaces or groups already registered in the primary Orca, including unrelated filesystem folders. Links retain the server, execution host, target kind and catalog identity; they do not move projects or replace the bot’s permanent folder, session, history or draft. A project may be linked to several bots. Unlinking removes only that association.
+
+Each explicit Shamu send resolves links from the current primary catalog, using current names and paths. Linked groups follow current logical membership and registered physical descendants on their owning host. Linked folder workspaces include registered descendants of that folder. Bot-owned folders are excluded from the project picker. Missing or foreign-server links remain saved and are reported as unavailable, without substituting another project. A bounded inventory accompanies the existing bot context for chat, CLI sends, bot consultations and routines. The provider is instructed to read project instructions and route work through the owning Orca host, retaining the existing session permissions. Links do not index file contents or grant filesystem access. Add new directories through Projects using Orca’s existing admission and discovery flow.
 
 ## Data and recovery
 
@@ -196,7 +202,7 @@ Geometry is adapted from [Bloub](https://github.com/jeremy-prt/bloub) at `b4bb3c
 
 ## Bot sidebar
 
-The bot sidebar keeps group counts hidden and reveals action menus on hover, keyboard focus or touch devices. Drag a group header above or below another group, drag bots to reorder them, or drop a bot on a group header to append it even while that group is collapsed. Pinned bots keep their dedicated top section and can be reordered or moved into another section. Alt+Up and Alt+Down reorder the focused bot or group; menus retain group movement and bot section choices. Order and membership are saved atomically against the current roster, preserving filtered bots, conversation identities and drafts. Invalid or changed destinations leave the saved roster intact and report an error.
+The Bots entry contains an indented Pinned section and indented named sections, with bot rows nested beneath each section. Bots without a section appear under General. The sidebar lists all bots without a separate search field. It keeps group counts hidden and reveals action menus on hover, keyboard focus or touch devices. Drag a group header above or below another group, drag bots to reorder them, or drop a bot on a group header to append it even while that group is collapsed. Pinned bots keep their dedicated top section and can be reordered or moved into another section. Alt+Up and Alt+Down reorder the focused bot or group; menus retain group movement and bot section choices. Order and membership are saved atomically against the current roster, preserving conversation identities and drafts. Invalid or changed destinations leave the saved roster intact and report an error.
 
 Bot rows read the same primary status stream as native workspaces and reuse their spinner and attention glyphs. A pending approval or question shows the attention icon; background monitoring and finished outcomes retain the workspace presentation. A disconnected stream shows unverified status rather than claiming that cached work is still running. Unread dots remain a separate per-bot indication.
 
@@ -205,3 +211,7 @@ Bot rows read the same primary status stream as native workspaces and reuse thei
 The primary connection lives in the existing statusbar. Press it to open Settings → Orca Shamu. The Shamu section is local to this desktop interface and is absent from the official Orca and paired web clients. It contains interface preference import, reconnect and access-link renewal. Import runs only on request; it copies the existing interface preference allowlist, including fonts, without changing the primary Orca. Access-link renewal retains the pinned primary and uses the existing connection form.
 
 The connected client adds no extra titlebar. The upstream titlebar keeps window dragging and traffic-light spacing. Floating panels and their buttons explicitly opt out of native Electron dragging because their header already uses pointer-based dragging.
+
+## Message preview expansion
+
+Bot exchange cards and native agent-message cards share an intrinsic grid expansion. Their bodies follow the current bounded preview as asynchronous text or media arrives, rather than keeping the loading placeholder’s measured height. A message preview uses a compact placeholder; the full conversation keeps its own multi-message skeleton. Opening and closing use the theme motion tokens and respect reduced motion.

@@ -23598,15 +23598,10 @@
     "terminalUnverifiable": "O Orca não conseguiu verificar se a distribuição WSL {{distro}} está em execução, então não iniciou este terminal. Inicie a distribuição e tente novamente."
   },
   "projectChannels": {
-    "navigation": "Navegação",
     "projects": "Bots",
-    "workspaces": "Workspaces",
-    "search": "Buscar bot",
     "new": "Novo bot",
     "reload": "Recarregar bots",
     "loading": "Carregando bots",
-    "noResults": "Nenhum bot encontrado",
-    "settings": "Configurações",
     "offline": "Chat indisponível",
     "connecting": "Conectando…",
     "needsAnswer": "Aguarda sua resposta",
@@ -23665,6 +23660,22 @@
     "changeSaveError": "Não foi possível salvar esta alteração. Recarregue os bots antes de tentar novamente."
   },
   "shamu": {
+    "bots": {
+      "general": "Geral"
+    },
+    "projects": {
+      "title": "Projetos vinculados",
+      "description": "Escolha os projetos que este bot deve acompanhar, em qualquer pasta. Grupos vinculados incluem seus projetos atuais.",
+      "link": "Vincular projetos, pastas ou grupos",
+      "search": "Buscar projetos, pastas ou hosts…",
+      "noResults": "Nenhum projeto encontrado. Adicione projetos pela barra lateral primeiro.",
+      "group": "Grupo de projetos",
+      "missing": "Fora do catálogo atual de projetos",
+      "unlink": "Desvincular {{name}}",
+      "loading": "Carregando projetos",
+      "loadError": "Não foi possível carregar projetos do Orca principal. Os vínculos salvos foram mantidos.",
+      "retry": "Tentar novamente"
+    },
     "loading": "Conectando ao Orca principal…",
     "description": "Use as sessões e os controles do Orca principal, com os dois aplicativos abertos.",
     "stepSettings": "No Orca principal, abra Configurações → Servidores Orca remotos.",
@@ -23687,6 +23698,11 @@
     "preferencesError": "Não foi possível importar as configurações da interface.",
     "title": "Orca Shamu",
     "liveReload": "Atualização ao vivo",
+    "communication": {
+      "messageTo": "Mensagem para",
+      "openFullConversation": "Ver conversa completa",
+      "previewFailed": "Não foi possível carregar esta mensagem."
+    },
     "vault": {
       "unlockedTitle": "Vault desbloqueado",
       "lockedTitle": "Vault bloqueado",

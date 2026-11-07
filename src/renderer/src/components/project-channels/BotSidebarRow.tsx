@@ -35,7 +35,12 @@ export function BotSidebarRow({
   return (
     <div ref={drag.ref} className={cn('relative', drag.dragging && 'opacity-40')}>
       <BotSidebarDropMark placement={drag.insertion} />
-      <BotSidebarActions channel={channel} sections={sections} onSection={onSection}>
+      <BotSidebarActions
+        channel={channel}
+        sections={sections}
+        selected={selected}
+        onSection={onSection}
+      >
         <button
           {...drag.handle}
           type="button"
@@ -56,10 +61,7 @@ export function BotSidebarRow({
             }
           }}
           onClick={() => openProjectChannel(channel.id)}
-          className={cn(
-            'group/bot-row flex min-w-0 flex-1 cursor-grab touch-manipulation items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            selected && 'bg-worktree-sidebar-accent'
-          )}
+          className="group/bot-row flex min-w-0 flex-1 cursor-grab touch-manipulation items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-worktree-sidebar-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="relative inline-flex shrink-0">
             <BotLiveAvatar

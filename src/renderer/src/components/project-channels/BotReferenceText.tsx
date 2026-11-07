@@ -26,6 +26,7 @@ export function BotReferenceText({
           exchange ? (
             <NativeChatPromptPill
               key={start}
+              variant="inlineReference"
               icon={MessagesSquare}
               label={translate('shamu.memory.messageFrom', 'Message from {{name}}', {
                 name: exchange.source.name
@@ -47,6 +48,7 @@ export function BotReferenceText({
           ) : bot || unavailableName !== undefined ? (
             <NativeChatPromptPill
               key={start}
+              variant="inlineReference"
               icon={Bot}
               label={
                 bot?.name ??

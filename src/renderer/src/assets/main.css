@@ -2142,6 +2142,52 @@ html.native-shell .app-layout {
   }
 }
 
+.collapsible-grid-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+}
+
+.collapsible-grid-content[data-state='open'] {
+  animation: collapsible-grid-down var(--duration-fast) var(--ease-smooth-out);
+}
+
+.collapsible-grid-content[data-state='closed'] {
+  grid-template-rows: 0fr;
+  animation: collapsible-grid-up var(--duration-quick) var(--ease-smooth-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-grid-content[data-state='open'],
+  .collapsible-grid-content[data-state='closed'] {
+    animation: none;
+  }
+}
+
+@keyframes collapsible-grid-down {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes collapsible-grid-up {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
 .sidebar.collapsed {
   width: 0;
   border-right: none;

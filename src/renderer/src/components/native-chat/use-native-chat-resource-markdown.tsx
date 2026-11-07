@@ -43,6 +43,7 @@ export function useNativeChatResourceMarkdown(
           }
           return (
             <NativeChatPromptPill
+              variant="inlineReference"
               icon={nativeChatResourceIcon(reference.kind)}
               label={reference.label}
               selected={false}

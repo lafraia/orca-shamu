@@ -1,3 +1,5 @@
+@import './native-chat-inline-highlight.css';
+
 /* Shared markdown also renders sidebar comments, so chat styling stays opt-in. */
 /* :where keeps this below the link-label rule, so bold link text takes the link color. */
 .native-chat-markdown :where(h1, h2, h3, h4, h5, h6, [role='heading'], strong) {
@@ -31,15 +33,6 @@
 .native-chat-markdown :is(th, td) {
   min-width: calc(var(--spacing) * 18);
   overflow-wrap: break-word;
-}
-
-.native-chat-markdown code {
-  border: 1px solid var(--chat-inline-code-border);
-  border-radius: var(--radius-sm, 0.375rem);
-  background: var(--chat-inline-code-surface);
-  padding: 0.0625rem 0.3125rem;
-  color: var(--chat-code-foreground);
-  font-size: var(--chat-inline-code-ratio, 0.8571428571em);
 }
 
 .native-chat-markdown pre:not([data-native-chat-code-content]) {
