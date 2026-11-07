@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import type { BotCommunication, BotCommunicationText } from '../../../../shared/bot-communications'
-import { CommunicationMessageBody, CommunicationSkeleton } from './BotCommunicationThreadPosts'
+import { CommunicationMessageBody } from './BotCommunicationThreadPosts'
 
 export function BotCommunicationMessagePreview({
   entry
@@ -48,7 +48,13 @@ function StoredMessagePreview({ entry }: { entry: BotCommunication }): React.JSX
     }
   }, [referenceId, attempt])
   if (!result || result.referenceId !== referenceId || result.attempt !== attempt) {
-    return <CommunicationSkeleton />
+    return (
+      <div
+        aria-busy="true"
+        aria-label={translate('shamu.communication.loading', 'Loading communication')}
+        className="h-5 w-3/4 rounded bg-muted motion-safe:animate-pulse"
+      />
+    )
   }
   if (!result.text) {
     return (

@@ -43,7 +43,8 @@ const collapsibleContentVariants = cva('', {
     animation: {
       none: '',
       // Grows and shrinks with its content, so what follows moves with it instead of jumping.
-      height: 'collapsible-height-content'
+      height: 'collapsible-height-content',
+      grid: 'collapsible-grid-content'
     }
   },
   defaultVariants: { animation: 'none' }
@@ -52,6 +53,7 @@ const collapsibleContentVariants = cva('', {
 function CollapsibleContent({
   className,
   animation,
+  children,
   ...props
 }: React.ComponentProps<typeof CollapsiblePrimitive.Content> &
   VariantProps<typeof collapsibleContentVariants>): React.JSX.Element {
@@ -60,7 +62,9 @@ function CollapsibleContent({
       data-slot="collapsible-content"
       className={cn(collapsibleContentVariants({ animation }), className)}
       {...props}
-    />
+    >
+      {animation === 'grid' ? <div className="min-h-0 overflow-hidden">{children}</div> : children}
+    </CollapsiblePrimitive.Content>
   )
 }
 

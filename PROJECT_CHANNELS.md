@@ -211,3 +211,7 @@ Bot rows read the same primary status stream as native workspaces and reuse thei
 The primary connection lives in the existing statusbar. Press it to open Settings → Orca Shamu. The Shamu section is local to this desktop interface and is absent from the official Orca and paired web clients. It contains interface preference import, reconnect and access-link renewal. Import runs only on request; it copies the existing interface preference allowlist, including fonts, without changing the primary Orca. Access-link renewal retains the pinned primary and uses the existing connection form.
 
 The connected client adds no extra titlebar. The upstream titlebar keeps window dragging and traffic-light spacing. Floating panels and their buttons explicitly opt out of native Electron dragging because their header already uses pointer-based dragging.
+
+## Message preview expansion
+
+Bot exchange cards and native agent-message cards share an intrinsic grid expansion. Their bodies follow the current bounded preview as asynchronous text or media arrives, rather than keeping the loading placeholder’s measured height. A message preview uses a compact placeholder; the full conversation keeps its own multi-message skeleton. Opening and closing use the theme motion tokens and respect reduced motion.

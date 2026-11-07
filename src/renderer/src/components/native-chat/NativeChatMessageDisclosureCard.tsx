@@ -77,7 +77,7 @@ export function NativeChatMessageDisclosureCard({
           />
         ) : null}
       </div>
-      <NativeChatExpandable open={expandable && disclosure.open}>
+      <NativeChatExpandable open={expandable && disclosure.open} animation="grid">
         <div id={bodyId} className="space-y-2 px-3 pb-3">
           {children}
           <NativeChatMessageTimestamp

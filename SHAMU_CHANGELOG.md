@@ -18,6 +18,8 @@ Upstream commit: `a162e08b29b2883b02d8a0dfcc99e26c80b2cfe7`
 
 ### Shamu changes
 
+- Animate bot and native agent message cards against their intrinsic content height, so a short lazy-loaded preview does not retain the larger loading height. Use a compact single-message placeholder and retain closing and reduced-motion behavior.
+
 - Remove bot sidebar search and nest pinned bots and named sections inside Bots, with a second indentation level for each section’s bots. Use General for bots without a named section.
 
 - Integrate Bots above Projects in the main sidebar, replacing the separate navigation modes. Link existing projects, folder workspaces and groups to each permanent bot workspace, with current host-qualified catalog context on every request.

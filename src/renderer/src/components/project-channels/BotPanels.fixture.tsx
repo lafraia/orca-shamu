@@ -217,3 +217,38 @@ export const expandedCommunication = defineFixture({
     triggers[2]?.click()
   }
 })
+
+let finishPreview: ((text: string) => void) | null = null
+export const lazyCommunication = defineFixture({
+  ...drawers,
+  width: 720,
+  setup: () => {
+    drawers.setup?.()
+    finishPreview = null
+    const communications = window.api.projectChannels?.communications
+    if (communications) {
+      communications.texts = async () => {
+        const text = await new Promise<string>((resolve) => {
+          finishPreview = resolve
+        })
+        return [{ referenceId: storedEntry.referenceId, text }]
+      }
+    }
+  },
+  render: () => (
+    <div className="native-chat-appearance space-y-4 bg-chat-canvas p-5 text-sm text-chat-foreground">
+      <Button onClick={() => finishPreview?.('One short reply.')}>Finish loading</Button>
+      <Button
+        onClick={() =>
+          finishPreview?.('A longer message stays inside the bounded preview.\n\n'.repeat(120))
+        }
+      >
+        Load long reply
+      </Button>
+      <BotCommunicationRow row={{ entry: storedEntry, direction: 'incoming', state: 'replied' }} />
+      <p>The conversation continues below this card.</p>
+    </div>
+  )
+})
+
+export const lazyCommunicationNarrow = defineFixture({ ...lazyCommunication, width: 360 })
